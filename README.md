@@ -1,4 +1,9 @@
-# MSW Storybook addon
+<p align="center">
+  <img src="https://msw-sb.netlify.app/logo.png" width="200">
+</p>
+<h1 align="center">MSW Storybook Addon</h1>
+
+## Features
 
 * Mock Rest and GraphQL requests right inside your story.
 * Document how a component behaves in various scenarios.
