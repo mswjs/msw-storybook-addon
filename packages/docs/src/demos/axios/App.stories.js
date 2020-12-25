@@ -1,36 +1,17 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
 import { rest } from 'msw';
 import { App } from './App';
 
 const config = {
-  title: 'Demos/React Query',
+  title: 'Demos/Axios',
   component: App,
 };
 
 export default config;
 
-const defaultQueryClient = new QueryClient();
+export const DefaultBehavior = () => <App />;
 
-export const DefaultBehavior = () => (
-  <QueryClientProvider client={defaultQueryClient}>
-    <App />
-  </QueryClientProvider>
-);
-
-const mockedQueryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
-
-const MockTemplate = () => (
-  <QueryClientProvider client={mockedQueryClient}>
-    <App />
-  </QueryClientProvider>
-);
+const MockTemplate = () => <App />;
 
 const films = [
   {
