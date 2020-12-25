@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-import { Columns } from '../components/Layout';
-import { FilmCard } from '../components/FilmCard';
+import { Columns } from '../../components/Layout';
+import { FilmCard } from '../../components/FilmCard';
 
 function useFetchFilms() {
   const [status, setStatus] = useState('idle');

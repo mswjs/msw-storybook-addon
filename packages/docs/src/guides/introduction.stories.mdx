@@ -1,0 +1,42 @@
+import { tw } from 'twind';
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Introduction" />
+
+<div className={tw`flex flex-col items-center`}>
+  <img src="https://msw-sb.netlify.app/logo.png" width="200" />
+  <h1 className={tw`mb-4`}>MSW Storybook Addon</h1>
+</div>
+
+With storybook we can test our app components in isolation and later integrate with the product. But with the trend of fetching data inside components we can't make stories for them easily. Extracting presentational components for just this purpose sucks. But there's a better way.
+
+With `msw-storybook-addon` you can easily mock the APIs inside stories like this.
+
+```js
+import { rest } from 'msw';
+
+export const SuccessBehavior = () => <UserProfile />;
+
+SuccessBehavior.story = {
+  parameters: {
+    msw: [
+      rest.get('/user', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            firstName: 'Neil',
+            lastName: 'Maverick',
+          }),
+        );
+      }),
+    ]
+  },
+};
+```
+
+The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
+
+## Features
+
+* Mock Rest and GraphQL requests right inside your story.
+* Document how a component behaves in various scenarios.
+* Get a11y, snapshot and visual tests using other addons for free.

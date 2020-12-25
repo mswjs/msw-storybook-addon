@@ -9,4 +9,25 @@
 * Document how a component behaves in various scenarios.
 * Get a11y, snapshot and visual tests using other addons for free.
 
+```js
+import { rest } from 'msw';
+
+export const SuccessBehavior = () => <UserProfile />;
+
+SuccessBehavior.story = {
+  parameters: {
+    msw: [
+      rest.get('/user', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            firstName: 'Neil',
+            lastName: 'Maverick',
+          }),
+        );
+      }),
+    ]
+  },
+};
+```
+
 [Full Documentation](https://msw-sb.netlify.app/)

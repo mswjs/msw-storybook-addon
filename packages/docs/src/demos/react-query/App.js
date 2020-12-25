@@ -1,8 +1,8 @@
 import React from 'react';
 import { useQuery } from 'react-query';
 
-import { Columns } from '../components/Layout';
-import { FilmCard } from '../components/FilmCard';
+import { Columns } from '../../components/Layout';
+import { FilmCard } from '../../components/FilmCard';
 
 function useFetchFilms() {
   const { status, data } = useQuery('films', () => {

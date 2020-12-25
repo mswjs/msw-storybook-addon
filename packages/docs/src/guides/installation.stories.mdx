@@ -1,25 +1,18 @@
-<p align="center">
-  <img src="https://msw-sb.netlify.app/logo.png" width="200">
-</p>
-<h1 align="center">MSW Storybook Addon</h1>
+import { Meta } from '@storybook/addon-docs/blocks';
 
-## Features
+<Meta title="Guides/Installation" />
 
-* Mock Rest and GraphQL requests right inside your story.
-* Document how a component behaves in various scenarios.
-* Get a11y, snapshot and visual tests using other addons for free.
+# Installation
 
-[Full Documentation](https://msw-sb.netlify.app/)
+We have to integrate our addon with storybook and also setup MSW.
 
-## Quick Start
-
-#### Install msw & storybook addon.
+### Install msw & storybook addon.
 
 ```sh
 npm i -D msw msw-storybook-addon
 ```
 
-#### Enable msw on storybook by adding these lines in `./storybook/preview.js`
+### Enable msw on storybook by adding these lines in `./storybook/preview.js`
 
 ```js
 import { addDecorator } from '@storybook/react';
@@ -29,7 +22,7 @@ initializeWorker();
 addDecorator(mswDecorator);
 ```
 
-#### Generate service worker for msw in your public folder.
+### Generate service worker for msw in your public folder.
 
 ```sh
 npx msw init public/
@@ -37,13 +30,15 @@ npx msw init public/
 
 Refer [MSW official guide](https://mswjs.io/docs/getting-started/integrate/browser) for framework specific paths.
 
-#### Start storybook with that public folder.
+### Start storybook with that public folder.
 
 ```sh
 npx start-storybook -s public -p 6006
 ```
 
-#### Mock API calls in a story.
+### Mock API calls in a story.
+
+Create a story just like normal and then add this code.
 
 ```js
 import { rest } from 'msw';
