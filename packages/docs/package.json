@@ -49,6 +49,6 @@
     "@storybook/preset-create-react-app": "^3.1.5",
     "@storybook/react": "^6.1.11",
     "msw": "^0.24.2",
-    "msw-storybook-addon": "^1.0.0"
+    "msw-storybook-addon": "^1.0.5"
   }
 }
