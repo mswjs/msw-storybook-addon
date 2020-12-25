@@ -5,5 +5,10 @@ initializeWorker();
 addDecorator(mswDecorator);
 
 export const parameters = {
+  previewTabs: {
+    'storybook/docs/panel': {
+      hidden: true,
+    },
+  },
   actions: { argTypesRegex: '^on[A-Z].*' },
 };
