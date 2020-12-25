@@ -1,35 +1,34 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { rest } from 'msw';
+import { createClient, Provider } from 'urql';
+import { graphql } from 'msw';
 import { App } from './App';
 
 const config = {
-  title: 'Demos/React-Query',
+  title: 'Demos/Urql',
   component: App,
 };
 
 export default config;
 
-const defaultQueryClient = new QueryClient();
+const defaultClient = createClient({
+  url: 'https://swapi-graphql.netlify.app/.netlify/functions/index',
+});
 
 export const DefaultBehavior = () => (
-  <QueryClientProvider client={defaultQueryClient}>
+  <Provider value={defaultClient}>
     <App />
-  </QueryClientProvider>
+  </Provider>
 );
 
-const mockedQueryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
+const mockedClient = createClient({
+  url: 'https://swapi-graphql.netlify.app/.netlify/functions/index',
+  requestPolicy: 'network-only',
 });
 
 const MockTemplate = () => (
-  <QueryClientProvider client={mockedQueryClient}>
+  <Provider value={mockedClient}>
     <App />
-  </QueryClientProvider>
+  </Provider>
 );
 
 const films = [
@@ -54,10 +53,12 @@ export const MockedSuccess = MockTemplate.bind({});
 MockedSuccess.story = {
   parameters: {
     msw: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+      graphql.query('AllFilmsQuery', (req, res, ctx) => {
         return res(
-          ctx.json({
-            results: films,
+          ctx.data({
+            allFilms: {
+              films,
+            },
           }),
         );
       }),
@@ -69,10 +70,14 @@ export const MockedError = MockTemplate.bind({});
 MockedError.story = {
   parameters: {
     msw: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+      graphql.query('AllFilmsQuery', (req, res, ctx) => {
         return res(
           ctx.delay(800),
-          ctx.status(403),
+          ctx.errors([
+            {
+              message: 'Access denied',
+            },
+          ]),
         );
       }),
     ],
