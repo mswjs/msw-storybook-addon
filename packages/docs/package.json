@@ -39,7 +39,7 @@
     ]
   },
   "devDependencies": {
-    "msw-storybook-addon": "1.0.0",
+    "msw-storybook-addon": "^1.0.0",
     "@storybook/addon-actions": "^6.1.11",
     "@storybook/addon-essentials": "^6.1.11",
     "@storybook/addon-links": "^6.1.11",
