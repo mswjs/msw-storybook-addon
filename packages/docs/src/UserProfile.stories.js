@@ -5,6 +5,13 @@ import { UserProfile } from '../src/UserProfile';
 const config = {
   title: 'User Profile',
   component: UserProfile,
+  parameters: {
+    previewTabs: {
+      'storybook/docs/panel': {
+        hidden: true,
+      },
+    },
+  }
 };
 
 export default config;
@@ -42,3 +49,5 @@ AnotherBehavior.story = {
     ]
   },
 };
+
+export const NoHandlerBehavior = () => <UserProfile />;

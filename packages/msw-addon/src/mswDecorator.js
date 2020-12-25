@@ -15,6 +15,7 @@ export const mswDecorator = makeDecorator({
   parameterName: 'msw',
   wrapper: (storyFn, context, { parameters = [] }) => {
     if (worker) {
+      worker.resetHandlers();
       worker.use(...parameters);
     }
     return storyFn(context);
