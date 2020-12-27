@@ -11,6 +11,12 @@ function useFetchFilms() {
     setStatus('loading');
 
     fetch('https://swapi.dev/api/films/')
+      .then((res) => {
+        if (!res.ok) {
+          throw Error(res.statusText);
+        }
+        return res;
+      })
       .then((res) => res.json())
       .then((data) => {
         setStatus('success');
@@ -19,7 +25,6 @@ function useFetchFilms() {
       .catch(() => {
         setStatus('error');
       });
-
   }, []);
 
   return {

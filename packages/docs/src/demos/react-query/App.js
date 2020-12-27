@@ -4,12 +4,20 @@ import { useQuery } from 'react-query';
 import { Columns } from '../../components/Layout';
 import { FilmCard } from '../../components/FilmCard';
 
+function fetchFilms() {
+  return fetch('https://swapi.dev/api/films/')
+    .then((res) => {
+      if (!res.ok) {
+        throw Error(res.statusText);
+      }
+      return res;
+    })
+    .then((res) => res.json())
+    .then((data) => data.results);
+}
+
 function useFetchFilms() {
-  const { status, data } = useQuery('films', () => {
-    return fetch('https://swapi.dev/api/films/')
-      .then((res) => res.json())
-      .then((data) => data.results);
-  });
+  const { status, data } = useQuery('films', fetchFilms);
 
   return {
     status,
