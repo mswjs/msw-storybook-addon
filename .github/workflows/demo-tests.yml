@@ -1,0 +1,11 @@
+name: 'Tests for Demos'
+on: push
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        uses: bahmutov/npm-install@v1
+      - name: Test Demos
+        run: yarn workspace msw-storybook-docs test --colors
