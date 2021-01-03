@@ -1,15 +1,10 @@
 import { addDecorator } from '@storybook/react';
-import { setup } from 'twind';
 import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
 
 import '../src/styles.css';
 
 initializeWorker();
 addDecorator(mswDecorator);
-
-setup({
-  preflight: false,
-});
 
 export const parameters = {
   options: {

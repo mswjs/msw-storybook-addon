@@ -18,7 +18,7 @@ export default function Characters(props) {
         const personUrlParts = person.url.split('/').filter(Boolean);
         const personId = personUrlParts[personUrlParts.length - 1];
         return (
-          <article key={personId} style={{ margin: '16px 0 0' }}>
+          <article key={personId}>
             <Link to={`/characters/${personId}`}>
               <h4>{person.name}</h4>
             </Link>

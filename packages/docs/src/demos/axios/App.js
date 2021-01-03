@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-import { Columns } from '../../components/Layout';
 import { FilmCard } from '../../components/FilmCard';
 
 function useFetchFilms() {
@@ -40,10 +39,10 @@ export function App() {
   }
 
   return (
-    <Columns>
+    <div className="films-grid">
       {films.map((film) => (
         <FilmCard key={film.episode_id} film={film} />
       ))}
-    </Columns>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Switch, Route, Link } from 'react-router-dom';
+import { Switch, Route, NavLink } from 'react-router-dom';
 
 import Films from './pages/films/Films';
 import Film from './pages/film/Film';
@@ -9,11 +9,11 @@ import Home from './pages/Home';
 
 export function App() {
   return (
-    <div className="App">
-      <nav className="navbar" style={{ display: 'flex', gap: '20px' }}>
-        <Link to="/">Home</Link>
-        <Link to="/films">Films</Link>
-        <Link to="/characters">Characters</Link>
+    <div className="rr-rq-app">
+      <nav className="rr-rq-navbar">
+        <NavLink activeClassName="active" exact to="/">Home</NavLink>
+        <NavLink activeClassName="active" exact to="/films">Films</NavLink>
+        <NavLink activeClassName="active" exact to="/characters">Characters</NavLink>
       </nav>
       <main>
         <Switch>
