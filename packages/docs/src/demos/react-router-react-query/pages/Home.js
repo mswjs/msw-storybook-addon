@@ -14,7 +14,7 @@ export default function Home() {
         <p>
           By mocking the API calls with my addon you can bring more parts of your app into Storybook than just reusable leaf components.
         </p>
-        <ol>
+        <ol className="rr-rq-purpose-list">
           <li>
             Whole App but it will need lot of mocks (Not Recommended)
           </li>

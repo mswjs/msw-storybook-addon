@@ -22,44 +22,42 @@ function Character(props) {
   return (
     <div>
       <h2>{data.name}</h2>
-      <div style={{ maxWidth: '400px', textAlign: 'center' }}>
-        <table size="small" aria-label="simple table">
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Born</td>
-              <td>{data.birth_year}</td>
-            </tr>
-            <tr>
-              <td>Eyes</td>
-              <td>{data.eye_color}</td>
-            </tr>
-            <tr>
-              <td>Hair</td>
-              <td>{data.hair_color}</td>
-            </tr>
-            <tr>
-              <td>Height</td>
-              <td>{data.height}</td>
-            </tr>
-            <tr>
-              <td>Mass</td>
-              <td>{data.mass}</td>
-            </tr>
-            <tr>
-              <td>Homeworld</td>
-              <td>
-                <Homeworld id={homeworldId} />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <table className="rr-rq-table" aria-label="simple table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Born</td>
+            <td>{data.birth_year}</td>
+          </tr>
+          <tr>
+            <td>Eyes</td>
+            <td>{data.eye_color}</td>
+          </tr>
+          <tr>
+            <td>Hair</td>
+            <td>{data.hair_color}</td>
+          </tr>
+          <tr>
+            <td>Height</td>
+            <td>{data.height}</td>
+          </tr>
+          <tr>
+            <td>Mass</td>
+            <td>{data.mass}</td>
+          </tr>
+          <tr>
+            <td>Homeworld</td>
+            <td>
+              <Homeworld id={homeworldId} />
+            </td>
+          </tr>
+        </tbody>
+      </table>
       <br />
       <h3>Films</h3>
       {data.films.map((film) => {

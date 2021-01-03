@@ -1,7 +1,6 @@
 import React from 'react';
 import { useQuery } from 'react-query';
 
-import { Columns } from '../../components/Layout';
 import { FilmCard } from '../../components/FilmCard';
 
 function fetchFilms() {
@@ -37,10 +36,10 @@ export function App() {
   }
 
   return (
-    <Columns>
+    <div className="films-grid">
       {films.map((film) => (
         <FilmCard key={film.episode_id} film={film} />
       ))}
-    </Columns>
+    </div>
   );
 }
