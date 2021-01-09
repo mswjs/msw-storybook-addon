@@ -1,9 +1,9 @@
 import React from 'react';
-import { useQuery } from 'urql';
+import { useQuery, gql } from '@apollo/client';
 
 import { FilmCard } from '../../components/FilmCard';
 
-const AllFilmsQuery = `
+const AllFilmsQuery = gql`
   query AllFilmsQuery {
     allFilms {
       films {
@@ -16,11 +16,8 @@ const AllFilmsQuery = `
 `;
 
 function useFetchFilms() {
-  const [{ fetching, error, data }] = useQuery({
-    query: AllFilmsQuery,
-  });
+  const { loading, error, data } = useQuery(AllFilmsQuery);
 
-  const loading = fetching;
   const films = data ? data.allFilms.films : [];
 
   return { loading, error, films };
