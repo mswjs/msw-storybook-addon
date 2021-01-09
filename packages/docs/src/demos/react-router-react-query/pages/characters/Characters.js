@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
-export default function Characters(props) {
+export default function Characters() {
   const { status, data } = useQuery('characters', () =>
     fetch(`https://swapi.dev/api/people/`),
   );

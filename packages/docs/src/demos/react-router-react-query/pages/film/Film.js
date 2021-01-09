@@ -1,11 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { withRouter } from 'react-router';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
-function Film(props) {
-  const filmId = props.match.params.filmId;
+export default function Film() {
+  const { filmId } = useParams();
   const { data, status } = useQuery(`film-${filmId}`, () =>
     fetch(`https://swapi.dev/api/films/${filmId}/`),
   );
@@ -50,5 +49,3 @@ function Character(props) {
     </article>
   );
 }
-
-export default withRouter(Film);
