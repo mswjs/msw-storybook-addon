@@ -1,11 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { withRouter } from 'react-router';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
-function Character(props) {
-  const characterId = props.match.params.characterId;
+export default function Character() {
+  const { characterId } = useParams();
   const { status, data } = useQuery(`character-${characterId}`, () =>
     fetch(`https://swapi.dev/api/people/${characterId}/`),
   );
@@ -101,5 +100,3 @@ function Homeworld(props) {
 
   return data.name;
 }
-
-export default withRouter(Character);

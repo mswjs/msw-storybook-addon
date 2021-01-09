@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
-export default function Films(props) {
+export default function Films() {
   const { data, status } = useQuery('films', () => fetch('https://swapi.dev/api/films/'));
 
   if (status === 'loading') {
