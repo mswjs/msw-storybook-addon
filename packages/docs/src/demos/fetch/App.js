@@ -12,7 +12,7 @@ function useFetchFilms() {
     fetch('https://swapi.dev/api/films/')
       .then((res) => {
         if (!res.ok) {
-          throw Error(res.statusText);
+          throw new Error(res.statusText);
         }
         return res;
       })

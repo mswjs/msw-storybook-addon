@@ -10,12 +10,9 @@ export default function Film() {
   );
 
   if (status === 'loading') return <p>Loading...</p>;
-  // this will not be necessary when v1 is released.
-  if (data == null) {
-    console.info("this shouldn't happen but it does 2");
-    return <p>Loading...</p>;
-  }
+
   if (status === 'error') return <p>Error :(</p>;
+
   return (
     <div>
       <h2>{data.title}</h2>
