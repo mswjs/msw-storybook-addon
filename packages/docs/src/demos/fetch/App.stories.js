@@ -11,7 +11,7 @@ export default config;
 
 export const DefaultBehavior = () => <App />;
 
-const MockTemplate = () => <App />;
+const MockTemplate = (args) => <App {...args} />;
 
 const films = [
   {
@@ -32,17 +32,34 @@ const films = [
 ];
 
 export const MockedSuccess = MockTemplate.bind({});
+MockedSuccess.args = {
+  filmTitle: 'My Movie',
+  triggerRefetch: 1,
+};
 MockedSuccess.story = {
   parameters: {
-    msw: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            results: films,
-          }),
-        );
-      }),
-    ],
+    msw(args) {
+      const { filmTitle } = args;
+
+      const [firstFilm, ...otherFilms] = films;
+
+      const newFirstFilm = {
+        ...firstFilm,
+        title: filmTitle,
+      };
+
+      const allFilms = [newFirstFilm, ...otherFilms];
+
+      return [
+        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+          return res(
+            ctx.json({
+              results: allFilms,
+            }),
+          );
+        }),
+      ];
+    },
   },
 };
 

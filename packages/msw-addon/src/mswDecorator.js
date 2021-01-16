@@ -13,10 +13,19 @@ export function initializeWorker() {
 export const mswDecorator = makeDecorator({
   name: 'withMsw',
   parameterName: 'msw',
-  wrapper: (storyFn, context, { parameters = [] }) => {
+  wrapper: (storyFn, context, { parameters }) => {
+    let handlers = parameters;
+
+    const isFunc = typeof parameters === 'function';
+    if (isFunc) {
+      handlers = parameters(context.args);
+    }
+
+    handlers = handlers || [];
+
     if (worker) {
       worker.resetHandlers();
-      worker.use(...parameters);
+      worker.use(...handlers);
     }
     return storyFn(context);
   },
