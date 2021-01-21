@@ -13,15 +13,36 @@ export default config;
 
 const defaultQueryClient = new QueryClient();
 
-export const DefaultBehavior = () => (
+export const DefaultBehavior = (args) => (
   <QueryClientProvider client={defaultQueryClient}>
     <Router initialEntries={['/films']}>
       <Route exact path="/films">
-        <Films />
+        <Films {...args} />
       </Route>
     </Router>
   </QueryClientProvider>
 );
+
+const apiSuccessHandler = rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+  return res(
+    ctx.json({
+      results: [
+        {
+          title: '(Mocked) A New Hope',
+          episode_id: 4,
+          release_date: '1977-05-25',
+          url: 'http://swapi.dev/api/films/1/',
+        },
+        {
+          title: '(Mocked) Empire Strikes Back',
+          episode_id: 5,
+          release_date: '1980-05-17',
+          url: 'http://swapi.dev/api/films/2/',
+        },
+      ],
+    }),
+  );
+});
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -31,11 +52,11 @@ const mockedQueryClient = new QueryClient({
   },
 });
 
-const MockTemplate = () => (
+const MockTemplate = (args) => (
   <QueryClientProvider client={mockedQueryClient}>
     <Router initialEntries={['/films']}>
       <Route exact path="/films">
-        <Films />
+        <Films {...args} />
       </Route>
     </Router>
   </QueryClientProvider>
@@ -44,29 +65,18 @@ const MockTemplate = () => (
 export const MockedSuccess = MockTemplate.bind({});
 MockedSuccess.story = {
   parameters: {
-    msw: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            results: [
-              {
-                title: '(Mocked) A New Hope',
-                episode_id: 4,
-                release_date: '1977-05-25',
-                url: 'http://swapi.dev/api/films/1/',
-              },
-              {
-                title: '(Mocked) Empire Strikes Back',
-                episode_id: 5,
-                release_date: '1980-05-17',
-                url: 'http://swapi.dev/api/films/2/',
-              },
-            ],
-          }),
-        );
-      }),
-    ],
+    msw: [apiSuccessHandler],
   },
+};
+
+export const FilmsWithDivider = MockTemplate.bind({});
+FilmsWithDivider.story = {
+  parameters: {
+    msw: [apiSuccessHandler],
+  },
+};
+FilmsWithDivider.args = {
+  isDividerShown: true,
 };
 
 export const MockedError = MockTemplate.bind({});

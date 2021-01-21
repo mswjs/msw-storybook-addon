@@ -1,0 +1,25 @@
+import { Meta, Story, ArgsTable } from '@storybook/addon-docs/blocks';
+
+import Films from './Films';
+
+
+<Meta title="Demos/React Router + RQ/Page Stories/Films/Documentation" />
+
+# Films
+
+Renders a list of films
+
+<ArgsTable of={Films} />
+
+## How it works?
+
+1. On mount, components makes an API request to `https://swapi.dev/api/films/` & caches it.
+1. On further re-renders, it uses the cached data.
+
+```js
+function Example() {
+  return (
+    <Films isDividerShown={true} />
+  );
+}
+```

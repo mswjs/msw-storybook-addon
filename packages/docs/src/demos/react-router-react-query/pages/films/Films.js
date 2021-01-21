@@ -1,9 +1,18 @@
+// @ts-check
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
-export default function Films() {
+export type Props = {
+  /**
+   * Show divider?
+   */
+  isDividerShown: boolean,
+};
+
+export default function Films(props: Props) {
+  const { isDividerShown } = props;
   const { data, status } = useQuery('films', () => fetch('https://swapi.dev/api/films/'));
 
   if (status === 'loading') {
@@ -16,6 +25,11 @@ export default function Films() {
   return (
     <div>
       <h2>Films</h2>
+      {
+        isDividerShown && (
+          <hr />
+        )
+      }
       {data.results.map((film) => {
         const filmUrlParts = film.url.split('/').filter(Boolean);
         const filmId = filmUrlParts[filmUrlParts.length - 1];
@@ -33,3 +47,7 @@ export default function Films() {
     </div>
   );
 }
+
+Films.defaultProps = {
+  isDividerShown: false,
+};

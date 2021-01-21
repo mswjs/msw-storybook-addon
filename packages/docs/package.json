@@ -46,14 +46,14 @@
     ]
   },
   "devDependencies": {
-    "@storybook/addon-a11y": "^6.1.11",
-    "@storybook/addon-actions": "^6.1.11",
-    "@storybook/addon-essentials": "^6.1.11",
-    "@storybook/addon-links": "^6.1.11",
-    "@storybook/addon-storysource": "^6.1.11",
-    "@storybook/node-logger": "^6.1.11",
+    "@storybook/addon-a11y": "^6.1.14",
+    "@storybook/addon-actions": "^6.1.14",
+    "@storybook/addon-essentials": "^6.1.14",
+    "@storybook/addon-links": "^6.1.14",
+    "@storybook/addon-storysource": "^6.1.14",
+    "@storybook/node-logger": "^6.1.14",
     "@storybook/preset-create-react-app": "^3.1.5",
-    "@storybook/react": "^6.1.11",
+    "@storybook/react": "^6.1.14",
     "chromatic": "^5.5.0",
     "msw": "^0.24.2",
     "msw-storybook-addon": "^1.0.5"
