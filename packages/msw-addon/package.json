@@ -1,6 +1,7 @@
 {
   "name": "msw-storybook-addon",
-  "version": "1.0.5",
+  "description": "Mock API requests in Storybook with MSW",
+  "version": "1.1.0",
   "main": "dist/index.js",
   "files": [
     "dist/"
@@ -10,7 +11,13 @@
     "url": "git+https://github.com/itaditya/msw-storybook-addon.git",
     "directory": "packages/msw-addon"
   },
-  "keywords": ["msw", "storybook", "mocking", "api", "graphql"],
+  "keywords": [
+    "msw",
+    "storybook",
+    "mocking",
+    "api",
+    "graphql"
+  ],
   "author": "Aditya Agarwal (@dev__adi)",
   "bugs": {
     "url": "https://github.com/itaditya/msw-storybook-addon/issues"
@@ -21,12 +28,21 @@
     "build": "babel ./src --out-dir ./dist",
     "prepublishOnly": "npm run build"
   },
+  "dependencies": {
+    "@storybook/addons": "^6.0.0"
+  },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0"
   },
   "peerDependencies": {
-    "msw": "*",
-    "@storybook/addons": "*"
+    "msw": "*"
+  },
+  "storybook": {
+    "displayName": "Mock Service Worker",
+    "unsupportedFrameworks": [
+      "react-native"
+    ],
+    "icon": "https://msw-sb.netlify.app/logo.png"
   }
 }
