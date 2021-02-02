@@ -56,6 +56,6 @@
     "@storybook/react": "^6.1.11",
     "chromatic": "^5.5.0",
     "msw": "^0.24.2",
-    "msw-storybook-addon": "^1.0.5"
+    "msw-storybook-addon": "^1.1.0"
   }
 }
