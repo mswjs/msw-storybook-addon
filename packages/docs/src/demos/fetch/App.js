@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { FilmCard } from '../../components/FilmCard';
 
-function useFetchFilms() {
+function useFetchFilms(triggerRefetch) {
   const [status, setStatus] = useState('idle');
   const [data, setData] = useState([]);
 
@@ -24,7 +24,7 @@ function useFetchFilms() {
       .catch(() => {
         setStatus('error');
       });
-  }, []);
+  }, [triggerRefetch]);
 
   return {
     status,
@@ -32,8 +32,9 @@ function useFetchFilms() {
   };
 }
 
-export function App() {
-  const { status, data: films } = useFetchFilms();
+export function App(props) {
+  const { triggerRefetch } = props;
+  const { status, data: films } = useFetchFilms(triggerRefetch);
 
   if (status === 'loading') {
     return <p>Fetching Star Wars data...</p>;
