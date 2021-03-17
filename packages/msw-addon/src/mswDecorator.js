@@ -7,6 +7,7 @@ export function initializeWorker(options) {
   if (typeof global.process === 'undefined') {
     worker = setupWorker();
     worker.start(options);
+    return worker
   }
 }
 
