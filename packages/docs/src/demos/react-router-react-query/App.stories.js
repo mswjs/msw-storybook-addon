@@ -1,17 +1,17 @@
-import React from 'react';
-import { MemoryRouter as Router } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { rest } from 'msw';
-import { App } from './App';
+import React from 'react'
+import { MemoryRouter as Router } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from 'react-query'
+import { rest } from 'msw'
+import { App } from './App'
 
 const config = {
   title: 'Demos/React Router + RQ',
   component: App,
-};
+}
 
-export default config;
+export default config
 
-const defaultQueryClient = new QueryClient();
+const defaultQueryClient = new QueryClient()
 
 export const DefaultApp = () => (
   <QueryClientProvider client={defaultQueryClient}>
@@ -19,7 +19,7 @@ export const DefaultApp = () => (
       <App />
     </Router>
   </QueryClientProvider>
-);
+)
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +27,7 @@ const mockedQueryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})
 
 export const MockedApp = () => (
   <QueryClientProvider client={mockedQueryClient}>
@@ -35,10 +35,10 @@ export const MockedApp = () => (
       <App />
     </Router>
   </QueryClientProvider>
-);
+)
 MockedApp.story = {
   parameters: {
-    msw: [
+    api: [
       rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
         return res(
           ctx.json({
@@ -57,7 +57,7 @@ MockedApp.story = {
               },
             ],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
         return res(
@@ -65,9 +65,12 @@ MockedApp.story = {
             title: '(Mocked) A New Hope',
             episode_id: 4,
             opening_crawl: `Rebel spaceships have won their first victory against the evil Galactic Empire.`,
-            characters: ['http://swapi.dev/api/people/1/', 'http://swapi.dev/api/people/2/'],
+            characters: [
+              'http://swapi.dev/api/people/1/',
+              'http://swapi.dev/api/people/2/',
+            ],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/films/2', (req, res, ctx) => {
         return res(
@@ -77,7 +80,7 @@ MockedApp.story = {
             opening_crawl: `Imperial troops are pursuing the Rebel forces across the galaxy.`,
             characters: ['http://swapi.dev/api/people/1/'],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
         return res(
@@ -93,7 +96,7 @@ MockedApp.story = {
               },
             ],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
         return res(
@@ -105,9 +108,12 @@ MockedApp.story = {
             height: '172',
             mass: '77',
             homeworld: 'http://swapi.dev/api/planets/1/',
-            films: ['http://swapi.dev/api/films/1/', 'http://swapi.dev/api/films/2/'],
+            films: [
+              'http://swapi.dev/api/films/1/',
+              'http://swapi.dev/api/films/2/',
+            ],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
         return res(
@@ -121,18 +127,18 @@ MockedApp.story = {
             homeworld: 'http://swapi.dev/api/planets/1/',
             films: ['http://swapi.dev/api/films/1/'],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
         return res(
           ctx.json({
             name: '(Mocked) Tatooine',
           }),
-        );
+        )
       }),
     ],
   },
-};
+}
 
 export const MockedFilmSubsection = () => (
   <QueryClientProvider client={mockedQueryClient}>
@@ -140,19 +146,22 @@ export const MockedFilmSubsection = () => (
       <App />
     </Router>
   </QueryClientProvider>
-);
+)
 MockedFilmSubsection.story = {
   parameters: {
-    msw: [
+    api: [
       rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
         return res(
           ctx.json({
             title: '(Mocked) A New Hope',
             episode_id: 4,
             opening_crawl: `Rebel spaceships have won their first victory against the evil Galactic Empire.`,
-            characters: ['http://swapi.dev/api/people/1/', 'http://swapi.dev/api/people/2/'],
+            characters: [
+              'http://swapi.dev/api/people/1/',
+              'http://swapi.dev/api/people/2/',
+            ],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
         return res(
@@ -164,9 +173,12 @@ MockedFilmSubsection.story = {
             height: '172',
             mass: '77',
             homeworld: 'http://swapi.dev/api/planets/1/',
-            films: ['http://swapi.dev/api/films/1/', 'http://swapi.dev/api/films/2/'],
+            films: [
+              'http://swapi.dev/api/films/1/',
+              'http://swapi.dev/api/films/2/',
+            ],
           }),
-        );
+        )
       }),
       rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
         return res(
@@ -180,7 +192,7 @@ MockedFilmSubsection.story = {
             homeworld: 'http://swapi.dev/api/planets/1/',
             films: ['http://swapi.dev/api/films/1/'],
           }),
-        );
+        )
       }),
     ],
   },

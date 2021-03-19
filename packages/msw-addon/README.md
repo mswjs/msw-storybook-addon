@@ -5,31 +5,30 @@
 
 ## Features
 
-* Mock Rest and GraphQL requests right inside your story.
-* Document how a component behaves in various scenarios.
-* Get a11y, snapshot and visual tests using other addons for free.
+- Mock REST and GraphQL requests right inside your story.
+- Document how a component behaves in various scenarios.
+- Get a11y, snapshot and visual tests using other addons for free.
 
 [Full Documentation](https://msw-sb.netlify.app/)
 
 ## Quick Start
 
-#### Install msw & storybook addon.
+#### Install msw & storybook addon
 
 ```sh
-npm i -D msw msw-storybook-addon
+npm i msw msw-storybook-addon -D
 ```
 
 #### Enable msw on storybook by adding these lines in `./storybook/preview.js`
 
 ```js
-import { addDecorator } from '@storybook/react';
-import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
+import { addDecorator } from '@storybook/react'
+import { mswDecorator } from 'msw-storybook-addon'
 
-initializeWorker();
-addDecorator(mswDecorator);
+addDecorator(mswDecorator())
 ```
 
-#### Generate service worker for msw in your public folder.
+#### Generate service worker for msw in your public folder
 
 ```sh
 npx msw init public/
@@ -37,33 +36,33 @@ npx msw init public/
 
 Refer [MSW official guide](https://mswjs.io/docs/getting-started/integrate/browser) for framework specific paths.
 
-#### Start storybook with that public folder.
+#### Start storybook with that public folder
 
 ```sh
 npx start-storybook -s public -p 6006
 ```
 
-#### Mock API calls in a story.
+#### Mock API calls in a story
 
 ```js
-import { rest } from 'msw';
+import { rest } from 'msw'
 
-export const SuccessBehavior = () => <UserProfile />;
+export const SuccessBehavior = () => <UserProfile />
 
 SuccessBehavior.story = {
   parameters: {
-    msw: [
+    api: [
       rest.get('/user', (req, res, ctx) => {
         return res(
           ctx.json({
             firstName: 'Neil',
             lastName: 'Maverick',
           }),
-        );
+        )
       }),
-    ]
+    ],
   },
-};
+}
 ```
 
-The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
+The `api` parameter takes an array of request handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).

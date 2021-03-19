@@ -1,22 +1,22 @@
-import React from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { rest } from 'msw';
-import { App } from './App';
+import React from 'react'
+import { QueryClient, QueryClientProvider } from 'react-query'
+import { rest } from 'msw'
+import { App } from './App'
 
 const config = {
   title: 'Demos/React Query',
   component: App,
-};
+}
 
-export default config;
+export default config
 
-const defaultQueryClient = new QueryClient();
+const defaultQueryClient = new QueryClient()
 
 export const DefaultBehavior = () => (
   <QueryClientProvider client={defaultQueryClient}>
     <App />
   </QueryClientProvider>
-);
+)
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -24,13 +24,13 @@ const mockedQueryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})
 
 const MockTemplate = () => (
   <QueryClientProvider client={mockedQueryClient}>
     <App />
   </QueryClientProvider>
-);
+)
 
 const films = [
   {
@@ -48,33 +48,30 @@ const films = [
     episode_id: 6,
     opening_crawl: `(Mocked) Luke Skywalker has returned to his home planet of Tatooine to rescue Han Solo.`,
   },
-];
+]
 
-export const MockedSuccess = MockTemplate.bind({});
+export const MockedSuccess = MockTemplate.bind({})
 MockedSuccess.story = {
   parameters: {
-    msw: [
+    api: [
       rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
         return res(
           ctx.json({
             results: films,
           }),
-        );
+        )
       }),
     ],
   },
-};
+}
 
-export const MockedError = MockTemplate.bind({});
+export const MockedError = MockTemplate.bind({})
 MockedError.story = {
   parameters: {
-    msw: [
+    api: [
       rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.status(403),
-        );
+        return res(ctx.delay(800), ctx.status(403))
       }),
     ],
   },
-};
+}
