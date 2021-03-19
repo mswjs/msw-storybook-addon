@@ -1,5 +1,5 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-import LinkTo from '@storybook/addon-links/react';
+import { Meta } from '@storybook/addon-docs/blocks'
+import LinkTo from '@storybook/addon-links/react'
 
 <Meta title="Guides/Introduction" />
 
@@ -13,45 +13,47 @@ With storybook we can test our app components in isolation and later integrate w
 With `msw-storybook-addon` you can easily mock the APIs inside stories like this.
 
 ```js
-import { rest } from 'msw';
+import { rest } from 'msw'
 
-export const SuccessBehavior = () => <UserProfile />;
+export const SuccessBehavior = () => <UserProfile />
 
 SuccessBehavior.story = {
   parameters: {
-    msw: [
+    api: [
       rest.get('/user', (req, res, ctx) => {
         return res(
           ctx.json({
             firstName: 'Neil',
             lastName: 'Maverick',
           }),
-        );
+        )
       }),
-    ]
+    ],
   },
-};
+}
 ```
 
-The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
+The `api` parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
 
 ## Features
 
-* Mock Rest and GraphQL requests right inside your story.
-* Document how a component behaves in various scenarios.
-* Get a11y, snapshot and visual tests using other addons for free.
+- Mock Rest and GraphQL requests right inside your story.
+- Document how a component behaves in various scenarios.
+- Get a11y, snapshot and visual tests using other addons for free.
 
 ## Demos
+
 It integrates well with browser fetch & libraries like React Query, Urql. Find the demos in the sidebar.
 The code for each is available on [GitHub](https://github.com/itaditya/msw-storybook-addon).
 
-* API call with Fetch: <LinkTo className="introduction-demo-link" kind="Demos/Fetch" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/fetch/App.stories.js)
-* API call with React Query: <LinkTo className="introduction-demo-link" kind="Demos/React Query" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-query/App.stories.js)
-* API call with Urql: <LinkTo className="introduction-demo-link" kind="Demos/Urql" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/urql/App.stories.js)
+- API call with Fetch: <LinkTo className="introduction-demo-link" kind="Demos/Fetch" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/fetch/App.stories.js)
+- API call with React Query: <LinkTo className="introduction-demo-link" kind="Demos/React Query" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-query/App.stories.js)
+- API call with Urql: <LinkTo className="introduction-demo-link" kind="Demos/Urql" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/urql/App.stories.js)
 
 ### Render pages in Storybook
+
 The following demo uses React Router for rendering various page components & React Query for fetching data in these components. It's upto you to decide how much of the app you want in Storybook.
 
-* Whole App (only feasible for small apps) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-app">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
-* Subsection of App (like /films/1 route) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-film-subsection">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
-* Isolated Page components (like Film.js component) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ/Page Stories/Film" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/pages/film/Film.stories.js)
+- Whole App (only feasible for small apps) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-app">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
+- Subsection of App (like /films/1 route) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-film-subsection">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
+- Isolated Page components (like Film.js component) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ/Page Stories/Film" story="mocked-success">Story</LinkTo> | [Source](https://github.com/itaditya/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/pages/film/Film.stories.js)

@@ -8,7 +8,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/itaditya/msw-storybook-addon.git",
+    "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
     "directory": "packages/msw-addon"
   },
   "keywords": [
@@ -20,7 +20,7 @@
   ],
   "author": "Aditya Agarwal (@dev__adi)",
   "bugs": {
-    "url": "https://github.com/itaditya/msw-storybook-addon/issues"
+    "url": "https://github.com/mswjs/msw-storybook-addon/issues"
   },
   "homepage": "https://msw-sb.netlify.app/",
   "license": "MIT",
