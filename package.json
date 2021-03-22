@@ -1,8 +1,27 @@
 {
   "private": true,
   "name": "msw-storybook-addon",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "start": "yarn workspace docs sb:start"
+  },
+  "keywords": [
+    "storybook-addon",
+    "msw",
+    "mocking",
+    "api",
+    "graphql",
+    "network",
+    "data-state"
+  ],
+  "description": "Mock API requests in Storybook with MSW",
+  "storybook": {
+    "icon": "https://msw-sb.netlify.app/logo.png",
+    "displayName": "Mock Service Worker",
+    "unsupportedFrameworks": [
+      "react-native"
+    ]
   }
 }
