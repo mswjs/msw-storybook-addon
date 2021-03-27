@@ -6,5 +6,5 @@ const styles = css({
 });
 
 export function Columns({ children }) {
-  return <div className={tw`grid ${styles} bg-blue-100 gap-8`}>{children}</div>;
+  return <div className={tw`grid ${styles} bg-blue-100 text-lg gap-8`}>{children}</div>;
 }
