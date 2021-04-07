@@ -12,11 +12,13 @@
     "directory": "packages/msw-addon"
   },
   "keywords": [
+    "storybook-addon",
     "msw",
-    "storybook",
     "mocking",
     "api",
-    "graphql"
+    "graphql",
+    "network",
+    "data-state"
   ],
   "author": "Aditya Agarwal (@dev__adi)",
   "bugs": {
@@ -40,9 +42,6 @@
   },
   "storybook": {
     "displayName": "Mock Service Worker",
-    "unsupportedFrameworks": [
-      "react-native"
-    ],
     "icon": "https://msw-sb.netlify.app/logo.png"
   }
 }
