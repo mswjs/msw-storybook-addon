@@ -25,6 +25,7 @@
   "homepage": "https://msw-sb.netlify.app/",
   "license": "MIT",
   "scripts": {
+    "dev": "yarn build --watch",
     "build": "babel ./src --out-dir ./dist",
     "prepublishOnly": "npm run build"
   },
