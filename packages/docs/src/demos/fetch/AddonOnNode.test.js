@@ -1,23 +1,26 @@
 import React from 'react';
 import { render, waitFor, screen } from '@testing-library/react';
-import { composeStories } from '@storybook/testing-react';
-import { getWorker } from 'msw-storybook-addon';
 
-import * as globalConfig from '../../../.storybook/preview'
-import * as stories from './App.stories';
+import { initializeWorker, getWorker, mswDecorator } from 'msw-storybook-addon';
+import { MockedSuccess, MockedError } from './App.stories';
 
-// https://github.com/storybookjs/testing-react#composestories
-// By reusing the configuration from the stories, the msw decorator will be configured automatically
-const { MockedSuccess, MockedError } = composeStories(stories, globalConfig);
+// Useful in scenarios where the addon runs on node, such as with @storybook/testing-react
+describe('Running msw-addon on node', () => {
+  let server
 
-describe('Reusing stories', () => {
+  beforeAll(() => {
+    initializeWorker()
+    server = getWorker()
+  })
+
   afterAll(() => {
-    // setup and cleanup of handlers is already done in the decorator, we just need to close the server
-    getWorker().close()
-  });
+    server.close()
+  })
 
   it('renders film cards for each film', async () => {
-    render(<MockedSuccess />);
+    // Story + msw addon decorator, which resets and applies the server handlers based on story parameters
+    render(mswDecorator(MockedSuccess, { parameters: MockedSuccess.parameters }));
+
     expect(screen.getByText(/fetching star wars data/i)).toBeInTheDocument();
 
     await waitFor(() => screen.getAllByRole('article'));
@@ -32,9 +35,11 @@ describe('Reusing stories', () => {
   });
 
   it('renders error message if it cannot load the films', async () => {
-    render(<MockedError />);
+    // Story + msw addon decorator, which resets and applies the server handlers based on story parameters
+    render(mswDecorator(MockedError, { parameters: MockedError.parameters }));
 
     const errorMsgNode = await screen.findByText(/could not fetch star wars data/i);
     expect(errorMsgNode).toBeInTheDocument();
   });
-});
+
+})
