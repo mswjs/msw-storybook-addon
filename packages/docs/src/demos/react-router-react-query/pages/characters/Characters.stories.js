@@ -4,12 +4,10 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { rest } from 'msw';
 import Characters from './Characters';
 
-const config = {
+export default {
   title: 'Demos/React Router + RQ/Page Stories/Characters',
   component: Characters,
 };
-
-export default config;
 
 const defaultQueryClient = new QueryClient();
 
@@ -42,39 +40,35 @@ const MockTemplate = () => (
 );
 
 export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.story = {
-  parameters: {
-    msw: [
-      rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            results: [
-              {
-                name: '(Mocked) Luke Skywalker',
-                url: 'http://swapi.dev/api/people/1/',
-              },
-              {
-                name: '(Mocked) C-3PO',
-                url: 'http://swapi.dev/api/people/2/',
-              },
-            ],
-          }),
-        );
-      }),
-    ],
-  },
+MockedSuccess.parameters = {
+  msw: [
+    rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
+      return res(
+        ctx.json({
+          results: [
+            {
+              name: '(Mocked) Luke Skywalker',
+              url: 'http://swapi.dev/api/people/1/',
+            },
+            {
+              name: '(Mocked) C-3PO',
+              url: 'http://swapi.dev/api/people/2/',
+            },
+          ],
+        }),
+      );
+    }),
+  ],
 };
 
 export const MockedError = MockTemplate.bind({});
-MockedError.story = {
-  parameters: {
-    msw: [
-      rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.status(403),
-        );
-      }),
-    ],
-  },
+MockedError.parameters = {
+  msw: [
+    rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
+      return res(
+        ctx.delay(800),
+        ctx.status(403),
+      );
+    }),
+  ],
 };
