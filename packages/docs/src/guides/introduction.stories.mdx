@@ -17,19 +17,17 @@ import { rest } from 'msw';
 
 export const SuccessBehavior = () => <UserProfile />;
 
-SuccessBehavior.story = {
-  parameters: {
-    msw: [
-      rest.get('/user', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            firstName: 'Neil',
-            lastName: 'Maverick',
-          }),
-        );
-      }),
-    ]
-  },
+SuccessBehavior.parameters = {
+  msw: [
+    rest.get('/user', (req, res, ctx) => {
+      return res(
+        ctx.json({
+          firstName: 'Neil',
+          lastName: 'Maverick',
+        }),
+      );
+    }),
+  ]
 };
 ```
 
