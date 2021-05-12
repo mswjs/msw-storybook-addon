@@ -3,12 +3,10 @@ import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
 import { graphql } from 'msw';
 import { App } from './App';
 
-const config = {
+export default {
   title: 'Demos/Apollo',
   component: App,
 };
-
-export default config;
 
 const defaultClient = new ApolloClient({
   uri: 'https://swapi-graphql.netlify.app/.netlify/functions/index',
@@ -61,36 +59,32 @@ const films = [
 ];
 
 export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.story = {
-  parameters: {
-    msw: [
-      graphql.query('AllFilmsQuery', (req, res, ctx) => {
-        return res(
-          ctx.data({
-            allFilms: {
-              films,
-            },
-          }),
-        );
-      }),
-    ],
-  },
+MockedSuccess.parameters = {
+  msw: [
+    graphql.query('AllFilmsQuery', (req, res, ctx) => {
+      return res(
+        ctx.data({
+          allFilms: {
+            films,
+          },
+        }),
+      );
+    }),
+  ],
 };
 
 export const MockedError = MockTemplate.bind({});
-MockedError.story = {
-  parameters: {
-    msw: [
-      graphql.query('AllFilmsQuery', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.errors([
-            {
-              message: 'Access denied',
-            },
-          ]),
-        );
-      }),
-    ],
-  },
+MockedError.parameters = {
+  msw: [
+    graphql.query('AllFilmsQuery', (req, res, ctx) => {
+      return res(
+        ctx.delay(800),
+        ctx.errors([
+          {
+            message: 'Access denied',
+          },
+        ]),
+      );
+    }),
+  ],
 };

@@ -4,12 +4,10 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { rest } from 'msw';
 import Character from './Character';
 
-const config = {
+export default {
   title: 'Demos/React Router + RQ/Page Stories/Character',
   component: Character,
 };
-
-export default config;
 
 const defaultQueryClient = new QueryClient();
 
@@ -75,29 +73,25 @@ const MockTemplate = () => (
 );
 
 export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.story = {
-  parameters: {
-    msw: [
-      ...commonMockHandlers,
-      rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            name: '(Mocked) Tatooine',
-          }),
-        );
-      }),
-    ],
-  },
+MockedSuccess.parameters = {
+  msw: [
+    ...commonMockHandlers,
+    rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
+      return res(
+        ctx.json({
+          name: '(Mocked) Tatooine',
+        }),
+      );
+    }),
+  ],
 };
 
 export const MockedPlanetsApiError = MockTemplate.bind({});
-MockedPlanetsApiError.story = {
-  parameters: {
-    msw: [
-      ...commonMockHandlers,
-      rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-        return res(ctx.delay(800), ctx.status(403));
-      }),
-    ],
-  },
+MockedPlanetsApiError.parameters = {
+  msw: [
+    ...commonMockHandlers,
+    rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
+      return res(ctx.delay(800), ctx.status(403));
+    }),
+  ],
 };
