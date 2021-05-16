@@ -1,18 +1,12 @@
-import { setupWorker } from 'msw';
-import { setupServer } from 'msw/node';
+import { initializeWorkerInstance } from './initializeWorker';
 
 let worker;
 
-const IS_BROWSER = typeof global.process === 'undefined'
-
 export function initializeWorker(options) {
-  if (IS_BROWSER) {
-    worker = setupWorker();
-    worker.start(options);
-  } else {
-    worker = setupServer();
-    worker.listen(options);
-  }
+  worker = initializeWorkerInstance()
+  worker.start(options)
+
+  return worker
 }
 
 export function getWorker() {
