@@ -5,7 +5,7 @@ let worker;
 
 export function initializeWorker(options, requestHandlers) {
   if (typeof global.process === 'undefined') {
-    worker = setupWorker(requestHandlers);
+    worker = setupWorker(...requestHandlers);
     worker.start(options);
   }
 }
