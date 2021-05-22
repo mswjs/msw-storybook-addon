@@ -3,7 +3,7 @@ import { setupWorker } from 'msw';
 
 let worker;
 
-export function initializeWorker(options, requestHandlers) {
+export function initializeWorker(options, requestHandlers = []) {
   if (typeof global.process === 'undefined') {
     worker = setupWorker(...requestHandlers);
     worker.start(options);
