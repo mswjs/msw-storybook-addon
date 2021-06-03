@@ -23,7 +23,7 @@ export const mswDecorator = (storyFn, { parameters: { msw = [] } }) => {
 
     if (!Array.isArray(msw)) {
       throw new Error(`[MSW] expected to receive an array of handlers but received "${typeof msw}" instead.
-        Please refer to the documentation: https://mswjs.io/docs/getting-started/mocks/rest-api`)
+        Please refer to the documentation: https://mswjs.io/docs/getting-started/mocks/`)
     }
 
     if (msw.length > 0) {
