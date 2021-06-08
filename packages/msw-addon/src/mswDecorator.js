@@ -1,25 +1,38 @@
-import { initializeWorkerInstance } from './initializeWorker';
+let api
 
-let worker;
+const IS_BROWSER = typeof global.process === 'undefined'
 
 export function initializeWorker(options) {
-  worker = initializeWorkerInstance()
-  worker.start(options)
+  console.warn(`[MSW] "initializeWorker" is now deprecated, please use "initialize" instead. This method will be removed in future releases.`)
+  return initialize(options);
+}
 
-  return worker
+export function initialize(options) {
+  if (IS_BROWSER) {
+    const { setupWorker } = require('msw')
+    const worker = setupWorker()
+    worker.start(options)
+    api = worker
+  } else {
+    const { setupServer } = require('msw/node')
+    const server = setupServer()
+    server.listen(options)
+    api = server
+  }
+  return api
 }
 
 export function getWorker() {
-  if (worker === undefined) {
-    throw new Error(`[MSW] Tried to get worker but it was not defined yet. Did you forget to initialize it?`)
+  if (api === undefined) {
+    throw new Error(`[MSW] Tried to get api but it was not defined yet. Did you forget to initialize it?`)
   }
 
-  return worker;
+  return api;
 }
 
 export const mswDecorator = (storyFn, { parameters: { msw = [] } }) => {
-  if (worker) {
-    worker.resetHandlers();
+  if (api) {
+    api.resetHandlers();
 
     if (!Array.isArray(msw)) {
       throw new Error(`[MSW] expected to receive an array of handlers but received "${typeof msw}" instead.
@@ -27,7 +40,7 @@ export const mswDecorator = (storyFn, { parameters: { msw = [] } }) => {
     }
 
     if (msw.length > 0) {
-      worker.use(...msw);
+      api.use(...msw);
     }
   }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, waitFor, screen } from '@testing-library/react';
 
-import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
+import { initialize, mswDecorator } from 'msw-storybook-addon';
 import { MockedSuccess, MockedError } from './App.stories';
 
 // Useful in scenarios where the addon runs on node, such as with @storybook/testing-react
@@ -9,11 +9,11 @@ describe('Running msw-addon on node', () => {
   let server
 
   beforeAll(() => {
-    server = initializeWorker()
+    server = initialize()
   })
 
   afterAll(() => {
-    server.stop()
+    server.close()
   })
 
   it('renders film cards for each film', async () => {
