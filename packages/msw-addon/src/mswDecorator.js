@@ -3,8 +3,10 @@ let api
 const IS_BROWSER = typeof global.process === 'undefined'
 
 export function initializeWorker(options) {
-  console.warn(`[MSW] "initializeWorker" is now deprecated, please use "initialize" instead. This method will be removed in future releases.`)
-  return initialize(options);
+  console.warn(
+    `[MSW] "initializeWorker" is now deprecated, please use "initialize" instead. This method will be removed in future releases.`
+  )
+  return initialize(options)
 }
 
 export function initialize(options) {
@@ -19,20 +21,23 @@ export function initialize(options) {
     server.listen(options)
     api = server
   }
+
   return api
 }
 
 export function getWorker() {
   if (api === undefined) {
-    throw new Error(`[MSW] Tried to get api but it was not defined yet. Did you forget to initialize it?`)
+    throw new Error(
+      `[MSW] Failed to retrieve the worker: no active worker found. Did you forget to call "initialize"?`
+    )
   }
 
-  return api;
+  return api
 }
 
 export const mswDecorator = (storyFn, { parameters: { msw = [] } }) => {
   if (api) {
-    api.resetHandlers();
+    api.resetHandlers()
 
     if (!Array.isArray(msw)) {
       throw new Error(`[MSW] expected to receive an array of handlers but received "${typeof msw}" instead.
@@ -40,9 +45,9 @@ export const mswDecorator = (storyFn, { parameters: { msw = [] } }) => {
     }
 
     if (msw.length > 0) {
-      api.use(...msw);
+      api.use(...msw)
     }
   }
 
-  return storyFn();
-};
+  return storyFn()
+}
