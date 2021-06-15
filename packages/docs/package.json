@@ -2,22 +2,6 @@
   "name": "msw-storybook-docs",
   "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "@apollo/client": "^3.3.6",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
-    "axios": "^0.21.1",
-    "graphql": "^15.4.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-query": "^3.5.5",
-    "react-router": "^5.2.0",
-    "react-router-dom": "^5.2.0",
-    "react-scripts": "4.0.1",
-    "urql": "^1.11.4",
-    "web-vitals": "^0.2.4"
-  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -55,6 +39,23 @@
       "last 1 safari version"
     ]
   },
+  "dependencies": {
+    "@apollo/client": "^3.3.6",
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10",
+    "axios": "^0.21.1",
+    "graphql": "^15.4.0",
+    "msw-storybook-addon": "link:../msw-addon",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-query": "^3.5.5",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
+    "react-scripts": "4.0.1",
+    "urql": "^1.11.4",
+    "web-vitals": "^0.2.4"
+  },
   "devDependencies": {
     "@storybook/addon-a11y": "^6.1.11",
     "@storybook/addon-actions": "^6.1.11",
@@ -65,7 +66,6 @@
     "@storybook/preset-create-react-app": "^3.1.5",
     "@storybook/react": "^6.1.11",
     "chromatic": "^5.5.0",
-    "msw": "^0.24.2",
-    "msw-storybook-addon": "^1.1.0"
+    "msw": "^0.24.2"
   }
 }
