@@ -1,8 +1,11 @@
 {
   "private": true,
   "name": "msw-storybook-addon",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "start": "yarn workspace docs sb:start"
+    "start": "yarn workspace msw-storybook-docs sb:start",
+    "build": "yarn workspace msw-storybook-addon build && yarn workspace msw-storybook-docs sb:build"
   }
 }
