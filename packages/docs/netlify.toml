@@ -1,7 +1,0 @@
-# We have moved to Vercel for deploying the docs.
-# This netlify config redirects traffic from old site to the new site.
-
-[[redirects]]
-  from = "/*"
-  to = "https://msw-sb.vercel.app"
-  force = true

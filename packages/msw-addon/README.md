@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="https://msw-sb.netlify.app/logo.png" width="200">
+  <img src="https://msw-sb.vercel.app/logo.png" width="200">
 </p>
 <h1 align="center">MSW Storybook Addon</h1>
 
 ## Features
 
-* Mock Rest and GraphQL requests right inside your story.
-* Document how a component behaves in various scenarios.
-* Get a11y, snapshot and visual tests using other addons for free.
+- Mock Rest and GraphQL requests right inside your story.
+- Document how a component behaves in various scenarios.
+- Get a11y, snapshot and visual tests using other addons for free.
 
-[Full Documentation](https://msw-sb.netlify.app/)
+[Full Documentation](https://msw-sb.vercel.app/)
 
 ## Quick Start
 
@@ -22,11 +22,11 @@ npm i -D msw msw-storybook-addon
 #### Enable msw on storybook by adding these lines in `./storybook/preview.js`
 
 ```js
-import { addDecorator } from '@storybook/react';
-import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
+import { addDecorator } from '@storybook/react'
+import { initializeWorker, mswDecorator } from 'msw-storybook-addon'
 
-initializeWorker();
-addDecorator(mswDecorator);
+initializeWorker()
+addDecorator(mswDecorator)
 ```
 
 #### Generate service worker for msw in your public folder.
@@ -46,9 +46,9 @@ npx start-storybook -s public -p 6006
 #### Mock API calls in a story.
 
 ```js
-import { rest } from 'msw';
+import { rest } from 'msw'
 
-export const SuccessBehavior = () => <UserProfile />;
+export const SuccessBehavior = () => <UserProfile />
 
 SuccessBehavior.parameters = {
   msw: [
@@ -57,11 +57,11 @@ SuccessBehavior.parameters = {
         ctx.json({
           firstName: 'Neil',
           lastName: 'Maverick',
-        }),
-      );
+        })
+      )
     }),
-  ]
-};
+  ],
+}
 ```
 
 The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
