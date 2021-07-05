@@ -9,15 +9,15 @@ export function initializeWorker(options) {
   return initialize(options)
 }
 
-export function initialize(options) {
+export function initialize(options, handlers = []) {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
-    const worker = setupWorker()
+    const worker = setupWorker(...handlers)
     worker.start(options)
     api = worker
   } else {
     const { setupServer } = require('msw/node')
-    const server = setupServer()
+    const server = setupServer(...handlers)
     server.listen(options)
     api = server
   }
