@@ -9,8 +9,10 @@
     "prepublishOnly": "npm run build"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "index.d.ts"
   ],
+  "types": "index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
