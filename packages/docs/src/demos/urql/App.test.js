@@ -7,7 +7,7 @@ import { MockedSuccess, MockedError } from './App.stories';
 const server = getServer();
 
 it('renders film cards for each film', async () => {
-  server.use(...MockedSuccess.story.parameters.msw);
+  server.use(...MockedSuccess.parameters.msw);
   render(<MockedSuccess />);
 
   expect(screen.getByText(/fetching star wars data/i)).toBeInTheDocument();
@@ -24,7 +24,7 @@ it('renders film cards for each film', async () => {
 });
 
 it('renders error message if it cannot load the films', async () => {
-  server.use(...MockedError.story.parameters.msw);
+  server.use(...MockedError.parameters.msw);
   render(<MockedError />);
 
   const errorMsgNode = await screen.findByText(/could not fetch star wars data/i);

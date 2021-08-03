@@ -3,12 +3,10 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { rest } from 'msw';
 import { App } from './App';
 
-const config = {
+export default {
   title: 'Demos/React Query',
   component: App,
 };
-
-export default config;
 
 const defaultQueryClient = new QueryClient();
 
@@ -51,30 +49,26 @@ const films = [
 ];
 
 export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.story = {
-  parameters: {
-    msw: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            results: films,
-          }),
-        );
-      }),
-    ],
-  },
+MockedSuccess.parameters = {
+  msw: [
+    rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+      return res(
+        ctx.json({
+          results: films,
+        }),
+      );
+    }),
+  ],
 };
 
 export const MockedError = MockTemplate.bind({});
-MockedError.story = {
-  parameters: {
-    msw: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.status(403),
-        );
-      }),
-    ],
-  },
+MockedError.parameters = {
+  msw: [
+    rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+      return res(
+        ctx.delay(800),
+        ctx.status(403),
+      );
+    }),
+  ],
 };

@@ -1,14 +1,19 @@
 {
   "name": "msw-storybook-addon",
-  "description": "Mock API requests in Storybook with MSW",
-  "version": "1.1.0",
+  "description": "Mock API requests in Storybook with Mock Service Worker.",
+  "version": "1.2.0",
   "main": "dist/index.js",
+  "scripts": {
+    "dev": "yarn build --watch",
+    "build": "babel ./src --out-dir ./dist",
+    "prepublishOnly": "npm run build"
+  },
   "files": [
     "dist/"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/itaditya/msw-storybook-addon.git",
+    "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
     "directory": "packages/msw-addon"
   },
   "keywords": [
@@ -22,14 +27,10 @@
   ],
   "author": "Aditya Agarwal (@dev__adi)",
   "bugs": {
-    "url": "https://github.com/itaditya/msw-storybook-addon/issues"
+    "url": "https://github.com/mswjs/msw-storybook-addon/issues"
   },
-  "homepage": "https://msw-sb.netlify.app/",
+  "homepage": "https://msw-sb.vercel.app/",
   "license": "MIT",
-  "scripts": {
-    "build": "babel ./src --out-dir ./dist",
-    "prepublishOnly": "npm run build"
-  },
   "dependencies": {
     "@storybook/addons": "^6.0.0"
   },
@@ -42,6 +43,6 @@
   },
   "storybook": {
     "displayName": "Mock Service Worker",
-    "icon": "https://msw-sb.netlify.app/logo.png"
+    "icon": "https://msw-sb.vercel.app/logo.png"
   }
 }

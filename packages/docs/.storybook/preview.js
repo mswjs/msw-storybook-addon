@@ -1,10 +1,8 @@
-import { addDecorator } from '@storybook/react';
 import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
 
 import '../src/styles.css';
 
 initializeWorker();
-addDecorator(mswDecorator);
 
 export const parameters = {
   options: {
@@ -19,3 +17,5 @@ export const parameters = {
   },
   actions: { argTypesRegex: '^on[A-Z].*' },
 };
+
+export const decorators = [mswDecorator];
