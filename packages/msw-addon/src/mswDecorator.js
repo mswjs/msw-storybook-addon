@@ -41,11 +41,12 @@ export const mswDecorator = (storyFn, { parameters: { msw } }) => {
 
     if (msw) {
       if (Array.isArray(msw) && msw.length > 0) {
-        // support Array of handlers
+        // support Array of handlers (backwards compatability)
         api.use(...msw);
-      } else {
-        // support object of named arrays
-        const handlers = Object.values(msw).filter(Boolean).reduce((acc, arr) => acc.concat(arr), []);
+      } else if (msw.handlers) {
+        // support an array named handlers
+        // or an Object named handlers with named arrays of handlers
+        const handlers = Object.values(msw.handlers).filter(Boolean).reduce((acc, arr) => acc.concat(arr), []);
 
         if (handlers.length > 0) {
           api.use(...handlers)

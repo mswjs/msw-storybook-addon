@@ -64,70 +64,83 @@ SuccessBehavior.parameters = {
 }
 ```
 
+_Deprecated_
+
 The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
 
-The msw parameter can also be an object with named handlers or named arrays of handlers, to inherit (and optionally overwrite/disable) handlers from preview.js.
+**Updated**
+
+The msw parameter is an object with a property named handlers. This is commonly an array of handlers.
+
+The handlers property can also be an object where the keys are either arrays of handlers or a handler itself. This enables you to inherit (and optionally overwrite/disable) handlers from preview.js parameters.
 
 ```js
-
 //preview.js
 export const parameters = {
     msw: {
-        auth: [
-            rest.get('/login', (req, res, ctx) => {
-                return res(
-                    ctx.json({
-                        success: true,
-                    })
-                )
-            }),
-            rest.get('/logout', (req, res, ctx) => {
-                return res(
-                    ctx.json({
-                        success: true,
-                    })
-                )
-            }),
-        ],
+        handlers: {
+            auth: [
+                rest.get('/login', (req, res, ctx) => {
+                    return res(
+                        ctx.json({
+                            success: true,
+                        })
+                    )
+                }),
+                rest.get('/logout', (req, res, ctx) => {
+                    return res(
+                        ctx.json({
+                            success: true,
+                        })
+                    )
+                }),
+            ],
+        }
     }
 };
 
 
-// story will include the auth handlers from preview.js
+// This story will include the auth handlers from preview.js
 SuccessBehavior.parameters = {
   msw: {
-      profile: rest.get('/profile', (req, res, ctx) => {
-          return res(
-              ctx.json({
-                  firstName: 'Neil',
-                  lastName: 'Maverick',
-              })
-          )
-      }),
+      handlers: {
+          profile: rest.get('/profile', (req, res, ctx) => {
+              return res(
+                  ctx.json({
+                      firstName: 'Neil',
+                      lastName: 'Maverick',
+                  })
+              )
+          }),
+      }
   }
 }
 
-// story will overwrite the auth handlers from preview.js
+// This story will overwrite the auth handlers from preview.js
 FailureBehavior.parameters = {
     msw: {
-        auth: rest.get('/login', (req, res, ctx) => {
-            return res(ctx.status(403))
-        }),
+        handlers: {
+            auth: rest.get('/login', (req, res, ctx) => {
+                return res(ctx.status(403))
+            }),
+        }
     }
 }
 
-// story will disable the auth handlers from preview.js
+// This story will disable the auth handlers from preview.js
 NoAuthBehavior.parameters = {
     msw: {
-        auth: null,
-        others: [
-            rest.get('/numbers', (req, res, ctx) => {
-                return res(ctx.json([1, 2, 3]))
-            }),
-            rest.get('/strings', (req, res, ctx) => {
-                return res(ctx.json(['a', 'b', 'c']))
-            }),
-        ],
+        handlers: {
+            auth: null,
+            others: [
+                rest.get('/numbers', (req, res, ctx) => {
+                    return res(ctx.json([1, 2, 3]))
+                }),
+                rest.get('/strings', (req, res, ctx) => {
+                    return res(ctx.json(['a', 'b', 'c']))
+                }),
+            ],
+        }
     }
 }
 ```
