@@ -1,6 +1,11 @@
 let api
+let IS_BROWSER
 
-const IS_BROWSER = typeof global.process === 'undefined'
+try {
+  IS_BROWSER = typeof global.process === 'undefined'
+} catch (e) {
+  IS_BROWSER = true
+}
 
 export function initializeWorker(options) {
   console.warn(
