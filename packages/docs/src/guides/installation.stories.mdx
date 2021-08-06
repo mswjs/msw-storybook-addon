@@ -16,11 +16,12 @@ npm i -D msw msw-storybook-addon
 
 ```js
 import { addDecorator } from '@storybook/react';
-import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
+import { initialize, mswDecorator } from 'msw-storybook-addon';
 
-initializeWorker();
+initialize();
 addDecorator(mswDecorator);
 ```
+*Note: initialize can also be configured with [options](#initialize-options)*
 
 ### Generate service worker for msw in your public folder.
 
@@ -60,3 +61,42 @@ SuccessBehavior.parameters = {
 ```
 
 The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
+
+---
+
+### Initialize Options
+
+The `initialize` method accepts two parameters: `options` and `handlers`:
+
+```js
+initialize(options, handlers);
+```
+
+#### `options`
+
+`Object` that accepts both worker and server options. On browser, the options will be passed to the worker, otherwise will be passed to the server implementation of MSW.
+
+Refer to MSW official docs for [worker options](https://mswjs.io/docs/api/setup-worker/start#options) and [server options](https://mswjs.io/docs/api/setup-server/listen#options)
+
+#### `handlers`
+
+`array` of [default request handlers](https://mswjs.io/docs/getting-started/mocks/rest-api#request-handler) that will be applied to every story.
+
+*Note: You can overide the handlers in individual stories as described [here](#mock-api-calls-in-a-story)*
+
+*Example:*
+```js
+initialize(
+  { onUnhandledRequest: 'warn' },
+  [
+    rest.get('/user', (req, res, ctx) => {
+      return res(
+        ctx.json({
+          firstName: 'Neil',
+          lastName: 'Maverick',
+        }),
+      );
+    }),
+  ]
+);
+```
