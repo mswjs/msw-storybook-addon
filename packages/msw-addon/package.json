@@ -1,7 +1,7 @@
 {
   "name": "msw-storybook-addon",
   "description": "Mock API requests in Storybook with Mock Service Worker.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "main": "dist/index.js",
   "scripts": {
     "dev": "yarn build --watch",
