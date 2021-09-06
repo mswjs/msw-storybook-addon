@@ -32,7 +32,8 @@
   "homepage": "https://msw-sb.vercel.app/",
   "license": "MIT",
   "dependencies": {
-    "@storybook/addons": "^6.0.0"
+    "@storybook/addons": "^6.0.0",
+    "is-node-process": "^1.0.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
