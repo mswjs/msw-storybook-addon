@@ -1,11 +1,7 @@
-let api
-let IS_BROWSER
+import { isNodeProcess } from 'is-node-process'
 
-try {
-  IS_BROWSER = typeof global.process === 'undefined'
-} catch (e) {
-  IS_BROWSER = true
-}
+const IS_BROWSER = !isNodeProcess()
+let api
 
 export function initializeWorker(options) {
   console.warn(
