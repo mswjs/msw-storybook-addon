@@ -24,6 +24,9 @@ it('renders film cards for each film', async () => {
 });
 
 it('renders error message if it cannot load the films', async () => {
+  // get rid of the console.error for this test which adds clutter to the logs
+  jest.spyOn(console, 'error').mockImplementationOnce(() => {})
+
   server.use(...MockedError.parameters.msw);
   render(<MockedError />);
 
