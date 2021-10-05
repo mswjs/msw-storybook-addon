@@ -1,8 +1,8 @@
-import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
+import { initialize } from 'msw-storybook-addon';
 
 import '../src/styles.css';
 
-initializeWorker();
+initialize();
 
 export const parameters = {
   options: {
@@ -18,4 +18,3 @@ export const parameters = {
   actions: { argTypesRegex: '^on[A-Z].*' },
 };
 
-export const decorators = [mswDecorator];

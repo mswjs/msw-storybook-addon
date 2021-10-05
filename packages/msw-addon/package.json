@@ -33,7 +33,8 @@
   "license": "MIT",
   "dependencies": {
     "@storybook/addons": "^6.0.0",
-    "is-node-process": "^1.0.1"
+    "is-node-process": "^1.0.1",
+    "node-polyfill-webpack-plugin": "^1.1.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",

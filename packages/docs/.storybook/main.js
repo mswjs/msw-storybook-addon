@@ -6,5 +6,6 @@ module.exports = {
     '@storybook/addon-a11y',
     '@storybook/preset-create-react-app',
     '@storybook/addon-storysource',
+    'msw-storybook-addon',
   ],
 };
