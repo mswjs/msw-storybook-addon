@@ -40,7 +40,7 @@
     "@babel/core": "^7.0.0"
   },
   "peerDependencies": {
-    "msw": "*"
+    "msw": "^0.35.0"
   },
   "storybook": {
     "displayName": "Mock Service Worker",
