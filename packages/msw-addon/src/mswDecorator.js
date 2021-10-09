@@ -17,7 +17,8 @@ export function initialize(options) {
     worker.start(options)
     api = worker
   } else {
-    const { setupServer } = require('msw/node')
+    globalThis.__non_webpack_require__ = require
+    const { setupServer } = __non_webpack_require__('msw/node')
     const server = setupServer()
     server.listen(options)
     api = server
