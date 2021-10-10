@@ -17,6 +17,13 @@ export function initialize(options) {
     worker.start(options)
     api = worker
   } else {
+    /**
+     * Webpack 5 does not provide node polyfills as it did before.
+     * Also, it can't tell whether a code will be executed at runtime, so it has to process everything. This branch of the conditional statement will NEVER run in the browser, but Webpack can't know so it breaks builds unless we start providing node polyfills.
+     * 
+     * As a workaround, we use __non_webpack_require__ to tell Webpack to ignore this, and we define it to globalThis so it works correctly when running in node.
+     * See https://github.com/webpack/webpack/issues/8826#issuecomment-660594260
+     */
     globalThis.__non_webpack_require__ = require
     const { setupServer } = __non_webpack_require__('msw/node')
     const server = setupServer()
