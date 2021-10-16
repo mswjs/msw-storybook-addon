@@ -44,17 +44,23 @@ export function getWorker() {
   return api
 }
 
-export const mswDecorator = (storyFn, { parameters: { msw = [] } }) => {
+export const mswDecorator = (storyFn, { parameters: { msw } }) => {
   if (api) {
     api.resetHandlers()
 
-    if (!Array.isArray(msw)) {
-      throw new Error(`[MSW] expected to receive an array of handlers but received "${typeof msw}" instead.
-        Please refer to the documentation: https://mswjs.io/docs/getting-started/mocks/`)
-    }
+    if (msw) {
+      if (Array.isArray(msw) && msw.length > 0) {
+        // support Array of handlers (backwards compatability)
+        api.use(...msw);
+      } else if (msw.handlers) {
+        // support an array named handlers
+        // or an Object named handlers with named arrays of handlers
+        const handlers = Object.values(msw.handlers).filter(Boolean).reduce((acc, arr) => acc.concat(arr), []);
 
-    if (msw.length > 0) {
-      api.use(...msw)
+        if (handlers.length > 0) {
+          api.use(...handlers)
+        }
+      }
     }
   }
 
