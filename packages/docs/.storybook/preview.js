@@ -1,8 +1,8 @@
-import { initializeWorker, mswDecorator } from 'msw-storybook-addon';
+import { initialize, mswDecorator } from 'msw-storybook-addon';
 
 import '../src/styles.css';
 
-initializeWorker();
+initialize();
 
 export const parameters = {
   options: {

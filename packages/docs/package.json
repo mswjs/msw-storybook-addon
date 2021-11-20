@@ -7,8 +7,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "sb:start": "start-storybook -p 6006 -s public",
-    "sb:build": "build-storybook -s public",
+    "storybook": "start-storybook -p 6006 -s public",
+    "storybook-build": "build-storybook -s public",
     "msw:update": "msw init public"
   },
   "eslintConfig": {
