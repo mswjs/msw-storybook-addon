@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "noImplicitAny": true,
+    "module": "CommonJS",
+    "target": "es5",
+    "allowJs": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "declaration": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

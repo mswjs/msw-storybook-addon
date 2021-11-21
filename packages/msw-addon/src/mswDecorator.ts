@@ -1,16 +1,21 @@
 import { isNodeProcess } from 'is-node-process'
+import type {
+  StoryFn,
+  DecoratorFunction,
+  StoryContext,
+} from '@storybook/addons'
+
+import type { SetupWorkerApi, RequestHandler } from 'msw'
+import type { SetupServerApi } from 'msw/node'
 
 const IS_BROWSER = !isNodeProcess()
-let api
+let api: SetupWorkerApi | SetupServerApi
 
-export function initializeWorker(options) {
-  console.warn(
-    `[MSW] "initializeWorker" deprecated, please use "initialize" instead. This method will be removed in future releases.`
-  )
-  return initialize(options)
-}
+type InitializeOptions =
+  | Parameters<SetupWorkerApi['start']>[0]
+  | Parameters<SetupServerApi['listen']>[0]
 
-export function initialize(options) {
+export function initialize(options?: InitializeOptions) {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
     const worker = setupWorker()
@@ -20,7 +25,7 @@ export function initialize(options) {
     /**
      * Webpack 5 does not provide node polyfills as it did before.
      * Also, it can't tell whether a code will be executed at runtime, so it has to process everything. This branch of the conditional statement will NEVER run in the browser, but Webpack can't know so it breaks builds unless we start providing node polyfills.
-     * 
+     *
      * As a workaround, we use __non_webpack_require__ to tell Webpack to ignore this, and we define it to globalThis so it works correctly when running in node.
      * See https://github.com/webpack/webpack/issues/8826#issuecomment-660594260
      */
@@ -34,6 +39,13 @@ export function initialize(options) {
   return api
 }
 
+export function initializeWorker(options?: InitializeOptions) {
+  console.warn(
+    `[MSW] "initializeWorker" is now deprecated, please use "initialize" instead. This method will be removed in future releases.`
+  )
+  return initialize(options)
+}
+
 export function getWorker() {
   if (api === undefined) {
     throw new Error(
@@ -44,22 +56,31 @@ export function getWorker() {
   return api
 }
 
-export const mswDecorator = (storyFn, { parameters: { msw } }) => {
+export type ParametersWithMsw = {
+  msw:
+    | {
+        handlers: Record<string, RequestHandler> | RequestHandler[]
+      }
+    | RequestHandler[]
+}
+
+export const mswDecorator: DecoratorFunction = (
+  storyFn: StoryFn,
+  { parameters: { msw } }: StoryContext & { parameters: ParametersWithMsw }
+) => {
   if (api) {
     api.resetHandlers()
 
     if (msw) {
       if (Array.isArray(msw) && msw.length > 0) {
         // support Array of handlers (backwards compatability)
-        api.use(...msw);
-
-        console.warn(
-          `[MSW] setting handlers directly in the "msw" parameter is deprecated, please use "msw.handlers" instead: https://github.com/mswjs/msw-storybook-addon#usage`
-        )
-      } else if (msw.handlers) {
+        api.use(...msw)
+      } else if ('handlers' in msw && msw.handlers) {
         // support an array named handlers
         // or an Object named handlers with named arrays of handlers
-        const handlers = Object.values(msw.handlers).filter(Boolean).reduce((acc, arr) => acc.concat(arr), []);
+        const handlers = Object.values(msw.handlers)
+          .filter(Boolean)
+          .reduce((acc, arr) => acc.concat(arr), [])
 
         if (handlers.length > 0) {
           api.use(...handlers)
