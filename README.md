@@ -232,7 +232,7 @@ initialize({
 
 #### Using this addon in node
 
-Storybook provides libraries such as [@storybook/testing-react](https://github.com/storybookjs/testing-react), which allows you to reuse stories in your jest tests.
+Storybook provides libraries like [@storybook/testing-react](https://github.com/storybookjs/testing-react) that allow you to reuse your stories in test suites directly.
 If you are using stories in your tests, `msw-storybook-addon` will work as intended, but instead of using a service worker implementation, it will use a server implementation. `msw-storybook-addon` provides access to the server instance, in case you'd like to do something with it:
 
 ```js
