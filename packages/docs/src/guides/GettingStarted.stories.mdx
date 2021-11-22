@@ -6,8 +6,16 @@ import { Meta } from '@storybook/addon-docs';
 
 ### Install MSW and the addon
 
+With npm:
+
 ```sh
-npm i -D msw msw-storybook-addon
+npm i msw msw-storybook-addon -D
+```
+
+Or with yarn:
+
+```sh
+yarn add msw msw-storybook-addon -D
 ```
 
 ### Generate service worker for MSW in your public folder.
@@ -20,7 +28,9 @@ npx msw init public/
 
 Refer to the [MSW official guide](https://mswjs.io/docs/getting-started/integrate/browser) for framework specific paths if you don't use `public`.
 
-### Enable MSW in Storybook by adding this to `./storybook/preview.js`
+### Configure the addon
+
+Enable MSW in Storybook by initializing MSW and providing the MSW decorator in `./storybook/preview.js`:
 
 ```js
 import { initialize, mswDecorator } from 'msw-storybook-addon';
@@ -65,32 +75,9 @@ SuccessBehavior.parameters = {
 }
 ```
 
-**Deprecated usage**
-
-From previous versions, the msw parameter takes an array of handlers. **This is not recommended** anymore and is deprecated. You should use the `handlers` instead, as stated above.
-
-```js
-import { rest } from 'msw'
-
-export const SuccessBehavior = () => <UserProfile />
-
-SuccessBehavior.parameters = {
-  msw: [
-   rest.get('/user', (req, res, ctx) => {
-    return res(
-      ctx.json({
-       firstName: 'Neil',
-       lastName: 'Maverick',
-      })
-    )
-   }),
-  ],
-}
-```
-
 ### Advanced Usage
 
-#### Sharing handlers with parameter inheritance
+#### Composing request handlers
 
 The `handlers` property can also be an object where the keys are either arrays of handlers or a handler itself. This enables you to inherit (and optionally overwrite/disable) handlers from preview.js using [parameter inheritance](https://storybook.js.org/docs/react/writing-stories/parameters#rules-of-parameter-inheritance):
 
@@ -190,7 +177,7 @@ NoAuthBehavior.parameters = {
 
 `msw-storybook-addon` starts MSW with default configuration. If you want to configure it, you can pass options to the `initialize` function. They are the [StartOptions](https://mswjs.io/docs/api/setup-worker/start) from setupWorker.
 
-A common example is to configure the `onUnhandledRequest` behavior, as MSW logs a warning in case there are requests which were not handled.
+A common example is to configure the [onUnhandledRequest](https://mswjs.io/docs/api/setup-worker/start#onunhandledrequest) behavior, as MSW logs a warning in case there are requests which were not handled.
 
 If you want MSW to bypass unhandled requests and not do anything:
 ```js
@@ -219,17 +206,4 @@ initialize({
     }
   },
 })
-```
-
-#### Using this addon in node
-
-Storybook provides libraries such as [@storybook/testing-react](https://github.com/storybookjs/testing-react), which allows you to reuse stories in your jest tests.
-If you are using stories in your tests, `msw-storybook-addon` will work as intended, but instead of using a service worker implementation, it will use a server implementation. `msw-storybook-addon` provides access to the server instance, in case you'd like to do something with it:
-
-```js
-// src/setupTests.js
-import { getWorker } from 'msw-storybook-addon';
-
-// Clean up after the tests are finished.
-afterAll(() => getWorker().close())
 ```
