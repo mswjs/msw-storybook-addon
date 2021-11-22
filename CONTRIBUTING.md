@@ -49,7 +49,7 @@ $ yarn start
 
 # to start Storybook only (examples/docs)
 # you can instead run `yarn storybook` under packages/docs if you prefer
-$ yarn sb:start
+$ yarn storybook
 
 # to build msw-addon in watch mode only
 # you can instead run `yarn dev` under packages/msw-addon if you prefer
