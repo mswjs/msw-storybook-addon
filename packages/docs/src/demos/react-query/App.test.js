@@ -11,7 +11,7 @@ afterAll(() => {
 })
 
 it('renders film cards for each film', async () => {
-  server.use(...MockedSuccess.parameters.msw)
+  server.use(...MockedSuccess.parameters.msw.handlers)
   render(<MockedSuccess />)
 
   expect(screen.getByText(/fetching star wars data/i)).toBeInTheDocument()
@@ -31,7 +31,7 @@ it('renders error message if it cannot load the films', async () => {
   // get rid of the console.error for this test which adds clutter to the logs
   jest.spyOn(console, 'error').mockImplementationOnce(() => {})
 
-  server.use(...MockedError.parameters.msw)
+  server.use(...MockedError.parameters.msw.handlers)
   render(<MockedError />)
 
   const errorMsgNode = await screen.findByText(
