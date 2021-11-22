@@ -41,38 +41,42 @@ const MockTemplate = () => (
 
 export const MockedSuccess = MockTemplate.bind({});
 MockedSuccess.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          results: [
-            {
-              title: '(Mocked) A New Hope',
-              episode_id: 4,
-              release_date: '1977-05-25',
-              url: 'http://swapi.dev/api/films/1/',
-            },
-            {
-              title: '(Mocked) Empire Strikes Back',
-              episode_id: 5,
-              release_date: '1980-05-17',
-              url: 'http://swapi.dev/api/films/2/',
-            },
-          ],
-        }),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            results: [
+              {
+                title: '(Mocked) A New Hope',
+                episode_id: 4,
+                release_date: '1977-05-25',
+                url: 'http://swapi.dev/api/films/1/',
+              },
+              {
+                title: '(Mocked) Empire Strikes Back',
+                episode_id: 5,
+                release_date: '1980-05-17',
+                url: 'http://swapi.dev/api/films/2/',
+              },
+            ],
+          }),
+        );
+      }),
+    ]
+  },
 };
 
 export const MockedError = MockTemplate.bind({});
 MockedError.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-      return res(
-        ctx.delay(800),
-        ctx.status(403),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+        return res(
+          ctx.delay(800),
+          ctx.status(403),
+        );
+      }),
+    ]
+  },
 };

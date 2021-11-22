@@ -41,34 +41,38 @@ const MockTemplate = () => (
 
 export const MockedSuccess = MockTemplate.bind({});
 MockedSuccess.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          results: [
-            {
-              name: '(Mocked) Luke Skywalker',
-              url: 'http://swapi.dev/api/people/1/',
-            },
-            {
-              name: '(Mocked) C-3PO',
-              url: 'http://swapi.dev/api/people/2/',
-            },
-          ],
-        }),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            results: [
+              {
+                name: '(Mocked) Luke Skywalker',
+                url: 'http://swapi.dev/api/people/1/',
+              },
+              {
+                name: '(Mocked) C-3PO',
+                url: 'http://swapi.dev/api/people/2/',
+              },
+            ],
+          }),
+        );
+      }),
+    ]
+  },
 };
 
 export const MockedError = MockTemplate.bind({});
 MockedError.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-      return res(
-        ctx.delay(800),
-        ctx.status(403),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
+        return res(
+          ctx.delay(800),
+          ctx.status(403),
+        );
+      }),
+    ]
+  },
 };

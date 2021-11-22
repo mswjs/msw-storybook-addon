@@ -41,71 +41,77 @@ const MockTemplate = () => (
 
 export const MockedSuccess = MockTemplate.bind({});
 MockedSuccess.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          title: '(Mocked) A New Hope',
-          episode_id: 4,
-          opening_crawl: `Rebel spaceships have won their first victory against the evil Galactic Empire.`,
-          characters: ['http://swapi.dev/api/people/1/', 'http://swapi.dev/api/people/2/'],
-        }),
-      );
-    }),
-    rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          name: '(Mocked) Luke Skywalker',
-        }),
-      );
-    }),
-    rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          name: '(Mocked) C-3PO',
-        }),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            title: '(Mocked) A New Hope',
+            episode_id: 4,
+            opening_crawl: `Rebel spaceships have won their first victory against the evil Galactic Empire.`,
+            characters: ['http://swapi.dev/api/people/1/', 'http://swapi.dev/api/people/2/'],
+          }),
+        );
+      }),
+      rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            name: '(Mocked) Luke Skywalker',
+          }),
+        );
+      }),
+      rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            name: '(Mocked) C-3PO',
+          }),
+        );
+      }),
+    ]
+  },
 };
 
 export const MockedFilmApiError = MockTemplate.bind({});
 MockedFilmApiError.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
-      return res(
-        ctx.delay(800),
-        ctx.status(403),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
+        return res(
+          ctx.delay(800),
+          ctx.status(403),
+        );
+      }),
+    ]
+  },
 };
 
 export const MockedCharacterApiError = MockTemplate.bind({});
 MockedCharacterApiError.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          title: '(Mocked) A New Hope',
-          episode_id: 4,
-          opening_crawl: `Rebel spaceships have won their first victory against the evil Galactic Empire.`,
-          characters: ['http://swapi.dev/api/people/1/', 'http://swapi.dev/api/people/2/'],
-        }),
-      );
-    }),
-    rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
-      return res(
-        ctx.delay(800),
-        ctx.status(403),
-      );
-    }),
-    rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          name: '(Mocked) C-3PO',
-        }),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            title: '(Mocked) A New Hope',
+            episode_id: 4,
+            opening_crawl: `Rebel spaceships have won their first victory against the evil Galactic Empire.`,
+            characters: ['http://swapi.dev/api/people/1/', 'http://swapi.dev/api/people/2/'],
+          }),
+        );
+      }),
+      rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
+        return res(
+          ctx.delay(800),
+          ctx.status(403),
+        );
+      }),
+      rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            name: '(Mocked) C-3PO',
+          }),
+        );
+      }),
+    ]
+  },
 };
