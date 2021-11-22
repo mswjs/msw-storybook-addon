@@ -1,4 +1,4 @@
-import { Meta } from '@storybook/addon-docs/blocks'
+import { Meta } from '@storybook/addon-docs'
 import LinkTo from '@storybook/addon-links/react'
 
 <Meta title="Guides/Introduction" />
@@ -8,30 +8,11 @@ import LinkTo from '@storybook/addon-links/react'
   <h1>MSW Storybook Addon</h1>
 </header>
 
-With storybook we can test our app components in isolation and later integrate with the product. But with the trend of fetching data inside components we can't make stories for them easily. Extracting presentational components for just this purpose sucks. But there's a better way.
+With Storybook, we can test our app components in isolation and later integrate in the application. With the trend of fetching data inside components, adding stories for complex components and pages becomes difficult. With `msw-storybook-addon`, you can easily mock your APIs, making that process much simpler!
 
-With `msw-storybook-addon` you can easily mock the APIs inside stories like this.
+## Get started
 
-```js
-import { rest } from 'msw'
-
-export const SuccessBehavior = () => <UserProfile />
-
-SuccessBehavior.parameters = {
-  msw: [
-    rest.get('/user', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          firstName: 'Neil',
-          lastName: 'Maverick',
-        })
-      )
-    }),
-  ],
-}
-```
-
-The msw parameter takes an array of handlers as shown in [MSW official guide](https://mswjs.io/docs/getting-started/mocks/rest-api).
+Refer to the <LinkTo className="introduction-demo-link" kind="Guides/Getting Started" story="page">Getting started</LinkTo> page for installation and usage.
 
 ## Features
 
@@ -41,8 +22,8 @@ The msw parameter takes an array of handlers as shown in [MSW official guide](ht
 
 ## Demos
 
-It integrates well with browser fetch & libraries like React Query, Urql. Find the demos in the sidebar.
-The code for each is available on [GitHub](https://github.com/mswjs/msw-storybook-addon).
+`msw-storybook-addon` integrates well with browser fetch & libraries like React Query and Urql. Find the demos in the sidebar on the left.
+The code for each example is available on [GitHub](https://github.com/mswjs/msw-storybook-addon/tree/master/packages/docs/src/demos).
 
 - API call with Fetch: <LinkTo className="introduction-demo-link" kind="Demos/Fetch" story="mocked-success">Story</LinkTo> | [Source](https://github.com/mswjs/msw-storybook-addon/blob/master/packages/docs/src/demos/fetch/App.stories.js)
 - API call with React Query: <LinkTo className="introduction-demo-link" kind="Demos/React Query" story="mocked-success">Story</LinkTo> | [Source](https://github.com/mswjs/msw-storybook-addon/blob/master/packages/docs/src/demos/react-query/App.stories.js)
@@ -52,6 +33,6 @@ The code for each is available on [GitHub](https://github.com/mswjs/msw-storyboo
 
 The following demo uses React Router for rendering various page components & React Query for fetching data in these components. It's upto you to decide how much of the app you want in Storybook.
 
-- Whole App (only feasible for small apps) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-app">Story</LinkTo> | [Source](https://github.com/mswjs/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
+- Whole App <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-app">Story</LinkTo> | [Source](https://github.com/mswjs/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
 - Subsection of App (like /films/1 route) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ" story="mocked-film-subsection">Story</LinkTo> | [Source](https://github.com/mswjs/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/App.stories.js)
 - Isolated Page components (like Film.js component) <LinkTo className="introduction-demo-link" kind="Demos/React Router + RQ/Page Stories/Film" story="mocked-success">Story</LinkTo> | [Source](https://github.com/mswjs/msw-storybook-addon/blob/master/packages/docs/src/demos/react-router-react-query/pages/film/Film.stories.js)
