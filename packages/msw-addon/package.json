@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "yarn build --watch",
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "yarn build"
   },
   "files": [
     "dist/"
