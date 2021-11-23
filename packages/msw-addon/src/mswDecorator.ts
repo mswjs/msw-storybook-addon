@@ -9,13 +9,13 @@ export type InitializeOptions =
   | Parameters<SetupServerApi['listen']>[0]
 
 export type DecoratorParameters = {
-  msw:
+  msw?:
     | RequestHandler[]
     | { handlers: RequestHandler[] | Record<string, RequestHandler> }
 }
 
-export type DecoratorContext = StoryContext & {
-  parameters: DecoratorParameters
+export interface DecoratorContext extends StoryContext {
+  parameters: StoryContext['parameters'] & DecoratorParameters
 }
 
 const IS_BROWSER = !isNodeProcess()
@@ -81,12 +81,15 @@ export const mswDecorator: DecoratorFunction = (
       if (Array.isArray(msw) && msw.length > 0) {
         // Support an Array of request handlers (backwards compatability).
         api.use(...msw)
-      } else if ('handlers' in msw) {
+      } else if ('handlers' in msw && msw.handlers) {
         // Support an Array named request handlers handlers
         // or an Object of named request handlers with named arrays of handlers
         const handlers = Object.values(msw.handlers)
           .filter(Boolean)
-          .reduce((handlers, handlersList) => handlers.concat(handlersList), [])
+          .reduce(
+            (handlers, handlersList) => handlers.concat(handlersList),
+            [] as RequestHandler[]
+          )
 
         if (handlers.length > 0) {
           api.use(...handlers)
