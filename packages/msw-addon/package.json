@@ -3,6 +3,7 @@
   "description": "Mock API requests in Storybook with Mock Service Worker.",
   "version": "1.4.1",
   "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "scripts": {
     "dev": "yarn build --watch",
     "build": "tsc",
