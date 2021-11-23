@@ -5,7 +5,7 @@ let api
 
 export function initializeWorker(options) {
   console.warn(
-    `[MSW] "initializeWorker" is now deprecated, please use "initialize" instead. This method will be removed in future releases.`
+    `[MSW] "initializeWorker" deprecated, please use "initialize" instead. This method will be removed in future releases.`
   )
   return initialize(options)
 }
@@ -52,6 +52,10 @@ export const mswDecorator = (storyFn, { parameters: { msw } }) => {
       if (Array.isArray(msw) && msw.length > 0) {
         // support Array of handlers (backwards compatability)
         api.use(...msw);
+
+        console.warn(
+          `[MSW] setting handlers directly in the "msw" parameter is deprecated, please use "msw.handlers" instead: https://github.com/mswjs/msw-storybook-addon#usage`
+        )
       } else if (msw.handlers) {
         // support an array named handlers
         // or an Object named handlers with named arrays of handlers

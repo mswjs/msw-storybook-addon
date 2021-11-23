@@ -31,25 +31,29 @@ const films = [
 
 export const MockedSuccess = MockTemplate.bind({});
 MockedSuccess.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-      return res(
-        ctx.json({
-          results: films,
-        }),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+        return res(
+          ctx.json({
+            results: films,
+          }),
+        );
+      }),
+    ]
+  },
 };
 
 export const MockedError = MockTemplate.bind({});
 MockedError.parameters = {
-  msw: [
-    rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-      return res(
-        ctx.delay(800),
-        ctx.status(403),
-      );
-    }),
-  ],
+  msw: {
+    handlers: [
+      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+        return res(
+          ctx.delay(800),
+          ctx.status(403),
+        );
+      }),
+    ]
+  },
 };

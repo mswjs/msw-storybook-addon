@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "sb:start": "yarn workspace msw-storybook-docs storybook",
+    "storybook": "yarn workspace msw-storybook-docs storybook",
     "msw:dev": "yarn workspace msw-storybook-addon dev",
     "start": "npm-run-all --parallel storybook msw:dev",
     "build": "yarn workspace msw-storybook-addon build && yarn workspace msw-storybook-docs build-storybook"
