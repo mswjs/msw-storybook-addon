@@ -1,21 +1,27 @@
 import { isNodeProcess } from 'is-node-process'
-import type {
-  StoryFn,
-  DecoratorFunction,
-  StoryContext,
-} from '@storybook/addons'
-
+import type { DecoratorFunction, StoryContext } from '@storybook/addons'
 import type { SetupWorkerApi, RequestHandler } from 'msw'
 import type { SetupServerApi } from 'msw/node'
 
-const IS_BROWSER = !isNodeProcess()
-let api: SetupWorkerApi | SetupServerApi
-
-type InitializeOptions =
+export type SetupApi = SetupWorkerApi | SetupServerApi
+export type InitializeOptions =
   | Parameters<SetupWorkerApi['start']>[0]
   | Parameters<SetupServerApi['listen']>[0]
 
-export function initialize(options?: InitializeOptions) {
+export type DecoratorParameters = {
+  msw:
+    | RequestHandler[]
+    | { handlers: RequestHandler[] | Record<string, RequestHandler> }
+}
+
+export type DecoratorContext = StoryContext & {
+  parameters: DecoratorParameters
+}
+
+const IS_BROWSER = !isNodeProcess()
+let api: SetupApi
+
+export function initialize(options?: InitializeOptions): SetupApi {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
     const worker = setupWorker()
@@ -24,12 +30,16 @@ export function initialize(options?: InitializeOptions) {
   } else {
     /**
      * Webpack 5 does not provide node polyfills as it did before.
-     * Also, it can't tell whether a code will be executed at runtime, so it has to process everything. This branch of the conditional statement will NEVER run in the browser, but Webpack can't know so it breaks builds unless we start providing node polyfills.
+     * Also, it can't tell whether a code will be executed at runtime, so it has to process everything.
+     * This branch of the conditional statement will NEVER run in the browser, but Webpack can't know so
+     * it breaks builds unless we start providing node polyfills.
      *
-     * As a workaround, we use __non_webpack_require__ to tell Webpack to ignore this, and we define it to globalThis so it works correctly when running in node.
-     * See https://github.com/webpack/webpack/issues/8826#issuecomment-660594260
+     * As a workaround, we use __non_webpack_require__ to tell Webpack to ignore this, and we define it
+     * to globalThis so it works correctly when running in node.
+     * @see https://github.com/webpack/webpack/issues/8826#issuecomment-660594260
      */
     globalThis.__non_webpack_require__ = require
+
     const { setupServer } = __non_webpack_require__('msw/node')
     const server = setupServer()
     server.listen(options)
@@ -39,14 +49,14 @@ export function initialize(options?: InitializeOptions) {
   return api
 }
 
-export function initializeWorker(options?: InitializeOptions) {
+export function initializeWorker(options?: InitializeOptions): SetupApi {
   console.warn(
     `[MSW] "initializeWorker" is now deprecated, please use "initialize" instead. This method will be removed in future releases.`
   )
   return initialize(options)
 }
 
-export function getWorker() {
+export function getWorker(): SetupApi {
   if (api === undefined) {
     throw new Error(
       `[MSW] Failed to retrieve the worker: no active worker found. Did you forget to call "initialize"?`
@@ -56,31 +66,27 @@ export function getWorker() {
   return api
 }
 
-export type ParametersWithMsw = {
-  msw:
-    | {
-        handlers: Record<string, RequestHandler> | RequestHandler[]
-      }
-    | RequestHandler[]
-}
-
 export const mswDecorator: DecoratorFunction = (
-  storyFn: StoryFn,
-  { parameters: { msw } }: StoryContext & { parameters: ParametersWithMsw }
+  storyFn,
+  context: DecoratorContext
 ) => {
+  const {
+    parameters: { msw },
+  } = context
+
   if (api) {
     api.resetHandlers()
 
     if (msw) {
       if (Array.isArray(msw) && msw.length > 0) {
-        // support Array of handlers (backwards compatability)
+        // Support an Array of request handlers (backwards compatability).
         api.use(...msw)
-      } else if ('handlers' in msw && msw.handlers) {
-        // support an array named handlers
-        // or an Object named handlers with named arrays of handlers
+      } else if ('handlers' in msw) {
+        // Support an Array named request handlers handlers
+        // or an Object of named request handlers with named arrays of handlers
         const handlers = Object.values(msw.handlers)
           .filter(Boolean)
-          .reduce((acc, arr) => acc.concat(arr), [])
+          .reduce((handlers, handlersList) => handlers.concat(handlersList), [])
 
         if (handlers.length > 0) {
           api.use(...handlers)
