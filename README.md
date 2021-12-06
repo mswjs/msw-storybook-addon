@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://msw-sb.vercel.app/logo.png" width="200">
+  <img src="https://user-images.githubusercontent.com/1671563/144888802-84346d8f-77c9-4377-98c7-4b0364797978.png" width="200">
 </p>
 <h1 align="center">MSW Storybook Addon</h1>
 
