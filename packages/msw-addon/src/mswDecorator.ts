@@ -38,9 +38,14 @@ export function initialize(options?: InitializeOptions): SetupApi {
      * to globalThis so it works correctly when running in node.
      * @see https://github.com/webpack/webpack/issues/8826#issuecomment-660594260
      */
-    globalThis.__non_webpack_require__ = require
-
-    const { setupServer } = __non_webpack_require__('msw/node')
+    const nodeVer = typeof process !== "undefined" && process.versions?.node;
+    const nodeRequire = nodeVer
+      ? typeof __webpack_require__ === "function"
+        ? __non_webpack_require__
+        : require
+      : undefined;
+     
+    const { setupServer } = nodeRequire('msw/node')
     const server = setupServer()
     server.listen(options)
     api = server
