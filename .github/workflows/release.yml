@@ -20,6 +20,9 @@ jobs:
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
 
+      - name: Build
+        run: yarn build
+
       - name: Test
         working-directory: ./packages/docs
         run: yarn test
