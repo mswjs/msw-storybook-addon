@@ -79,26 +79,24 @@ export const mswDecorator: DecoratorFunction = (
     parameters: { msw },
   } = context
 
-  if (api) {
+  if (api && msw) {
     api.resetHandlers()
 
-    if (msw) {
-      if (Array.isArray(msw) && msw.length > 0) {
-        // Support an Array of request handlers (backwards compatability).
-        api.use(...msw)
-      } else if ('handlers' in msw && msw.handlers) {
-        // Support an Array named request handlers handlers
-        // or an Object of named request handlers with named arrays of handlers
-        const handlers = Object.values(msw.handlers)
-          .filter(Boolean)
-          .reduce(
-            (handlers, handlersList) => handlers.concat(handlersList),
-            [] as RequestHandler[]
-          )
+    if (Array.isArray(msw) && msw.length > 0) {
+      // Support an Array of request handlers (backwards compatability).
+      api.use(...msw)
+    } else if ('handlers' in msw && msw.handlers) {
+      // Support an Array named request handlers handlers
+      // or an Object of named request handlers with named arrays of handlers
+      const handlers = Object.values(msw.handlers)
+        .filter(Boolean)
+        .reduce(
+          (handlers, handlersList) => handlers.concat(handlersList),
+          [] as RequestHandler[]
+        )
 
-        if (handlers.length > 0) {
-          api.use(...handlers)
-        }
+      if (handlers.length > 0) {
+        api.use(...handlers)
       }
     }
   }
