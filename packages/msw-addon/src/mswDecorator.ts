@@ -28,12 +28,13 @@ export interface LoaderContext extends StoryContext {
 
 const IS_BROWSER = !isNodeProcess()
 let api: SetupApi
+let workerPromise: Promise<unknown>;
 
 export function initialize(options?: InitializeOptions): SetupApi {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
     const worker = setupWorker()
-    worker.start(options)
+    workerPromise = worker.start(options)
     api = worker
   } else {
     /**
@@ -50,7 +51,7 @@ export function initialize(options?: InitializeOptions): SetupApi {
 
     const { setupServer } = __non_webpack_require__('msw/node')
     const server = setupServer()
-    server.listen(options)
+    workerPromise = server.listen(options)
     api = server
   }
 
@@ -137,6 +138,8 @@ export const mswLoader: LoaderFunction = async (context: LoaderContext) => {
       }
     }
   }
+
+  await (workerPromise || Promise.resolve());
 
   return {}
 }
