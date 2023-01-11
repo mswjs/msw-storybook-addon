@@ -1,5 +1,9 @@
 import { isNodeProcess } from 'is-node-process'
-import type { DecoratorFunction, StoryContext } from '@storybook/addons'
+import type {
+  DecoratorFunction,
+  LoaderFunction,
+  StoryContext,
+} from '@storybook/addons'
 import type { SetupWorkerApi, RequestHandler } from 'msw'
 import type { SetupServerApi } from 'msw/node'
 
@@ -8,24 +12,29 @@ export type InitializeOptions =
   | Parameters<SetupWorkerApi['start']>[0]
   | Parameters<SetupServerApi['listen']>[0]
 
-export type DecoratorParameters = {
+export type MswParameters = {
   msw?:
     | RequestHandler[]
     | { handlers: RequestHandler[] | Record<string, RequestHandler> }
 }
 
 export interface DecoratorContext extends StoryContext {
-  parameters: StoryContext['parameters'] & DecoratorParameters
+  parameters: StoryContext['parameters'] & MswParameters
+}
+
+export interface LoaderContext extends StoryContext {
+  parameters: StoryContext['parameters'] & MswParameters
 }
 
 const IS_BROWSER = !isNodeProcess()
 let api: SetupApi
+let workerPromise: Promise<unknown>;
 
 export function initialize(options?: InitializeOptions): SetupApi {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
     const worker = setupWorker()
-    worker.start(options)
+    workerPromise = worker.start(options)
     api = worker
   } else {
     /**
@@ -47,7 +56,7 @@ export function initialize(options?: InitializeOptions): SetupApi {
      
     const { setupServer } = nodeRequire('msw/node')
     const server = setupServer()
-    server.listen(options)
+    workerPromise = server.listen(options)
     api = server
   }
 
@@ -104,4 +113,38 @@ export const mswDecorator: DecoratorFunction = (
   }
 
   return storyFn()
+}
+
+export const mswLoader: LoaderFunction = async (context: LoaderContext) => {
+  const {
+    parameters: { msw },
+  } = context
+
+  if (api) {
+    api.resetHandlers()
+
+    if (msw) {
+      if (Array.isArray(msw) && msw.length > 0) {
+        // Support an Array of request handlers (backwards compatability).
+        api.use(...msw)
+      } else if ('handlers' in msw && msw.handlers) {
+        // Support an Array named request handlers handlers
+        // or an Object of named request handlers with named arrays of handlers
+        const handlers = Object.values(msw.handlers)
+          .filter(Boolean)
+          .reduce(
+            (handlers, handlersList) => handlers.concat(handlersList),
+            [] as RequestHandler[]
+          )
+
+        if (handlers.length > 0) {
+          api.use(...handlers)
+        }
+      }
+    }
+  }
+
+  await (workerPromise || Promise.resolve());
+
+  return {}
 }
