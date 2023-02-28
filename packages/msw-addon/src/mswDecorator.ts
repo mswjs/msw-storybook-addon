@@ -1,9 +1,5 @@
 import { isNodeProcess } from 'is-node-process'
-import type {
-  DecoratorFunction,
-  LoaderFunction,
-  StoryContext,
-} from '@storybook/addons'
+import type { DecoratorFunction, StoryContext } from '@storybook/addons'
 import type { SetupWorkerApi, RequestHandler } from 'msw'
 import type { SetupServerApi } from 'msw/node'
 
@@ -28,7 +24,7 @@ export interface LoaderContext extends StoryContext {
 
 const IS_BROWSER = !isNodeProcess()
 let api: SetupApi
-let workerPromise: Promise<unknown>;
+let workerPromise: Promise<unknown>
 
 export function initialize(options?: InitializeOptions): SetupApi {
   if (IS_BROWSER) {
@@ -47,13 +43,13 @@ export function initialize(options?: InitializeOptions): SetupApi {
      * to globalThis so it works correctly when running in node.
      * @see https://github.com/webpack/webpack/issues/8826#issuecomment-660594260
      */
-    const nodeVer = typeof process !== "undefined" && process.versions?.node;
+    const nodeVer = typeof process !== 'undefined' && process.versions?.node
     const nodeRequire = nodeVer
-      ? typeof __webpack_require__ === "function"
+      ? typeof __webpack_require__ === 'function'
         ? __non_webpack_require__
         : require
-      : undefined;
-     
+      : undefined
+
     const { setupServer } = nodeRequire('msw/node')
     const server = setupServer()
     workerPromise = server.listen(options)
@@ -115,7 +111,7 @@ export const mswDecorator: DecoratorFunction = (
   return storyFn()
 }
 
-export const mswLoader: LoaderFunction = async (context: LoaderContext) => {
+export const mswLoader = async (context: LoaderContext) => {
   const {
     parameters: { msw },
   } = context
@@ -144,7 +140,7 @@ export const mswLoader: LoaderFunction = async (context: LoaderContext) => {
     }
   }
 
-  await (workerPromise || Promise.resolve());
+  await (workerPromise || Promise.resolve())
 
   return {}
 }
