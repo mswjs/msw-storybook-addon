@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "storybook": "NODE_OPTIONS=--openssl-legacy-provider start-storybook -p 6006",
-    "build-storybook": "build-storybook",
+    "build-storybook": "NODE_OPTIONS=--openssl-legacy-provider build-storybook",
     "msw:update": "msw init public"
   },
   "browserslist": {
