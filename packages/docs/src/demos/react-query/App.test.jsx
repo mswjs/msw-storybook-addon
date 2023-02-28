@@ -3,8 +3,13 @@ import { render, waitFor, screen } from '@testing-library/react'
 
 import { getServer } from '../../test-utils'
 import { MockedSuccess, MockedError } from './App.stories'
+import { vi } from 'vitest'
 
 const server = getServer()
+
+afterAll(() => {
+  vi.restoreAllMocks()
+})
 
 it('renders film cards for each film', async () => {
   server.use(...MockedSuccess.parameters.msw.handlers)
@@ -24,6 +29,9 @@ it('renders film cards for each film', async () => {
 })
 
 it('renders error message if it cannot load the films', async () => {
+  // get rid of the console.error for this test which adds clutter to the logs
+  vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+
   server.use(...MockedError.parameters.msw.handlers)
   render(<MockedError />)
 
