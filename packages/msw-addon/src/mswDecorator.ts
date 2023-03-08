@@ -71,8 +71,8 @@ export function getWorker(): SetupApi {
   return api
 }
 
-export const mswDecorator = <T extends (...args: any[]) => any>(
-  storyFn: T,
+export const mswDecorator = <Story extends (...args: any[]) => any>(
+  storyFn: Story,
   context: Context
 ) => {
   const {
