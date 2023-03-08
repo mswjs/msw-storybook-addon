@@ -7,4 +7,15 @@ module.exports = {
     '@storybook/preset-create-react-app',
     '@storybook/addon-storysource',
   ],
-};
+  webpackFinal: async (config) => {
+    config.resolve = config.resolve || {}
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'msw-storybook-addon': require.resolve('../../msw-addon/dist'),
+    }
+    return config
+  },
+  core: {
+    builder: 'webpack5',
+  },
+}
