@@ -10,6 +10,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Prepare repository
+        run: git fetch --unshallow --tags
+
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
