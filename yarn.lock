@@ -2509,7 +2509,7 @@
     prop-types "^15.7.2"
     regenerator-runtime "^0.13.7"
 
-"@storybook/addons@6.3.8", "@storybook/addons@^6.0.0", "@storybook/addons@^6.3.0":
+"@storybook/addons@6.3.8", "@storybook/addons@^6.3.0":
   version "6.3.8"
   resolved "https://registry.yarnpkg.com/@storybook/addons/-/addons-6.3.8.tgz#c4a839ae9b86fb4a1183466db6eb16201c1a0553"
   integrity sha512-TzYk1f/wvfoGDkLxXIx85ii5ED7IfGP/6eu00/i2Hyn4uGqdNi/ltSOJxnxa+DZv8KjYQRVAEo/Fbh95IEXI1Q==
@@ -11207,7 +11207,6 @@ ms@^2.1.1:
 "msw-storybook-addon@link:packages/msw-addon":
   version "1.6.0"
   dependencies:
-    "@storybook/addons" "^6.0.0"
     is-node-process "^1.0.1"
 
 msw@^0.35.0:
