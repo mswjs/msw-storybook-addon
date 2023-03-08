@@ -8,9 +8,22 @@
     "storybook": "yarn workspace msw-storybook-docs storybook",
     "msw:dev": "yarn workspace msw-storybook-addon dev",
     "start": "npm-run-all --parallel storybook msw:dev",
-    "build": "yarn workspace msw-storybook-addon build && yarn workspace msw-storybook-docs storybook-build"
+    "build": "yarn workspace msw-storybook-addon build && yarn workspace msw-storybook-docs storybook-build",
+    "release": "auto shipit"
   },
   "devDependencies": {
+    "@auto-it/released": "^10.32.2",
+    "auto": "^10.32.2",
     "npm-run-all": "^4.1.5"
+  },
+  "auto": {
+    "prereleaseBranches": [
+      "next",
+      "prerelease"
+    ],
+    "plugins": [
+      "npm",
+      "released"
+    ]
   }
 }

@@ -57,15 +57,15 @@
     "web-vitals": "^0.2.4"
   },
   "devDependencies": {
-    "@storybook/addon-a11y": "^6.1.11",
-    "@storybook/addon-actions": "^6.1.11",
-    "@storybook/addon-essentials": "^6.1.11",
-    "@storybook/addon-links": "^6.1.11",
-    "@storybook/addon-storysource": "^6.1.11",
-    "@storybook/node-logger": "^6.1.11",
+    "@storybook/addon-a11y": "^6.5.16",
+    "@storybook/addon-actions": "^6.5.16",
+    "@storybook/addon-essentials": "^6.5.16",
+    "@storybook/addon-links": "^6.5.16",
+    "@storybook/addon-storysource": "^6.5.16",
+    "@storybook/node-logger": "^6.5.16",
     "@storybook/preset-create-react-app": "^3.1.5",
-    "@storybook/react": "^6.1.11",
-    "chromatic": "^5.5.0",
+    "@storybook/react": "^6.5.16",
+    "chromatic": "^6.17.1",
     "msw": "^0.35.0"
   },
   "msw": {
