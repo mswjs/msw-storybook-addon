@@ -5,6 +5,7 @@
     "module": "CommonJS",
     "target": "es5",
     "strict": true,
+    "skipLibCheck": true,
     "allowJs": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
