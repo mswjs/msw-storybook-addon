@@ -21,10 +21,10 @@ const IS_BROWSER = !isNodeProcess()
 let api: SetupApi
 let workerPromise: Promise<unknown>
 
-export function initialize(options?: InitializeOptions): SetupApi {
+export function initialize(options?: InitializeOptions, initialHandlers: RequestHandler[] = []): SetupApi {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
-    const worker = setupWorker()
+    const worker = setupWorker(...initialHandlers)
     workerPromise = worker.start(options)
     api = worker
   } else {
@@ -46,7 +46,7 @@ export function initialize(options?: InitializeOptions): SetupApi {
       : undefined
 
     const { setupServer } = nodeRequire('msw/node')
-    const server = setupServer()
+    const server = setupServer(...initialHandlers)
     workerPromise = server.listen(options)
     api = server
   }
