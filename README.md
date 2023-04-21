@@ -53,10 +53,10 @@ export const decorators = [mswDecorator];
 
 ### Start Storybook
 
-When running Storybook, you have to serve the `public` folder as an asset to Storybook. Refer to [the docs](https://storybook.js.org/docs/react/configure/images-and-assets) if needed.
+When running Storybook, you have to serve the `public` folder as an asset to Storybook. This means you should set the `staticDirs` field in the Storybook main config file. Refer to [the docs](https://storybook.js.org/docs/react/configure/images-and-assets#serving-static-files-via-storybook-configuration) if needed.
 
 ```sh
-npm run start-storybook -s public
+npm run start-storybook
 ```
 
 ## Usage
@@ -216,3 +216,11 @@ initialize({
   },
 })
 ```
+
+### Troubleshooting
+
+#### MSW is interfering with HMR (Hot Module Replacement)
+
+If you're experiencing issues like `[MSW] Failed to mock a "GET" request to "http://localhost:6006/4cb31fa2eee22cf5b32f.hot-update.json"` in the console, it's likely that MSW is interfering with HMR. This is not common and it seems to only happen in Webpack projects, but if it happens to you, you can follow the steps in this issue to fix it:
+
+https://github.com/mswjs/msw-storybook-addon/issues/36#issuecomment-1496150729
