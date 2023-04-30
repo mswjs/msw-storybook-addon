@@ -2,6 +2,8 @@ import { isNodeProcess } from 'is-node-process'
 import type { SetupWorkerApi, RequestHandler } from 'msw'
 import type { SetupServerApi } from 'msw/node'
 
+declare var __webpack_require__: any
+declare var __non_webpack_require__: any
 export type SetupApi = SetupWorkerApi | SetupServerApi
 export type InitializeOptions =
   | Parameters<SetupWorkerApi['start']>[0]
