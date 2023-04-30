@@ -1,19 +1,17 @@
-import React from 'react'
-import { render, waitFor, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import { composeStories } from '@storybook/react'
 
-import { initialize, mswDecorator } from 'msw-storybook-addon'
-import { MockedSuccess, MockedError } from './App.stories'
+import { getWorker, initialize, mswDecorator } from 'msw-storybook-addon'
+import * as stories from './App.stories'
+
+const { MockedSuccess, MockedError } = composeStories(stories)
+
+initialize()
 
 // Useful in scenarios where the addon runs on node, such as with @storybook/testing-react
 describe('Running msw-addon on node', () => {
-  let server
-
-  beforeAll(() => {
-    server = initialize()
-  })
-
   afterAll(() => {
-    server.close()
+    getWorker().close()
   })
 
   it('renders film cards for each film', async () => {
@@ -24,7 +22,7 @@ describe('Running msw-addon on node', () => {
 
     expect(screen.getByText(/fetching star wars data/i)).toBeInTheDocument()
 
-    await waitFor(() => screen.getAllByRole('article'))
+    await screen.findAllByRole('article')
 
     const articleNodes = screen.getAllByRole('article')
     expect(articleNodes).toHaveLength(3)
@@ -37,7 +35,9 @@ describe('Running msw-addon on node', () => {
 
   it('renders error message if it cannot load the films', async () => {
     // Story + msw addon decorator, which resets and applies the server handlers based on story parameters
-    render(mswDecorator(MockedError, { parameters: MockedError.parameters }))
+    render(
+      mswDecorator(MockedError, { parameters: MockedError.parameters })
+    )
 
     const errorMsgNode = await screen.findByText(
       /could not fetch star wars data/i
