@@ -1,21 +1,28 @@
-import { initialize, mswDecorator } from 'msw-storybook-addon';
+import { initialize, mswLoader } from 'msw-storybook-addon';
 
 import '../src/styles.css';
 
 initialize();
 
-export const parameters = {
-  options: {
-    storySort: {
-      order: ['Guides', ['Introduction', 'Installation'], 'Demos', ['Urql']],
+/**
+ * @type {import('@storybook/react').Preview}
+ */
+const preview = {
+  parameters: {
+    options: {
+      storySort: {
+        order: ['Guides', ['Introduction', 'Installation'], 'Demos', ['Urql']],
+      },
     },
-  },
-  previewTabs: {
-    'storybook/docs/panel': {
-      hidden: true,
+    previewTabs: {
+      'storybook/docs/panel': {
+        hidden: true,
+      },
     },
+    actions: { argTypesRegex: '^on[A-Z].*' },
   },
-  actions: { argTypesRegex: '^on[A-Z].*' },
+  loaders: [mswLoader]
 };
 
-export const decorators = [mswDecorator];
+export default preview;
+
