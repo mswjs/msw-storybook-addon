@@ -1,6 +1,7 @@
 import { rest } from 'msw';
 import { App } from './App';
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default {
   title: 'Demos/Fetch',
   component: App,

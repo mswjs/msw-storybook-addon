@@ -3,16 +3,27 @@
   "description": "Mock API requests in Storybook with Mock Service Worker.",
   "version": "1.6.0",
   "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsup",
     "dev": "yarn build --watch",
-    "build": "tsc",
     "prepublishOnly": "yarn build",
     "release": "auto shipit"
   },
   "files": [
-    "dist/"
+    "dist/**/*",
+    "README.md",
+    "*.js",
+    "*.d.ts"
   ],
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
@@ -39,7 +50,8 @@
   "devDependencies": {
     "@auto-it/released": "^10.32.2",
     "auto": "^10.32.2",
-    "typescript": "^4.5.2"
+    "tsup": "^6.6.3",
+    "typescript": "^5.0.4"
   },
   "peerDependencies": {
     "msw": ">=0.35.0 <2.0.0"

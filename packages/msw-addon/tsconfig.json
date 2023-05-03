@@ -1,13 +1,10 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
-    "noImplicitAny": true,
-    "module": "CommonJS",
-    "skipLibCheck": true,
-    "target": "es5",
     "strict": true,
-    "allowJs": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
     "moduleResolution": "node",
+    "target": "es2020",
     "allowSyntheticDefaultImports": true,
     "declaration": true
   },

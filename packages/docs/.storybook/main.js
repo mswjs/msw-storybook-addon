@@ -7,7 +7,6 @@ const config = {
     '@storybook/addon-links',
     '@storybook/addon-essentials',
     '@storybook/addon-a11y',
-    '@storybook/preset-create-react-app',
     '@storybook/addon-storysource',
   ],
   staticDirs: ['../public'],
@@ -20,7 +19,7 @@ const config = {
     return config
   },
   framework: {
-    name: '@storybook/react-webpack5',
+    name: '@storybook/react-vite',
     options: {},
   },
   docs: {
