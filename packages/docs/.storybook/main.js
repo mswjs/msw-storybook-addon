@@ -1,5 +1,5 @@
 /**
- * @type {import('@storybook/react-webpack5').StorybookConfig}
+ * @type {import('@storybook/react-vite').StorybookConfig}
  */
 const config = {
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
@@ -10,14 +10,6 @@ const config = {
     '@storybook/addon-storysource',
   ],
   staticDirs: ['../public'],
-  webpackFinal: async (config) => {
-    config.resolve = config.resolve || {}
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'msw-storybook-addon': require.resolve('../../msw-addon/dist'),
-    }
-    return config
-  },
   framework: {
     name: '@storybook/react-vite',
     options: {},

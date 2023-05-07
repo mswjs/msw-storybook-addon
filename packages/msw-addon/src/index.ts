@@ -73,7 +73,6 @@ const setupHandlers = (msw: MswParameters['msw']) => {
           )
 
         if (handlers.length > 0) {
-          console.log('setup handlers', handlers)
           api.use(...handlers)
         }
       }
