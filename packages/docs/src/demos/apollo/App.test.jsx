@@ -1,12 +1,17 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { composeStories } from '@storybook/react'
+import { vi } from 'vitest'
 
 import { getServer } from '../../test-utils'
 import * as stories from './App.stories'
 
 const { MockedSuccess, MockedError } = composeStories(stories)
 const server = getServer()
+
+afterAll(() => {
+  vi.restoreAllMocks()
+})
 
 it('renders film cards for each film', async () => {
   server.use(...MockedSuccess.parameters.msw.handlers)

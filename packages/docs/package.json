@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
     "storybook": "storybook dev -p 6006",
-    "storybook-build": "storybook build",
+    "build-storybook": "storybook build",
     "msw:update": "msw init public"
   },
   "eslintConfig": {
@@ -41,36 +42,39 @@
   },
   "dependencies": {
     "@apollo/client": "^3.3.6",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
     "axios": "^0.21.1",
     "graphql": "^15.4.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-query": "^3.5.5",
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^5.0.1",
-    "urql": "^1.11.4",
-    "web-vitals": "^0.2.4"
+    "urql": "^1.11.4"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "^7.0.7",
-    "@storybook/addon-actions": "^7.0.7",
     "@storybook/addon-essentials": "^7.0.7",
     "@storybook/addon-links": "^7.0.7",
     "@storybook/addon-storysource": "^7.0.7",
-    "@storybook/node-logger": "^7.0.7",
-    "@storybook/preset-create-react-app": "^7.0.7",
     "@storybook/react": "^7.0.7",
-    "@storybook/react-webpack5": "^7.0.7",
-    "chromatic": "^5.5.0",
+    "@storybook/react-vite": "^7.0.7",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "chromatic": "^6.17.4",
+    "jsdom": "^21.1.0",
     "msw": "^1.2.1",
     "storybook": "^7.0.7",
-    "webpack": "5"
+    "timers": "^0.1.1",
+    "typescript": "^4.9.3",
+    "vite": "^4.1.0",
+    "vitest": "^0.29.2"
   },
   "msw": {
     "workerDirectory": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
