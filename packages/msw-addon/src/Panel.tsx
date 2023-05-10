@@ -69,6 +69,7 @@ const SBButton = styled(Button)`
 
 export const Panel: React.FC<PanelProps> = (props) => {
   const [addonState, setAddonState] = useAddonState(ADDON_ID, {} as any);
+  const [dataHasChanged, setDataHasChanged] = React.useState(false);
 
   const emit = useChannel({
     [EVENTS.SEND]: (newAddonState) => {
@@ -77,13 +78,31 @@ export const Panel: React.FC<PanelProps> = (props) => {
     },
   });
 
+  const onReset = () => {
+    emit(EVENTS.RESET);
+    setDataHasChanged(false);
+  };
+
   const onChange = (key: string, value: number | string | null) => {
     console.log('onChange', key, value);
     emit(EVENTS.UPDATE, { key, value });
   };
 
+  const onChangeResponse = (
+    key: string,
+    objectKey: string,
+    objectValue: number | string
+  ) => {
+    setDataHasChanged(true);
+    emit(EVENTS.UPDATE_RESPONSES, { key, objectKey, objectValue });
+  };
+
   const getRender = () => {
-    if (addonState.delay !== undefined && addonState.status !== undefined)
+    if (
+      addonState.delay !== undefined &&
+      addonState.status !== undefined &&
+      addonState.responses !== undefined
+    )
       return (
         <ScrollArea>
           <Container>
@@ -118,7 +137,7 @@ export const Panel: React.FC<PanelProps> = (props) => {
                 ))}
               </SBSelect>
             </div>
-            {/* 
+
             <div>
               <Label>
                 <h3>Response Data</h3>
@@ -131,7 +150,15 @@ export const Panel: React.FC<PanelProps> = (props) => {
                     <ObjectControlContainer key={key}>
                       <ObjectControl
                         name={key}
-                        value={addonState.responses[key].data}
+                        value={
+                          addonState.responses[key].handler.info.path
+                            ? JSON.parse(
+                                addonState.responses[key].response.body
+                              )
+                            : JSON.parse(
+                                addonState.responses[key].response.body
+                              ).data
+                        }
                         onChange={(value) =>
                           onChangeResponse('responses', key, value)
                         }
@@ -153,7 +180,7 @@ export const Panel: React.FC<PanelProps> = (props) => {
               >
                 Reset Mock Data
               </SBButton>
-            </div> */}
+            </div>
           </Container>
         </ScrollArea>
       );

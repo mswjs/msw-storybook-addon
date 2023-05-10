@@ -33,10 +33,8 @@ const updateHandlers = () => {
     (handler: {
       info: { header: string; path?: string; operationName?: string };
     }) => {
-      const currentResponse = (window as any).mswRequests.get(
-        handler.info.header
-      ).response;
-      console.log(handler.info, currentResponse);
+      const currentResponse = (window as any).mswRequests[handler.info.header]
+        .response;
       if (handler.info.path)
         worker.use(
           rest.get(handler.info.path, (req, res, ctx) => {
@@ -75,8 +73,7 @@ export const withRoundTrip = (
     if (!(window as any).handlers)
       (window as any).handlers = ctx.parameters.msw
         .handlers as RequestHandler[];
-    if (!(window as any).mswRequests) (window as any).mswRequests = new Map();
-
+    if (!(window as any).mswRequests) (window as any).mswRequests = {};
     emit = useChannel({
       [EVENTS.UPDATE]: ({ key, value }) => {
         if (key === 'delay') {
@@ -95,6 +92,7 @@ export const withRoundTrip = (
         const responseObject = {
           delay: delay,
           status: status,
+          responses: (window as any).mswRequests,
         };
         emit(EVENTS.SEND, responseObject);
       },
@@ -105,6 +103,7 @@ export const withRoundTrip = (
       emit(EVENTS.SEND, {
         delay: delay,
         status: status,
+        responses: (window as any).mswRequests,
       });
       channel.on(STORY_ARGS_UPDATED, () => {
         delete (window as any).mswRequests;
@@ -131,11 +130,17 @@ const logEvents = () => {
       (window as any).handlers
     );
     if (response && handler) {
-      (window as any).mswRequests.set(handler.info.header, {
+      (window as any).mswRequests[handler.info.header] = {
         handler: handler,
         response: { ...response, delay: delay, status: status },
-      });
+      };
       updateHandlers();
+      console.log('sending', (window as any).mswRequests);
+      emit(EVENTS.SEND, {
+        delay: delay,
+        status: status,
+        responses: (window as any).mswRequests,
+      });
     }
   });
 };
