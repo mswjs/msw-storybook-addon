@@ -2,7 +2,7 @@ import { initialize, mswLoader } from 'msw-storybook-addon';
 
 import '../src/styles.css';
 
-initialize();
+initialize({ onUnhandledRequest: 'bypass' });
 
 /**
  * @type {import('@storybook/react').Preview}
@@ -11,8 +11,7 @@ const preview = {
   parameters: {
     actions: { argTypesRegex: '^on[A-Z].*' },
   },
-  loaders: [mswLoader]
+  loaders: [mswLoader],
 };
 
 export default preview;
-

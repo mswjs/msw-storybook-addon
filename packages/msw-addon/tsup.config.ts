@@ -1,17 +1,18 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from "tsup";
 
 export default defineConfig((options) => ({
-  entry: ['src/index.ts'],
+  entry: ["src/index.ts", "src/preview.ts", "src/manager.ts"],
   splitting: false,
-  minify: false,
-  format: ['cjs', 'esm'],
+  minify: !options.watch,
+  format: ["cjs", "esm"],
   dts: {
     resolve: true,
   },
   treeshake: true,
+  sourcemap: true,
   clean: true,
-  platform: 'browser',
+  platform: "browser",
   esbuildOptions(options) {
-    options.conditions = ['module']
+    options.conditions = ["module"];
   },
-}))
+}));

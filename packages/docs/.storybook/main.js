@@ -8,6 +8,7 @@ const config = {
     '@storybook/addon-essentials',
     '@storybook/addon-a11y',
     '@storybook/addon-storysource',
+    './local-preset.js',
   ],
   staticDirs: ['../public'],
   framework: {
@@ -17,6 +18,6 @@ const config = {
   docs: {
     autodocs: 'tag',
   },
-}
+};
 
 export default config;

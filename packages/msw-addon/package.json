@@ -22,7 +22,18 @@
       "require": "./dist/index.js",
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
-    }
+    },
+    "./manager": {
+      "require": "./dist/manager.js",
+      "import": "./dist/manager.mjs",
+      "types": "./dist/manager.d.ts"
+    },
+    "./preview": {
+      "require": "./dist/preview.js",
+      "import": "./dist/preview.mjs",
+      "types": "./dist/preview.d.ts"
+    },
+    "./package.json": "./package.json"
   },
   "repository": {
     "type": "git",
@@ -54,6 +65,13 @@
     "typescript": "^5.0.4"
   },
   "peerDependencies": {
+    "@storybook/blocks": "^7.0.7",
+    "@storybook/components": "^7.0.7",
+    "@storybook/core-events": "^7.0.7",
+    "@storybook/manager-api": "^7.0.7",
+    "@storybook/preview-api": "^7.0.7",
+    "@storybook/theming": "^7.0.7",
+    "@storybook/types": "^7.0.7",
     "msw": ">=0.35.0 <2.0.0"
   },
   "storybook": {

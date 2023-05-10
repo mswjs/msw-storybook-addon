@@ -1,13 +1,21 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "target": "es2020",
     "allowSyntheticDefaultImports": true,
-    "declaration": true
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "incremental": false,
+    "isolatedModules": true,
+    "declaration": true,
+    "jsx": "react",
+    "lib": ["es2020", "dom"],
+    "moduleResolution": "node",
+    "module": "es2020",
+    "noImplicitAny": true,
+    "rootDir": "./src",
+    "skipLibCheck": true,
+    "target": "ES2020",
+    "types": ["node", "vite/client"]
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "**/*.test.*"]
+  "include": ["src/**/*", "api/mockServiceWorker.js"]
 }
