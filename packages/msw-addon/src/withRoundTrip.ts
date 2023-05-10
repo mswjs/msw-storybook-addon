@@ -87,8 +87,14 @@ export const withRoundTrip = (
             channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
           }, 300);
         }
+        if (key === 'status') {
+          status = value;
+          updateHandlers();
+          channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
+        }
         const responseObject = {
           delay: delay,
+          status: status,
         };
         emit(EVENTS.SEND, responseObject);
       },
@@ -98,6 +104,7 @@ export const withRoundTrip = (
       logEvents();
       emit(EVENTS.SEND, {
         delay: delay,
+        status: status,
       });
       channel.on(STORY_ARGS_UPDATED, () => {
         delete (window as any).mswRequests;

@@ -83,7 +83,7 @@ export const Panel: React.FC<PanelProps> = (props) => {
   };
 
   const getRender = () => {
-    if (addonState.delay !== undefined)
+    if (addonState.delay !== undefined && addonState.status !== undefined)
       return (
         <ScrollArea>
           <Container>
@@ -101,7 +101,7 @@ export const Panel: React.FC<PanelProps> = (props) => {
                 step={500}
               />
             </div>
-            {/* <div>
+            <div>
               <Label>
                 <h3>Response Status : {addonState.status}</h3>
                 <p>Select a mock response status</p>
@@ -118,6 +118,7 @@ export const Panel: React.FC<PanelProps> = (props) => {
                 ))}
               </SBSelect>
             </div>
+            {/* 
             <div>
               <Label>
                 <h3>Response Data</h3>
