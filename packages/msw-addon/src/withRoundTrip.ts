@@ -20,21 +20,31 @@ type Context = {
 
 const channel = addons.getChannel();
 let INITIAL_MOUNT_STATE = true;
-let delay = 500;
+let delay = 0;
 let status = 200;
 let moveTimeout: NodeJS.Timeout;
 let emit: (eventName: string, ...args: any) => void;
 
 const updateHandlers = () => {
+  //works for handlers array, not handlers object .i.e. React Router + RQ is not working yet
+  //TODO:  add support for handlers object
+  if (
+    !Array.isArray((window as any).msw.handlers) ||
+    !(window as any).msw.handlersMap.length
+  )
+    return;
+
   if (!(window as any).msw) return;
-  const worker = (window as any).msw;
+  const worker = (window as any).msw.worker;
   worker.resetHandlers();
-  (window as any).handlers?.forEach(
+  (window as any).msw.handlers?.forEach(
     (handler: {
       info: { header: string; path?: string; operationName?: string };
     }) => {
-      const currentResponse = (window as any).mswRequests[handler.info.header]
-        .response;
+      const currentResponse = (window as any).msw.handlersMap[
+        handler.info.header
+      ].response;
+
       if (handler.info.path)
         worker.use(
           rest.get(handler.info.path, (req, res, ctx) => {
@@ -51,7 +61,9 @@ const updateHandlers = () => {
             return res(
               ctx.status(status),
               ctx.delay(delay),
-              ctx.data(JSON.parse(currentResponse.body).data)
+              currentResponse.body.includes('errors')
+                ? ctx.errors([...JSON.parse(currentResponse.body).errors])
+                : ctx.data(JSON.parse(currentResponse.body).data)
             );
           })
         );
@@ -70,10 +82,10 @@ export const withRoundTrip = (
     return storyFn();
   }
   if ('handlers' in ctx.parameters.msw) {
-    if (!(window as any).handlers)
-      (window as any).handlers = ctx.parameters.msw
+    if (!(window as any).msw.handlers)
+      (window as any).msw.handlers = ctx.parameters.msw
         .handlers as RequestHandler[];
-    if (!(window as any).mswRequests) (window as any).mswRequests = {};
+    if (!(window as any).msw.handlersMap) (window as any).msw.handlersMap = {};
     emit = useChannel({
       [EVENTS.UPDATE]: ({ key, value }) => {
         if (key === 'delay') {
@@ -82,7 +94,7 @@ export const withRoundTrip = (
           updateHandlers();
           moveTimeout = setTimeout(() => {
             channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
-          }, 300);
+          }, 500);
         }
         if (key === 'status') {
           status = value;
@@ -92,9 +104,29 @@ export const withRoundTrip = (
         const responseObject = {
           delay: delay,
           status: status,
-          responses: (window as any).mswRequests,
+          responses: (window as any).msw.handlersMap,
         };
         emit(EVENTS.SEND, responseObject);
+      },
+      [EVENTS.UPDATE_RESPONSES]: ({ key, objectKey, objectValue }) => {
+        if (key === 'responses') {
+          (window as any).msw.handlersMap[objectKey].response.body =
+            JSON.stringify(objectValue);
+          updateHandlers();
+          const responseObject = {
+            delay: delay,
+            status: status,
+            responses: (window as any).msw.handlersMap,
+          };
+          channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
+          emit(EVENTS.SEND, responseObject);
+        }
+      },
+      [EVENTS.RESET]: () => {
+        delete (window as any).msw.handlersMap;
+        (window as any).msw.worker.stop();
+
+        location.reload();
       },
     });
 
@@ -103,15 +135,20 @@ export const withRoundTrip = (
       emit(EVENTS.SEND, {
         delay: delay,
         status: status,
-        responses: (window as any).mswRequests,
+        responses: (window as any).msw.handlersMap,
       });
       channel.on(STORY_ARGS_UPDATED, () => {
-        delete (window as any).mswRequests;
+        delete (window as any).msw.handlersMap;
         location.reload();
       });
       channel.on(STORY_CHANGED, () => {
-        delete (window as any).mswRequests;
-        (window as any).msw.stop();
+        emit(EVENTS.SEND, {
+          status: undefined,
+          delay: undefined,
+          responses: undefined,
+        });
+        delete (window as any).msw.handlersMap;
+        (window as any).msw.worker.stop();
         location.reload();
       });
       INITIAL_MOUNT_STATE = false;
@@ -123,23 +160,38 @@ export const withRoundTrip = (
 };
 
 const logEvents = () => {
-  const worker = (window as any).msw;
+  const worker = (window as any).msw.worker;
+
+  //SUGGESTION: return both the request and the handler for a matched request
+  //WORKAROUND: use msw's getResponse function as a utility to get the handler
   (worker.events as any).on('request:match', async (req: RestRequest) => {
+    //works for handlers array, not handlers object .i.e. React Router + RQ is not working yet
+    //TODO:  add support for handlers object
+    if (!Array.isArray((window as any).msw.handlers)) return;
     const { handler, response } = await getResponse(
       req,
-      (window as any).handlers
+      (window as any).msw.handlers
     );
+
     if (response && handler) {
-      (window as any).mswRequests[handler.info.header] = {
+      if (
+        (window as any).msw.handlersMap[handler.info.header] &&
+        (window as any).msw.handlersMap[handler.info.header].response
+      ) {
+        response.body = (window as any).msw.handlersMap[
+          handler.info.header
+        ].response.body;
+      }
+
+      (window as any).msw.handlersMap[handler.info.header] = {
         handler: handler,
         response: { ...response, delay: delay, status: status },
       };
       updateHandlers();
-      console.log('sending', (window as any).mswRequests);
       emit(EVENTS.SEND, {
         delay: delay,
         status: status,
-        responses: (window as any).mswRequests,
+        responses: (window as any).msw.handlersMap,
       });
     }
   });

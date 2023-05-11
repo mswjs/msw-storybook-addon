@@ -73,7 +73,6 @@ export const Panel: React.FC<PanelProps> = (props) => {
 
   const emit = useChannel({
     [EVENTS.SEND]: (newAddonState) => {
-      console.log('newAddonState', newAddonState);
       setAddonState({ ...addonState, ...newAddonState });
     },
   });
@@ -84,7 +83,6 @@ export const Panel: React.FC<PanelProps> = (props) => {
   };
 
   const onChange = (key: string, value: number | string | null) => {
-    console.log('onChange', key, value);
     emit(EVENTS.UPDATE, { key, value });
   };
 
@@ -146,19 +144,13 @@ export const Panel: React.FC<PanelProps> = (props) => {
               <ObjectsContainer>
                 {addonState.responses &&
                   Object.keys(addonState.responses).length > 0 &&
-                  Object.keys(addonState.responses).map((key) => (
-                    <ObjectControlContainer key={key}>
+                  Object.keys(addonState.responses).map((key, index) => (
+                    <ObjectControlContainer key={index}>
                       <ObjectControl
                         name={key}
-                        value={
-                          addonState.responses[key].handler.info.path
-                            ? JSON.parse(
-                                addonState.responses[key].response.body
-                              )
-                            : JSON.parse(
-                                addonState.responses[key].response.body
-                              ).data
-                        }
+                        value={JSON.parse(
+                          addonState.responses[key].response.body
+                        )}
                         onChange={(value) =>
                           onChangeResponse('responses', key, value)
                         }

@@ -127,7 +127,8 @@ export const mswLoader = async (context: Context) => {
 
   if (workerPromise) {
     await workerPromise;
-    (window as any).msw = api;
+    (window as any).msw = (window as any).msw || {};
+    (window as any).msw.worker = api;
   }
   return {};
 };
