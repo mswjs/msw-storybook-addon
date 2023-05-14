@@ -1,0 +1,7 @@
+dist
+node_modules
+.cache
+.env
+*.snap
+__snapshots__
+CHANGELOG.md
