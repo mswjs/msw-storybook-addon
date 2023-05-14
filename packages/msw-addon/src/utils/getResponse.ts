@@ -29,7 +29,6 @@ export const getResponse = async <
   handlers: Handler,
   resolutionContext?: ResponseResolutionContext
 ): Promise<ResponseLookupResult> => {
-  console.log('gettingResponse');
   const relevantHandlers = handlers.filter((handler) => {
     return handler.test(request, resolutionContext);
   });

@@ -8,9 +8,9 @@ import {
   FORCE_REMOUNT,
   STORY_ARGS_UPDATED,
 } from '@storybook/core-events';
-import { EVENTS, PARAM_KEY } from './constants';
+import { EVENTS } from './constants';
 import { RequestHandler, RestRequest, graphql, rest } from 'msw';
-import { MswParameters, SetupApi } from './mswLoader';
+import { MswParameters } from './mswLoader';
 import { getResponse } from './utils/getResponse';
 
 type Context = {
@@ -76,12 +76,17 @@ export const withRoundTrip = (
     channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
     return storyFn();
   }
+
   if ('handlers' in ctx.parameters.msw) {
+    // Get handlers from story parameters
     if (!(window as any).msw.handlers)
       (window as any).msw.handlers = ctx.parameters.msw
         .handlers as RequestHandler[];
 
+    // Initialize handlersMap to store responses
     if (!(window as any).msw.handlersMap) (window as any).msw.handlersMap = {};
+
+    // Define events to listen to from the addon panel
     emit = useChannel({
       [EVENTS.UPDATE]: ({ key, value }) => {
         if (key === 'delay') {
@@ -126,6 +131,7 @@ export const withRoundTrip = (
       },
     });
 
+    // If this is the first time the story is mounted, send the initial state to the addon panel
     if (INITIAL_MOUNT_STATE) {
       logEvents();
       emit(EVENTS.SEND, {
@@ -155,6 +161,7 @@ export const withRoundTrip = (
   return storyFn();
 };
 
+// Listen to request:match events from msw in order to build the handlersMap
 const logEvents = () => {
   const worker = (window as any).msw.worker;
   if (!Array.isArray((window as any).msw.handlers)) {
@@ -170,8 +177,6 @@ const logEvents = () => {
   //SUGGESTION: return both the request and the handler for a matched request
   //WORKAROUND: use msw's getResponse function as a utility to get the handler
   (worker.events as any).on('request:match', async (req: RestRequest) => {
-    console.log('request:match', req);
-
     const { handler, response } = await getResponse(
       req,
       (window as any).msw.handlers
