@@ -1,15 +1,8 @@
 import { addons, useChannel } from '@storybook/preview-api';
-import type {
-  Renderer,
-  PartialStoryFn as StoryFunction,
-} from '@storybook/types';
-import {
-  STORY_CHANGED,
-  FORCE_REMOUNT,
-  STORY_ARGS_UPDATED,
-} from '@storybook/core-events';
+import type { Renderer, PartialStoryFn as StoryFunction } from '@storybook/types';
+import { STORY_CHANGED, FORCE_REMOUNT, STORY_ARGS_UPDATED } from '@storybook/core-events';
 import { EVENTS } from './constants';
-import { RequestHandler, RestRequest, graphql, rest } from 'msw';
+import { RequestHandler, graphql, rest } from 'msw';
 import { MswParameters } from './mswLoader';
 import { getResponse } from './utils/getResponse';
 
@@ -26,19 +19,15 @@ let moveTimeout: NodeJS.Timeout;
 let emit: (eventName: string, ...args: any) => void;
 
 const updateHandlers = () => {
-  if (!Object.keys((window as any).msw.handlersMap).length) return;
+  if (!Object.keys(window.__MSW_STORYBOOK__.handlersMap).length) return;
 
-  if (!(window as any).msw) return;
-  const worker = (window as any).msw.worker;
+  if (!window.__MSW_STORYBOOK__) return;
+  const worker = window.__MSW_STORYBOOK__.worker;
   // worker.resetHandlers();
-  (window as any).msw.handlers?.forEach(
-    (handler: {
-      info: { header: string; path?: string; operationName?: string };
-    }) => {
-      if (!(window as any).msw.handlersMap[handler.info.header]) return;
-      const currentResponse = (window as any).msw.handlersMap[
-        handler.info.header
-      ].response;
+  window.__MSW_STORYBOOK__.handlers?.forEach(
+    (handler: { info: { header: string; path?: string; operationName?: string } }) => {
+      if (!window.__MSW_STORYBOOK__.handlersMap[handler.info.header]) return;
+      const currentResponse = window.__MSW_STORYBOOK__.handlersMap[handler.info.header].response;
 
       if (handler.info.path)
         worker.use(
@@ -66,25 +55,21 @@ const updateHandlers = () => {
   );
 };
 
-export const withRoundTrip = (
-  storyFn: StoryFunction<Renderer>,
-  ctx: Context
-) => {
+export const withRoundTrip = (storyFn: StoryFunction<Renderer>, ctx: Context) => {
   if (!ctx.parameters.msw) return storyFn();
 
-  if (!(window as any).msw) {
+  if (!window.__MSW_STORYBOOK__) {
     channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
     return storyFn();
   }
 
   if ('handlers' in ctx.parameters.msw) {
     // Get handlers from story parameters
-    if (!(window as any).msw.handlers)
-      (window as any).msw.handlers = ctx.parameters.msw
-        .handlers as RequestHandler[];
+    if (!window.__MSW_STORYBOOK__.handlers)
+      window.__MSW_STORYBOOK__.handlers = ctx.parameters.msw.handlers as RequestHandler[];
 
     // Initialize handlersMap to store responses
-    if (!(window as any).msw.handlersMap) (window as any).msw.handlersMap = {};
+    if (!window.__MSW_STORYBOOK__.handlersMap) window.__MSW_STORYBOOK__.handlersMap = {};
 
     // Define events to listen to from the addon panel
     emit = useChannel({
@@ -105,27 +90,27 @@ export const withRoundTrip = (
         const responseObject = {
           delay: delay,
           status: status,
-          responses: (window as any).msw.handlersMap,
+          responses: window.__MSW_STORYBOOK__.handlersMap,
         };
         emit(EVENTS.SEND, responseObject);
       },
       [EVENTS.UPDATE_RESPONSES]: ({ key, objectKey, objectValue }) => {
         if (key === 'responses') {
-          (window as any).msw.handlersMap[objectKey].response.body =
+          window.__MSW_STORYBOOK__.handlersMap[objectKey].response.body =
             JSON.stringify(objectValue);
           updateHandlers();
           const responseObject = {
             delay: delay,
             status: status,
-            responses: (window as any).msw.handlersMap,
+            responses: window.__MSW_STORYBOOK__.handlersMap,
           };
           channel.emit(FORCE_REMOUNT, { storyId: ctx.id });
           emit(EVENTS.SEND, responseObject);
         }
       },
       [EVENTS.RESET]: () => {
-        delete (window as any).msw.handlersMap;
-        (window as any).msw.worker.stop();
+        window.__MSW_STORYBOOK__.handlersMap = {};
+        window.__MSW_STORYBOOK__.worker.stop();
 
         location.reload();
       },
@@ -137,10 +122,10 @@ export const withRoundTrip = (
       emit(EVENTS.SEND, {
         delay: delay,
         status: status,
-        responses: (window as any).msw.handlersMap,
+        responses: window.__MSW_STORYBOOK__.handlersMap,
       });
       channel.on(STORY_ARGS_UPDATED, () => {
-        delete (window as any).msw.handlersMap;
+        window.__MSW_STORYBOOK__.handlersMap = {};
         location.reload();
       });
       channel.on(STORY_CHANGED, () => {
@@ -149,8 +134,8 @@ export const withRoundTrip = (
           delay: undefined,
           responses: undefined,
         });
-        delete (window as any).msw.handlersMap;
-        (window as any).msw.worker.stop();
+        window.__MSW_STORYBOOK__.handlersMap = {};
+        window.__MSW_STORYBOOK__.worker.stop();
         location.reload();
       });
       INITIAL_MOUNT_STATE = false;
@@ -163,44 +148,38 @@ export const withRoundTrip = (
 
 // Listen to request:match events from msw in order to build the handlersMap
 const logEvents = () => {
-  const worker = (window as any).msw.worker;
-  if (!Array.isArray((window as any).msw.handlers)) {
+  const worker = window.__MSW_STORYBOOK__.worker;
+  if (!Array.isArray(window.__MSW_STORYBOOK__.handlers)) {
     const joinedHandlers: any = [];
-    Object.values((window as any).msw.handlers).forEach((handler) => {
+    Object.values(window.__MSW_STORYBOOK__.handlers).forEach((handler) => {
       if (Array.isArray(handler)) joinedHandlers.push(...handler);
       else joinedHandlers.push(handler);
     });
-
-    (window as any).msw.handlers = joinedHandlers;
+    window.__MSW_STORYBOOK__.handlers = joinedHandlers;
   }
 
   //SUGGESTION: return both the request and the handler for a matched request
   //WORKAROUND: use msw's getResponse function as a utility to get the handler
-  (worker.events as any).on('request:match', async (req: RestRequest) => {
-    const { handler, response } = await getResponse(
-      req,
-      (window as any).msw.handlers
-    );
+  worker.events.on('request:match', async (req) => {
+    const { handler, response } = await getResponse(req, window.__MSW_STORYBOOK__.handlers || []);
 
     if (response && handler) {
       if (
-        (window as any).msw.handlersMap[handler.info.header] &&
-        (window as any).msw.handlersMap[handler.info.header].response
+        window.__MSW_STORYBOOK__.handlersMap[handler.info.header] &&
+        window.__MSW_STORYBOOK__.handlersMap[handler.info.header].response
       ) {
-        response.body = (window as any).msw.handlersMap[
-          handler.info.header
-        ].response.body;
+        response.body = window.__MSW_STORYBOOK__.handlersMap[handler.info.header].response.body;
       }
 
-      (window as any).msw.handlersMap[handler.info.header] = {
+      window.__MSW_STORYBOOK__.handlersMap[handler.info.header] = {
         handler: handler,
-        response: { ...response, delay: delay, status: status },
+        response: { ...response, delay: delay, status: response.status },
       };
       updateHandlers();
       emit(EVENTS.SEND, {
         delay: delay,
         status: status,
-        responses: (window as any).msw.handlersMap,
+        responses: window.__MSW_STORYBOOK__.handlersMap,
       });
     }
   });

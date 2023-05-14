@@ -2,6 +2,7 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
+    "strict": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "incremental": false,
@@ -11,11 +12,10 @@
     "lib": ["es2020", "dom"],
     "moduleResolution": "node",
     "module": "es2020",
-    "noImplicitAny": true,
     "rootDir": "./src",
     "skipLibCheck": true,
     "target": "ES2020",
     "types": ["node", "vite/client"]
   },
-  "include": ["src/**/*", "api/mockServiceWorker.js"]
+  "include": ["src/**/*", "api/mockServiceWorker.js", "./typings.d.ts"],
 }

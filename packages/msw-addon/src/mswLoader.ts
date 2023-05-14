@@ -28,9 +28,7 @@ const IS_BROWSER = !isNodeProcess();
 let api: SetupApi;
 let workerPromise: Promise<unknown>;
 
-export async function initialize(
-  options?: InitializeOptions
-): Promise<SetupApi> {
+export async function initialize(options?: InitializeOptions): Promise<SetupApi> {
   const defaultHandlers = [
     rest.get('/hot-update/*', (req) => req.passthrough()),
     rest.get('/node_modules/*', (req) => req.passthrough()),
@@ -63,7 +61,7 @@ export function getWorker(): SetupApi {
 
 const setupHandlers = (msw: MswParameters['msw']) => {
   if (api) {
-    if ((window as any).msw) return;
+    if (window.__MSW_STORYBOOK__) return;
 
     api.resetHandlers();
 
@@ -127,8 +125,9 @@ export const mswLoader = async (context: Context) => {
 
   if (workerPromise) {
     await workerPromise;
-    (window as any).msw = (window as any).msw || {};
-    (window as any).msw.worker = api;
+    window.__MSW_STORYBOOK__ = window.__MSW_STORYBOOK__ || {};
+    // @ts-expect-error the types are getting confused, we will eventually remove setupServerApi
+    window.__MSW_STORYBOOK__.worker = api;
   }
   return {};
 };

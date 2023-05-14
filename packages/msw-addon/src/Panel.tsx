@@ -12,7 +12,7 @@ const statusCodes = Object.keys(statusTextMap);
 const { Select } = Form;
 
 interface PanelProps {
-  active: boolean;
+  active?: boolean;
 }
 
 const Container = styled.div`
@@ -184,7 +184,9 @@ export const Panel: React.FC<PanelProps> = (props) => {
   };
 
   return (
-    <AddonPanel {...props}>
+    // seems like there is a type mismatch between Addon_RenderOptions and AddonPanelProps
+    // where active is boolean | undefined and boolean respectively
+    <AddonPanel {...props} active={!!props.active}>
       <div>{getRender()}</div>
     </AddonPanel>
   );
