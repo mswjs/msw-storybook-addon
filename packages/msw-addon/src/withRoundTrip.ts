@@ -26,21 +26,16 @@ let moveTimeout: NodeJS.Timeout;
 let emit: (eventName: string, ...args: any) => void;
 
 const updateHandlers = () => {
-  //works for handlers array, not handlers object .i.e. React Router + RQ is not working yet
-  //TODO:  add support for handlers object
-  if (
-    !Array.isArray((window as any).msw.handlers) ||
-    !(window as any).msw.handlersMap.length
-  )
-    return;
+  if (!Object.keys((window as any).msw.handlersMap).length) return;
 
   if (!(window as any).msw) return;
   const worker = (window as any).msw.worker;
-  worker.resetHandlers();
+  // worker.resetHandlers();
   (window as any).msw.handlers?.forEach(
     (handler: {
       info: { header: string; path?: string; operationName?: string };
     }) => {
+      if (!(window as any).msw.handlersMap[handler.info.header]) return;
       const currentResponse = (window as any).msw.handlersMap[
         handler.info.header
       ].response;
@@ -85,6 +80,7 @@ export const withRoundTrip = (
     if (!(window as any).msw.handlers)
       (window as any).msw.handlers = ctx.parameters.msw
         .handlers as RequestHandler[];
+
     if (!(window as any).msw.handlersMap) (window as any).msw.handlersMap = {};
     emit = useChannel({
       [EVENTS.UPDATE]: ({ key, value }) => {
@@ -161,13 +157,21 @@ export const withRoundTrip = (
 
 const logEvents = () => {
   const worker = (window as any).msw.worker;
+  if (!Array.isArray((window as any).msw.handlers)) {
+    const joinedHandlers: any = [];
+    Object.values((window as any).msw.handlers).forEach((handler) => {
+      if (Array.isArray(handler)) joinedHandlers.push(...handler);
+      else joinedHandlers.push(handler);
+    });
+
+    (window as any).msw.handlers = joinedHandlers;
+  }
 
   //SUGGESTION: return both the request and the handler for a matched request
   //WORKAROUND: use msw's getResponse function as a utility to get the handler
   (worker.events as any).on('request:match', async (req: RestRequest) => {
-    //works for handlers array, not handlers object .i.e. React Router + RQ is not working yet
-    //TODO:  add support for handlers object
-    if (!Array.isArray((window as any).msw.handlers)) return;
+    console.log('request:match', req);
+
     const { handler, response } = await getResponse(
       req,
       (window as any).msw.handlers
