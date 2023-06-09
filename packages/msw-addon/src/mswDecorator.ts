@@ -20,11 +20,17 @@ type Context = {
 }
 
 const IS_BROWSER = !isNodeProcess()
+const IS_REACT_NATIVE = typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
 let api: SetupApi
 let workerPromise: Promise<unknown>
 
 export function initialize(options?: InitializeOptions): SetupApi {
-  if (IS_BROWSER) {
+  if (IS_REACT_NATIVE) {
+    const { setupServer } = require('msw/native')
+    const server = setupServer()
+    workerPromise = server.listen(options)
+    api = server;
+  } else if (IS_BROWSER) {
     const { setupWorker } = require('msw')
     const worker = setupWorker()
     workerPromise = worker.start(options)
