@@ -184,7 +184,9 @@ NoAuthBehavior.parameters = {
 
 #### Configuring MSW
 
-`msw-storybook-addon` starts MSW with default configuration. If you want to configure it, you can pass options to the `initialize` function. They are the [StartOptions](https://mswjs.io/docs/api/setup-worker/start) from setupWorker.
+`msw-storybook-addon` starts MSW with default configuration. `initialize` takes two arguments:
+- `options`: this gets passed to either [`worker.start()`](https://mswjs.io/docs/api/setup-worker/start) or [`server.listen()`](https://mswjs.io/docs/api/setup-server/listen), so the same types are expected.
+- `initialHandlers`: a `RequestHandler[]` type, this array is spread to either [`setupWorker()`](https://mswjs.io/docs/api/setup-worker) or [`setupServer()`](https://mswjs.io/docs/api/setup-server).
 
 A common example is to configure the [onUnhandledRequest](https://mswjs.io/docs/api/setup-worker/start#onunhandledrequest) behavior, as MSW logs a warning in case there are requests which were not handled.
 
@@ -215,4 +217,20 @@ initialize({
     }
   },
 })
+```
+
+Although [composing handlers](https://github.com/mswjs/msw-storybook-addon#composing-request-handlers) is possible, that relies on Storybook's merging logic, which currently only works when stories are defined in objects. To help you get around this limitation, you can pass initial request handlers directly to [`setupWorker()`](https://mswjs.io/docs/api/setup-worker) or [`setupServer()`](https://mswjs.io/docs/api/setup-server).
+
+```js
+// preview.js
+import { initialize } from 'msw-storybook-addon';
+
+initialize({}, [
+  rest.get('/numbers', (req, res, ctx) => {
+    return res(ctx.json([1, 2, 3]))
+  }),
+  rest.get('/strings', (req, res, ctx) => {
+    return res(ctx.json(['a', 'b', 'c']))
+  }),
+])
 ```
