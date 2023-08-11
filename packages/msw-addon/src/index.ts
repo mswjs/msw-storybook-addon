@@ -30,8 +30,18 @@ export async function initialize(
   ]
 
   if (IS_BROWSER) {
-    const { setupWorker } = await import('msw')
-    const worker = setupWorker(...defaultHandlers)
+    async function resolveMsw(){
+      const { setupWorker } = await import('msw')
+      const worker = setupWorker(...defaultHandlers)
+      return worker;
+    }
+    // Placeholder support for new RC
+    async function resolveMswBrowser(){
+      const { setupWorker } = await import('msw/browser')
+      const worker = setupWorker(...defaultHandlers)
+      return worker;
+    }
+    const worker = await Promise.any([resolveMsw(), resolveMswBrowser()]);    
     workerPromise = worker.start(options)
     api = worker as SetupApi
   } else {
