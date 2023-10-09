@@ -1,3 +1,20 @@
+# v1.9.0 (Mon Oct 09 2023)
+
+#### 🚀 Enhancement
+
+- feat: support initial request handlers [#108](https://github.com/mswjs/msw-storybook-addon/pull/108) (zsolt.pentz@bitrise.io [@yannbf](https://github.com/yannbf))
+
+#### 📝 Documentation
+
+- Docs: Add troubleshooting section and update reference to statics (#109) [skip-ci] [#109](https://github.com/mswjs/msw-storybook-addon/pull/109) ([@yannbf](https://github.com/yannbf))
+
+#### Authors: 2
+
+- Yann Braga ([@yannbf](https://github.com/yannbf))
+- Zsolt Pentz ([@pentzzsolt](https://github.com/pentzzsolt))
+
+---
+
 # v1.8.0 (Wed Mar 08 2023)
 
 #### 🚀 Enhancement
