@@ -1,5 +1,6 @@
 import { isNodeProcess } from 'is-node-process'
-import type { SetupWorkerApi, RequestHandler } from 'msw'
+import type { RequestHandler } from 'msw'
+import type { SetupWorkerApi } from 'msw/browser'
 import type { SetupServerApi } from 'msw/node'
 
 declare var __webpack_require__: any
@@ -25,7 +26,7 @@ let workerPromise: Promise<unknown>
 
 export function initialize(options?: InitializeOptions, initialHandlers: RequestHandler[] = []): SetupApi {
   if (IS_BROWSER) {
-    const { setupWorker } = require('msw')
+    const { setupWorker } = require('msw/browser')
     const worker = setupWorker(...initialHandlers)
     workerPromise = worker.start(options)
     api = worker
