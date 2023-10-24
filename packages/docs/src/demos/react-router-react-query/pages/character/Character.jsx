@@ -94,8 +94,12 @@ function Homeworld(props) {
     fetch(`https://swapi.dev/api/planets/${id}/`),
   );
 
-  if (status !== 'success') {
+  if (status !== 'success' && status !== 'error') {
     return null;
+  }
+
+  if (status === 'error') {
+    return 'error!';
   }
 
   return data.name;

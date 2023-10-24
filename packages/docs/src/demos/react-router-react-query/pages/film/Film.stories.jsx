@@ -81,7 +81,7 @@ export const MockedFilmApiError = {
     msw: {
       handlers: [
         rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+          return res(ctx.delay(100), ctx.status(403));
         }),
       ],
     },
@@ -105,7 +105,7 @@ export const MockedCharacterApiError = {
           );
         }),
         rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+          return res(ctx.delay(100), ctx.status(403));
         }),
         rest.get('https://swapi.dev/api/people/2', (req, res, ctx) => {
           return res(

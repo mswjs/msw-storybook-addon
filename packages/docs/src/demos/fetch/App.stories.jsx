@@ -47,7 +47,7 @@ export const MockedError = {
     msw: {
       handlers: [
         rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+          return res(ctx.delay(100), ctx.status(403));
         }),
       ],
     },

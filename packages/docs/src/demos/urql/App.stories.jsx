@@ -75,7 +75,7 @@ export const MockedError = {
       handlers: [
         graphql.query('AllFilmsQuery', (req, res, ctx) => {
           return res(
-            ctx.delay(800),
+            ctx.delay(100),
             ctx.errors([
               {
                 message: 'Access denied',

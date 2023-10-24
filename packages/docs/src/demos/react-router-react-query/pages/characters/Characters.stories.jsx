@@ -1,5 +1,7 @@
 import React from 'react';
 import { MemoryRouter as Router, Route } from 'react-router-dom';
+import { within } from '@storybook/testing-library';
+import { expect } from '@storybook/jest';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { rest } from 'msw';
 import Characters from './Characters';
@@ -73,9 +75,13 @@ export const MockedError = {
     msw: {
       handlers: [
         rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+          return res(ctx.status(403));
         }),
       ],
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText(/Error/i)).toBeInTheDocument()
+  }
 };

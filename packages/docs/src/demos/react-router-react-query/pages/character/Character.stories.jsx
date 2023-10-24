@@ -1,6 +1,8 @@
 import React from 'react';
 import { MemoryRouter as Router, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { within } from '@storybook/testing-library';
+import { expect } from '@storybook/jest';
 import { rest } from 'msw';
 import Character from './Character';
 
@@ -115,10 +117,14 @@ export const MockedPlanetsApiError = {
       handlers: {
         planets: [
           rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-            return res(ctx.delay(800), ctx.status(403));
+            return res(ctx.status(403));
           }),
         ],
       },
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText(/Error/i)).toBeInTheDocument()
+  }
 };
