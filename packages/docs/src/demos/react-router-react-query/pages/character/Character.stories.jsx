@@ -1,53 +1,50 @@
-import React from 'react';
-import { MemoryRouter as Router, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { rest } from 'msw';
-import Character from './Character';
+import React from 'react'
+import { MemoryRouter as Router, Route } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from 'react-query'
+import { http, HttpResponse, delay } from 'msw'
 
-export default {
+import Character from './Character'
+
+const meta = {
   title: 'Demos/React Router + RQ/Page Stories/Character',
   component: Character,
   parameters: {
     msw: {
       handlers: {
         common: [
-          rest.get('https://swapi.dev/api/people/1', (req, res, ctx) => {
-            return res(
-              ctx.json({
-                name: '(Mocked) Luke Skywalker',
-                birth_year: '19BBY',
-                eye_color: 'blue',
-                hair_color: 'blond',
-                height: '172',
-                mass: '77',
-                homeworld: 'http://swapi.dev/api/planets/1/',
-                films: ['http://swapi.dev/api/films/1/', 'http://swapi.dev/api/films/2/'],
-              })
-            );
+          http.get('https://swapi.dev/api/people/1', () => {
+            return HttpResponse.json({
+              name: '(Mocked) Luke Skywalker',
+              birth_year: '19BBY',
+              eye_color: 'blue',
+              hair_color: 'blond',
+              height: '172',
+              mass: '77',
+              homeworld: 'http://swapi.dev/api/planets/1/',
+              films: ['http://swapi.dev/api/films/1/', 'http://swapi.dev/api/films/2/'],
+            })
           }),
-          rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
-            return res(
-              ctx.json({
-                title: '(Mocked) A New Hope',
-                episode_id: 4,
-              })
-            );
+          http.get('https://swapi.dev/api/films/1', () => {
+            return HttpResponse.json({
+              title: '(Mocked) A New Hope',
+              episode_id: 4,
+            })
           }),
-          rest.get('https://swapi.dev/api/films/2', (req, res, ctx) => {
-            return res(
-              ctx.json({
-                title: '(Mocked) Empire Strikes Back',
-                episode_id: 5,
-              })
-            );
+          http.get('https://swapi.dev/api/films/2', () => {
+            return HttpResponse.json({
+              title: '(Mocked) Empire Strikes Back',
+              episode_id: 5,
+            })
           }),
         ],
       },
     },
   },
-};
+}
 
-const defaultQueryClient = new QueryClient();
+export default meta
+
+const defaultQueryClient = new QueryClient()
 
 export const DefaultBehavior = {
   render: () => (
@@ -67,7 +64,7 @@ export const DefaultBehavior = {
       },
     },
   },
-};
+}
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -75,7 +72,7 @@ const mockedQueryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})
 
 const MockTemplate = () => (
   <QueryClientProvider client={mockedQueryClient}>
@@ -85,7 +82,7 @@ const MockTemplate = () => (
       </Route>
     </Router>
   </QueryClientProvider>
-);
+)
 
 export const MockedSuccess = {
   render: MockTemplate,
@@ -94,18 +91,16 @@ export const MockedSuccess = {
     msw: {
       handlers: {
         planets: [
-          rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-            return res(
-              ctx.json({
-                name: '(Mocked) Tatooine',
-              })
-            );
+          http.get('https://swapi.dev/api/planets/1', () => {
+            return HttpResponse.json({
+              name: '(Mocked) Tatooine',
+            })
           }),
         ],
       },
     },
   },
-};
+}
 
 export const MockedPlanetsApiError = {
   render: MockTemplate,
@@ -114,11 +109,14 @@ export const MockedPlanetsApiError = {
     msw: {
       handlers: {
         planets: [
-          rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-            return res(ctx.delay(800), ctx.status(403));
+          http.get('https://swapi.dev/api/planets/1', async () => {
+            await delay(300)
+            return new HttpResponse(null, {
+              status: 403,
+            })
           }),
         ],
       },
     },
   },
-};
+}

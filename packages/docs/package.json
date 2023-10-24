@@ -8,7 +8,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "storybook": "storybook dev -p 6006",
-    "storybook-build": "storybook build",
+    "build-storybook": "storybook build",
     "msw:update": "msw init public"
   },
   "eslintConfig": {
@@ -56,21 +56,25 @@
     "web-vitals": "^0.2.4"
   },
   "devDependencies": {
-    "@storybook/addon-a11y": "^7.0.7",
-    "@storybook/addon-actions": "^7.0.7",
-    "@storybook/addon-essentials": "^7.0.7",
-    "@storybook/addon-links": "^7.0.7",
-    "@storybook/addon-storysource": "^7.0.7",
-    "@storybook/node-logger": "^7.0.7",
-    "@storybook/preset-create-react-app": "^7.0.7",
-    "@storybook/react": "^7.0.7",
-    "@storybook/react-webpack5": "^7.0.7",
-    "chromatic": "^5.5.0",
-    "msw": "^1.2.1",
-    "storybook": "^7.0.7",
+    "@storybook/addon-a11y": "^7.5.1",
+    "@storybook/addon-actions": "^7.5.1",
+    "@storybook/addon-essentials": "^7.5.1",
+    "@storybook/addon-links": "^7.5.1",
+    "@storybook/node-logger": "^7.5.1",
+    "@storybook/preset-create-react-app": "^7.5.1",
+    "@storybook/react": "^7.5.1",
+    "@storybook/react-webpack5": "^7.5.1",
+    "chromatic": "^7.5.0",
+    "msw": "^2.0.0",
+    "storybook": "^7.5.1",
     "webpack": "5"
   },
   "msw": {
     "workerDirectory": "public"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!@bundled-es-modules)/"
+    ]
   }
 }

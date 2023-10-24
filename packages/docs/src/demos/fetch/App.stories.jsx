@@ -1,12 +1,15 @@
-import { rest } from 'msw';
-import { App } from './App';
+import { http, HttpResponse, delay } from 'msw'
 
-export default {
+import { App } from './App'
+
+const meta = {
   title: 'Demos/Fetch',
   component: App,
-};
+}
 
-export const DefaultBehavior = {};
+export default meta;
+
+export const DefaultBehavior = {}
 
 const films = [
   {
@@ -24,33 +27,33 @@ const films = [
     episode_id: 6,
     opening_crawl: `(Mocked) Luke Skywalker has returned to his home planet of Tatooine to rescue Han Solo.`,
   },
-];
+]
 
 export const MockedSuccess = {
   parameters: {
     msw: {
       handlers: [
-        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-          console.log('MATCHED!')
-          return res(
-            ctx.json({
-              results: films,
-            })
-          );
+        http.get('https://swapi.dev/api/films/', () => {
+          return HttpResponse.json({
+            results: films,
+          })
         }),
       ],
     },
   },
-};
+}
 
 export const MockedError = {
   parameters: {
     msw: {
       handlers: [
-        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+        http.get('https://swapi.dev/api/films/', async () => {
+          await delay(300)
+          return new HttpResponse(null, {
+            status: 403,
+          })
         }),
       ],
     },
   },
-};
+}

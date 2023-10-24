@@ -11,7 +11,7 @@ const preview = {
   parameters: {
     actions: { argTypesRegex: '^on[A-Z].*' },
   },
-  loaders: [mswLoader]
+  loaders: [mswLoader],
 };
 
 export default preview;

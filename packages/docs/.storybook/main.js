@@ -8,7 +8,6 @@ const config = {
     '@storybook/addon-essentials',
     '@storybook/addon-a11y',
     '@storybook/preset-create-react-app',
-    '@storybook/addon-storysource',
   ],
   staticDirs: ['../public'],
   webpackFinal: async (config) => {

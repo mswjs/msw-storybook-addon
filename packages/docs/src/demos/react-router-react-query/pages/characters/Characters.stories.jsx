@@ -1,15 +1,18 @@
-import React from 'react';
-import { MemoryRouter as Router, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { rest } from 'msw';
-import Characters from './Characters';
+import React from 'react'
+import { MemoryRouter as Router, Route } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from 'react-query'
+import { http, HttpResponse, delay } from 'msw'
 
-export default {
+import Characters from './Characters'
+
+const meta = {
   title: 'Demos/React Router + RQ/Page Stories/Characters',
   component: Characters,
-};
+}
 
-const defaultQueryClient = new QueryClient();
+export default meta
+
+const defaultQueryClient = new QueryClient()
 
 export const DefaultBehavior = () => (
   <QueryClientProvider client={defaultQueryClient}>
@@ -19,7 +22,7 @@ export const DefaultBehavior = () => (
       </Route>
     </Router>
   </QueryClientProvider>
-);
+)
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +30,7 @@ const mockedQueryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})
 
 const MockTemplate = () => (
   <QueryClientProvider client={mockedQueryClient}>
@@ -37,7 +40,7 @@ const MockTemplate = () => (
       </Route>
     </Router>
   </QueryClientProvider>
-);
+)
 
 export const MockedSuccess = {
   render: MockTemplate,
@@ -45,26 +48,24 @@ export const MockedSuccess = {
   parameters: {
     msw: {
       handlers: [
-        rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-          return res(
-            ctx.json({
-              results: [
-                {
-                  name: '(Mocked) Luke Skywalker',
-                  url: 'http://swapi.dev/api/people/1/',
-                },
-                {
-                  name: '(Mocked) C-3PO',
-                  url: 'http://swapi.dev/api/people/2/',
-                },
-              ],
-            })
-          );
+        http.get('https://swapi.dev/api/people/', () => {
+          return HttpResponse.json({
+            results: [
+              {
+                name: '(Mocked) Luke Skywalker',
+                url: 'http://swapi.dev/api/people/1/',
+              },
+              {
+                name: '(Mocked) C-3PO',
+                url: 'http://swapi.dev/api/people/2/',
+              },
+            ],
+          })
         }),
       ],
     },
   },
-};
+}
 
 export const MockedError = {
   render: MockTemplate,
@@ -72,10 +73,13 @@ export const MockedError = {
   parameters: {
     msw: {
       handlers: [
-        rest.get('https://swapi.dev/api/people/', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+        http.get('https://swapi.dev/api/people/', async () => {
+          await delay(300)
+          return new HttpResponse(null, {
+            status: 403,
+          })
         }),
       ],
     },
   },
-};
+}

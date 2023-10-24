@@ -18,7 +18,6 @@ function useFetchFilms() {
       })
       .then((res) => res.json())
       .then((data) => {
-        console.log({ data })
         setStatus('success');
         setData(data.results);
       })
@@ -36,7 +35,6 @@ function useFetchFilms() {
 export function App() {
   const { status, data: films } = useFetchFilms();
 
-  console.log({ status, films })
   if (status === 'loading') {
     return <p>Fetching Star Wars data...</p>;
   }
