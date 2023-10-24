@@ -1,9 +1,12 @@
 import React from 'react'
-import { render, waitFor, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import { composeStories } from '@storybook/react'
 
 import { getServer } from '../../test-utils'
-import { MockedSuccess, MockedError } from './App.stories'
 import { vi } from 'vitest'
+import * as stories from './App.stories'
+
+const { MockedSuccess, MockedError } = composeStories(stories)
 
 const server = getServer()
 
@@ -17,7 +20,7 @@ it('renders film cards for each film', async () => {
 
   expect(screen.getByText(/fetching star wars data/i)).toBeInTheDocument()
 
-  await waitFor(() => screen.getAllByRole('article'))
+  await screen.findAllByRole('article')
 
   const articleNodes = screen.getAllByRole('article')
   expect(articleNodes).toHaveLength(3)

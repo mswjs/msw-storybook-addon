@@ -1,8 +1,9 @@
 import { isNodeProcess } from 'is-node-process'
-import type { DecoratorFunction, StoryContext } from '@storybook/addons'
 import type { SetupWorkerApi, RequestHandler } from 'msw'
 import type { SetupServerApi } from 'msw/node'
 
+declare var __webpack_require__: any
+declare var __non_webpack_require__: any
 export type SetupApi = SetupWorkerApi | SetupServerApi
 export type InitializeOptions =
   | Parameters<SetupWorkerApi['start']>[0]
@@ -14,22 +15,18 @@ export type MswParameters = {
     | { handlers: RequestHandler[] | Record<string, RequestHandler> }
 }
 
-export interface DecoratorContext extends StoryContext {
-  parameters: StoryContext['parameters'] & MswParameters
-}
-
-export interface LoaderContext extends StoryContext {
-  parameters: StoryContext['parameters'] & MswParameters
+type Context = {
+  parameters: MswParameters
 }
 
 const IS_BROWSER = !isNodeProcess()
 let api: SetupApi
 let workerPromise: Promise<unknown>
 
-export function initialize(options?: InitializeOptions): SetupApi {
+export function initialize(options?: InitializeOptions, initialHandlers: RequestHandler[] = []): SetupApi {
   if (IS_BROWSER) {
     const { setupWorker } = require('msw')
-    const worker = setupWorker()
+    const worker = setupWorker(...initialHandlers)
     workerPromise = worker.start(options)
     api = worker
   } else {
@@ -51,7 +48,7 @@ export function initialize(options?: InitializeOptions): SetupApi {
       : undefined
 
     const { setupServer } = nodeRequire('msw/node')
-    const server = setupServer()
+    const server = setupServer(...initialHandlers)
     workerPromise = server.listen(options)
     api = server
   }
@@ -76,9 +73,9 @@ export function getWorker(): SetupApi {
   return api
 }
 
-export const mswDecorator: DecoratorFunction = (
-  storyFn,
-  context: DecoratorContext
+export const mswDecorator = <Story extends (...args: any[]) => any>(
+  storyFn: Story,
+  context: Context
 ) => {
   const {
     parameters: { msw },
@@ -111,7 +108,7 @@ export const mswDecorator: DecoratorFunction = (
   return storyFn()
 }
 
-export const mswLoader = async (context: LoaderContext) => {
+export const mswLoader = async (context: Context) => {
   const {
     parameters: { msw },
   } = context
@@ -140,7 +137,9 @@ export const mswLoader = async (context: LoaderContext) => {
     }
   }
 
-  await (workerPromise || Promise.resolve())
+  if (workerPromise) {
+    await workerPromise
+  }
 
   return {}
 }

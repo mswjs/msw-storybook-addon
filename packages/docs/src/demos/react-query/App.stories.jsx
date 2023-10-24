@@ -48,31 +48,34 @@ const films = [
   },
 ];
 
-export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.parameters = {
-  msw: {
-    handlers: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            results: films,
-          }),
-        );
-      }),
-    ]
+export const MockedSuccess = {
+  render: MockTemplate,
+
+  parameters: {
+    msw: {
+      handlers: [
+        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+          return res(
+            ctx.json({
+              results: films,
+            })
+          );
+        }),
+      ],
+    },
   },
 };
 
-export const MockedError = MockTemplate.bind({});
-MockedError.parameters = {
-  msw: {
-    handlers: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.status(403),
-        );
-      }),
-    ]
+export const MockedError = {
+  render: MockTemplate,
+
+  parameters: {
+    msw: {
+      handlers: [
+        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+          return res(ctx.delay(800), ctx.status(403));
+        }),
+      ],
+    },
   },
 };

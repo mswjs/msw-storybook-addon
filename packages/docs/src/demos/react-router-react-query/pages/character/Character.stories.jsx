@@ -22,7 +22,7 @@ export default {
                 mass: '77',
                 homeworld: 'http://swapi.dev/api/planets/1/',
                 films: ['http://swapi.dev/api/films/1/', 'http://swapi.dev/api/films/2/'],
-              }),
+              })
             );
           }),
           rest.get('https://swapi.dev/api/films/1', (req, res, ctx) => {
@@ -30,7 +30,7 @@ export default {
               ctx.json({
                 title: '(Mocked) A New Hope',
                 episode_id: 4,
-              }),
+              })
             );
           }),
           rest.get('https://swapi.dev/api/films/2', (req, res, ctx) => {
@@ -38,33 +38,36 @@ export default {
               ctx.json({
                 title: '(Mocked) Empire Strikes Back',
                 episode_id: 5,
-              }),
+              })
             );
           }),
-        ]
-      }
-    }
-  }
+        ],
+      },
+    },
+  },
 };
 
 const defaultQueryClient = new QueryClient();
 
-export const DefaultBehavior = () => (
-  <QueryClientProvider client={defaultQueryClient}>
-    <Router initialEntries={['/characters/1']}>
-      <Route exact path="/characters/:characterId">
-        <Character />
-      </Route>
-    </Router>
-  </QueryClientProvider>
-);
-DefaultBehavior.parameters = {
-  msw: {
-    handlers: {
-      common: null
-    }
-  }
-}
+export const DefaultBehavior = {
+  render: () => (
+    <QueryClientProvider client={defaultQueryClient}>
+      <Router initialEntries={['/characters/1']}>
+        <Route exact path="/characters/:characterId">
+          <Character />
+        </Route>
+      </Router>
+    </QueryClientProvider>
+  ),
+
+  parameters: {
+    msw: {
+      handlers: {
+        common: null,
+      },
+    },
+  },
+};
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -84,32 +87,38 @@ const MockTemplate = () => (
   </QueryClientProvider>
 );
 
-export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.parameters = {
-  msw: {
-    handlers: {
-      planets: [
-        rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-          return res(
-            ctx.json({
-              name: '(Mocked) Tatooine',
-            }),
-          );
-        }),
-      ]
-    }
+export const MockedSuccess = {
+  render: MockTemplate,
+
+  parameters: {
+    msw: {
+      handlers: {
+        planets: [
+          rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
+            return res(
+              ctx.json({
+                name: '(Mocked) Tatooine',
+              })
+            );
+          }),
+        ],
+      },
+    },
   },
 };
 
-export const MockedPlanetsApiError = MockTemplate.bind({});
-MockedPlanetsApiError.parameters = {
-  msw: {
-    handlers: {
-      planets: [
-        rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
-        }),
-      ]
-    }
+export const MockedPlanetsApiError = {
+  render: MockTemplate,
+
+  parameters: {
+    msw: {
+      handlers: {
+        planets: [
+          rest.get('https://swapi.dev/api/planets/1', (req, res, ctx) => {
+            return res(ctx.delay(800), ctx.status(403));
+          }),
+        ],
+      },
+    },
   },
 };

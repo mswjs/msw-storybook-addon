@@ -47,37 +47,43 @@ const films = [
   },
 ];
 
-export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.parameters = {
-  msw: {
-    handlers: [
-      graphql.query('AllFilmsQuery', (req, res, ctx) => {
-        return res(
-          ctx.data({
-            allFilms: {
-              films,
-            },
-          }),
-        );
-      }),
-    ]
+export const MockedSuccess = {
+  render: MockTemplate,
+
+  parameters: {
+    msw: {
+      handlers: [
+        graphql.query('AllFilmsQuery', (req, res, ctx) => {
+          return res(
+            ctx.data({
+              allFilms: {
+                films,
+              },
+            })
+          );
+        }),
+      ],
+    },
   },
 };
 
-export const MockedError = MockTemplate.bind({});
-MockedError.parameters = {
-  msw: {
-    handlers: [
-      graphql.query('AllFilmsQuery', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.errors([
-            {
-              message: 'Access denied',
-            },
-          ]),
-        );
-      }),
-    ]
+export const MockedError = {
+  render: MockTemplate,
+
+  parameters: {
+    msw: {
+      handlers: [
+        graphql.query('AllFilmsQuery', (req, res, ctx) => {
+          return res(
+            ctx.delay(800),
+            ctx.errors([
+              {
+                message: 'Access denied',
+              },
+            ])
+          );
+        }),
+      ],
+    },
   },
 };

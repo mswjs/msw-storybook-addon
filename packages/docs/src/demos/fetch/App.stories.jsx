@@ -1,4 +1,3 @@
-import React from 'react';
 import { rest } from 'msw';
 import { App } from './App';
 
@@ -7,9 +6,7 @@ export default {
   component: App,
 };
 
-export const DefaultBehavior = () => <App />;
-
-const MockTemplate = () => <App />;
+export const DefaultBehavior = {};
 
 const films = [
   {
@@ -29,31 +26,30 @@ const films = [
   },
 ];
 
-export const MockedSuccess = MockTemplate.bind({});
-MockedSuccess.parameters = {
-  msw: {
-    handlers: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            results: films,
-          }),
-        );
-      }),
-    ]
+export const MockedSuccess = {
+  parameters: {
+    msw: {
+      handlers: [
+        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+          return res(
+            ctx.json({
+              results: films,
+            })
+          );
+        }),
+      ],
+    },
   },
 };
 
-export const MockedError = MockTemplate.bind({});
-MockedError.parameters = {
-  msw: {
-    handlers: [
-      rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-        return res(
-          ctx.delay(800),
-          ctx.status(403),
-        );
-      }),
-    ]
+export const MockedError = {
+  parameters: {
+    msw: {
+      handlers: [
+        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
+          return res(ctx.delay(800), ctx.status(403));
+        }),
+      ],
+    },
   },
 };
