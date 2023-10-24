@@ -34,8 +34,12 @@ function Character(props) {
     fetch(`https://swapi.dev/api/people/${props.id}/`),
   );
 
-  if (status !== 'success') {
+  if (status !== 'success' && status !== 'error') {
     return null;
+  }
+
+  if (status === 'error') {
+    return `- error fetching id: ${id}`;
   }
 
   return (
