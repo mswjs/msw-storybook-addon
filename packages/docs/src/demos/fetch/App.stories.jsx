@@ -31,7 +31,6 @@ export const MockedSuccess = {
     msw: {
       handlers: [
         rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-          console.log('MATCHED!')
           return res(
             ctx.json({
               results: films,
