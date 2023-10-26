@@ -1,3 +1,16 @@
+# v1.10.0 (Thu Oct 26 2023)
+
+#### 🚀 Enhancement
+
+- Feature: Support React Native environments [#115](https://github.com/mswjs/msw-storybook-addon/pull/115) ([@SethDavenport](https://github.com/SethDavenport) [@yannbf](https://github.com/yannbf))
+
+#### Authors: 2
+
+- Seth Davenport ([@SethDavenport](https://github.com/SethDavenport))
+- Yann Braga ([@yannbf](https://github.com/yannbf))
+
+---
+
 # v1.9.0 (Mon Oct 09 2023)
 
 #### 🚀 Enhancement
