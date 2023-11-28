@@ -20,12 +20,9 @@ module.exports = {
   setupFilesAfterEnv: ['./src/setupTests.js'],
   testEnvironment: 'jsdom',
   transform: {
-    '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$':
-      '/Users/mattcosta7/msw-storybook-addon/node_modules/react-scripts/config/jest/babelTransform.js',
-    '^.+\\.css$':
-      '/Users/mattcosta7/msw-storybook-addon/node_modules/react-scripts/config/jest/cssTransform.js',
-    '^(?!.*\\.(js|jsx|mjs|cjs|ts|tsx|css|json)$)':
-      '/Users/mattcosta7/msw-storybook-addon/node_modules/react-scripts/config/jest/fileTransform.js',
+    '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': 'react-scripts/config/jest/babelTransform.js',
+    '^.+\\.css$': 'react-scripts/config/jest/cssTransform.js',
+    '^(?!.*\\.(js|jsx|mjs|cjs|ts|tsx|css|json)$)': 'react-scripts/config/jest/fileTransform.js',
   },
   transformIgnorePatterns: ['node_modules/(?!@bundled-es-modules)/'],
 }
