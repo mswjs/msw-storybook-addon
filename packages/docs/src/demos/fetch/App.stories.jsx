@@ -7,7 +7,7 @@ const meta = {
   component: App,
 }
 
-export default meta;
+export default meta
 
 export const DefaultBehavior = {}
 
