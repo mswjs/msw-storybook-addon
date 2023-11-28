@@ -40,10 +40,10 @@
     "@auto-it/released": "^10.32.2",
     "auto": "^10.32.2",
     "typescript": "^5.2.2",
-    "msw": "^2.0.0"
+    "msw": "^2.0.9"
   },
   "peerDependencies": {
-    "msw": "^2.0.0"
+    "msw": "^2.0.9"
   },
   "storybook": {
     "displayName": "Mock Service Worker",

@@ -5,7 +5,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "jest",
     "eject": "react-scripts eject",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
@@ -65,16 +65,12 @@
     "@storybook/react": "^7.5.1",
     "@storybook/react-webpack5": "^7.5.1",
     "chromatic": "^7.5.0",
-    "msw": "^2.0.0",
+    "msw": "^2.0.9",
     "storybook": "^7.5.1",
+    "undici": "^5.28.1",
     "webpack": "5"
   },
   "msw": {
     "workerDirectory": "public"
-  },
-  "jest": {
-    "transformIgnorePatterns": [
-      "node_modules/(?!@bundled-es-modules)/"
-    ]
   }
 }
