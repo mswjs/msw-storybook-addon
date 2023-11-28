@@ -1,3 +1,4 @@
+const path = require('path')
 /**
  * @type {import('@storybook/react-webpack5').StorybookConfig}
  */
@@ -14,6 +15,9 @@ const config = {
     config.resolve = config.resolve || {}
     config.resolve.alias = {
       ...config.resolve.alias,
+      'msw/native': require.resolve(
+        path.resolve(__dirname, '../../../node_modules/msw/lib/native/index.mjs')
+      ),
       'msw-storybook-addon': require.resolve('../../msw-addon/dist'),
     }
     return config
@@ -27,4 +31,4 @@ const config = {
   },
 }
 
-export default config;
+export default config
