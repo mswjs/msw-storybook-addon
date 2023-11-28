@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom'
 
 // eslint-disable-next-line import/first
-const { startServer } = require('./test-utils')
+import { startServer } from './test-utils'
 
 const server = startServer()
 
