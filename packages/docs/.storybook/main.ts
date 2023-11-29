@@ -1,4 +1,5 @@
 import { dirname, join } from "path";
+import replace from '@rollup/plugin-replace';
 
 import { StorybookConfig } from "@storybook/react-vite";
 import { mergeConfig } from "vite";
@@ -25,6 +26,16 @@ const config: StorybookConfig = {
       resolve: {
         preserveSymlinks: true,
       },
+      plugins: [
+        // Workaround necessary because of a bug in Vite
+        // They replace the string process.env.NODE_ENV at build time, 
+        // but they don't properly skip replacing globalThis.process.env.NODE_ENV so that graphql check becomes globalThis."development", which is invalid
+        // https://github.com/graphql/graphql-js/issues/3918#issuecomment-1692475931
+        replace({
+          preventAssignment: true,
+          'globalThis.process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+        }),
+      ]
     });
   },
 };
