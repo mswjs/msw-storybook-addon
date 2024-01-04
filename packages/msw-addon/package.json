@@ -43,7 +43,7 @@
     "msw": "^2.0.9"
   },
   "peerDependencies": {
-    "msw": "^2.0.9"
+    "msw": "^2.0.0"
   },
   "storybook": {
     "displayName": "Mock Service Worker",
