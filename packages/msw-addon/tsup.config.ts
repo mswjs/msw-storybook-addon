@@ -4,7 +4,7 @@ const browser = defineConfig({
   entry: {
     'index.browser': './src/index.new.ts',
   },
-  outDir: './build',
+  outDir: './dist',
   target: ['chrome112'],
   format: 'cjs',
   esbuildOptions(options) {
@@ -20,7 +20,7 @@ const node = defineConfig({
   entry: {
     'index.node': './src/index.new.ts',
   },
-  outDir: './build',
+  outDir: './dist',
   target: 'node18',
   format: 'cjs',
   esbuildOptions(options) {
@@ -36,7 +36,7 @@ const reactNative = defineConfig({
   entry: {
     'index.react-native': './src/index.new.ts',
   },
-  outDir: './build',
+  outDir: './dist',
   target: 'esnext',
   format: 'cjs',
   esbuildOptions(options) {

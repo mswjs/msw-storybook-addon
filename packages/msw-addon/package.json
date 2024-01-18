@@ -2,15 +2,15 @@
   "name": "msw-storybook-addon",
   "description": "Mock API requests in Storybook with Mock Service Worker.",
   "version": "1.6.0",
-  "main": "./build/index.browser.js",
+  "main": "./dist/index.browser.js",
   "exports": {
-    "browser": "./build/index.browser.js",
-    "react-native": "./build/index.react-native.js",
-    "node": "./build/index.node.js"
+    "browser": "./dist/index.browser.js",
+    "react-native": "./dist/index.react-native.js",
+    "node": "./dist/index.node.js"
   },
   "scripts": {
     "dev": "yarn build --watch",
-    "clean": "rimraf ./build",
+    "clean": "rimraf ./dist",
     "build": "tsup",
     "prepublishOnly": "yarn clean && yarn build",
     "release": "auto shipit"
