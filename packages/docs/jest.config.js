@@ -19,6 +19,9 @@ module.exports = {
   setupFiles: ['./src/fetch-polyfill.js'],
   setupFilesAfterEnv: ['./src/setupTests.js'],
   testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    customExportConditions: [''],
+  },
   transform: {
     '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': 'react-scripts/config/jest/babelTransform.js',
     '^.+\\.css$': 'react-scripts/config/jest/cssTransform.js',

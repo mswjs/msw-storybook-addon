@@ -1,4 +1,3 @@
-const path = require('path')
 /**
  * @type {import('@storybook/react-webpack5').StorybookConfig}
  */
