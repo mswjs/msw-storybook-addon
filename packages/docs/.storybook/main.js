@@ -11,17 +11,6 @@ const config = {
     '@storybook/preset-create-react-app',
   ],
   staticDirs: ['../public'],
-  webpackFinal: async (config) => {
-    config.resolve = config.resolve || {}
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'msw/native': require.resolve(
-        path.resolve(__dirname, '../../../node_modules/msw/lib/native/index.mjs')
-      ),
-      'msw-storybook-addon': require.resolve('../../msw-addon/dist'),
-    }
-    return config
-  },
   framework: {
     name: '@storybook/react-webpack5',
     options: {},
