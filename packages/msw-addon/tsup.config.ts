@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup'
 
 const browser = defineConfig({
   entry: {
-    'index.browser': './src/index.new.ts',
+    'index.browser': './src/index.ts',
   },
   outDir: './dist',
   target: ['chrome112'],
@@ -18,7 +18,7 @@ const browser = defineConfig({
 
 const node = defineConfig({
   entry: {
-    'index.node': './src/index.new.ts',
+    'index.node': './src/index.ts',
   },
   outDir: './dist',
   target: 'node18',
@@ -34,7 +34,7 @@ const node = defineConfig({
 
 const reactNative = defineConfig({
   entry: {
-    'index.react-native': './src/index.new.ts',
+    'index.react-native': './src/index.ts',
   },
   outDir: './dist',
   target: 'esnext',
