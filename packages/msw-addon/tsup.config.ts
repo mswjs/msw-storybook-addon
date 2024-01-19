@@ -14,6 +14,8 @@ const browser = defineConfig({
     }
   },
   bundle: true,
+  dts: true,
+  tsconfig: './tsconfig.browser.json',
 })
 
 const node = defineConfig({
@@ -30,6 +32,8 @@ const node = defineConfig({
     }
   },
   bundle: true,
+  dts: true,
+  tsconfig: './tsconfig.node.json',
 })
 
 const reactNative = defineConfig({
@@ -46,6 +50,8 @@ const reactNative = defineConfig({
     }
   },
   bundle: true,
+  dts: true,
+  tsconfig: './tsconfig.react-native.json',
 })
 
 export default [browser, node, reactNative]

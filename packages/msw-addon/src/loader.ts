@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'msw'
+import type { RequestHandler, SetupApi } from 'msw'
 import type { Context } from './decorator'
 import { api } from '@build-time/initialize'
 
