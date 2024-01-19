@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'msw'
-import { api, initialize } from '@build-time/initialize'
+import { api } from '@build-time/initialize'
 
 export type MswParameters = {
   msw?:
