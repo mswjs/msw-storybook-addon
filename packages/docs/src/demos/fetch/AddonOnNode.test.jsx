@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { render, screen } from '@testing-library/react'
 import { composeStories } from '@storybook/react'
 
@@ -16,9 +19,7 @@ describe('Running msw-addon on node', () => {
 
   it('renders film cards for each film', async () => {
     // Story + msw addon decorator, which resets and applies the server handlers based on story parameters
-    render(
-      mswDecorator(MockedSuccess, { parameters: MockedSuccess.parameters })
-    )
+    render(mswDecorator(MockedSuccess, { parameters: MockedSuccess.parameters }))
 
     expect(screen.getByText(/fetching star wars data/i)).toBeInTheDocument()
 
@@ -35,13 +36,9 @@ describe('Running msw-addon on node', () => {
 
   it('renders error message if it cannot load the films', async () => {
     // Story + msw addon decorator, which resets and applies the server handlers based on story parameters
-    render(
-      mswDecorator(MockedError, { parameters: MockedError.parameters })
-    )
+    render(mswDecorator(MockedError, { parameters: MockedError.parameters }))
 
-    const errorMsgNode = await screen.findByText(
-      /could not fetch star wars data/i
-    )
+    const errorMsgNode = await screen.findByText(/could not fetch star wars data/i)
     expect(errorMsgNode).toBeInTheDocument()
   })
 })
