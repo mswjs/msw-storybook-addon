@@ -12,7 +12,10 @@ module.exports = {
     'jsx',
     'node',
   ],
-  moduleNameMapper: { '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy' },
+  moduleNameMapper: {
+    '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
+    '^msw-storybook-addon$': '<rootDir>/../msw-addon/dist/index.node.js',
+  },
   resetMocks: true,
   resetModules: false,
   restoreMocks: false,

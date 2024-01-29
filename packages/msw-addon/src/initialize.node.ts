@@ -15,3 +15,13 @@ export function initialize(
   api = server
   return server
 }
+
+export function getWorker(): SetupServer {
+  if (api === undefined) {
+    throw new Error(
+      `[MSW] Failed to retrieve the worker: no active worker found. Did you forget to call "initialize"?`
+    )
+  }
+
+  return api
+}

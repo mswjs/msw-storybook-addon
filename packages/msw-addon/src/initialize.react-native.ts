@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'msw'
-import { SetupServer } from 'msw/node'
+import type { SetupServer } from 'msw/node'
 import { setupServer } from 'msw/native'
 
 export let api: SetupServer
@@ -14,4 +14,14 @@ export function initialize(
   server.listen(options)
   api = server
   return server
+}
+
+export function getWorker(): SetupServer {
+  if (api === undefined) {
+    throw new Error(
+      `[MSW] Failed to retrieve the worker: no active worker found. Did you forget to call "initialize"?`
+    )
+  }
+
+  return api
 }
