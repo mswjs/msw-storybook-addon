@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'msw'
 import type { SetupWorker } from 'msw/browser'
 import { setupWorker } from 'msw/browser'
+import { augmentInitializeOptions } from './augmentInitializeOptions'
 
 export let api: SetupWorker
 
@@ -11,7 +12,7 @@ export function initialize(
   initialHandlers: RequestHandler[] = []
 ): SetupWorker {
   const worker = setupWorker(...initialHandlers)
-  worker.start(options)
+  worker.start(augmentInitializeOptions(options))
   api = worker
   return worker
 }

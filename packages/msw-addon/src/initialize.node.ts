@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'msw'
 import type { SetupServer } from 'msw/node'
 import { setupServer } from 'msw/node'
+import { augmentInitializeOptions } from './augmentInitializeOptions'
 
 export let api: SetupServer
 
@@ -11,7 +12,7 @@ export function initialize(
   initialHandlers: RequestHandler[] = []
 ): SetupServer {
   const server = setupServer(...initialHandlers)
-  server.listen(options)
+  server.listen(augmentInitializeOptions(options))
   api = server
   return server
 }
