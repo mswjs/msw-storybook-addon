@@ -12,3 +12,5 @@ export declare function initialize(
   options?: InitializeOptions,
   initialHandlers?: RequestHandler[]
 ): SetupApi<LifeCycleEventsMap>
+
+export declare function getWorker(): typeof api
