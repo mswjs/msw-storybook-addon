@@ -5,6 +5,8 @@ import type { Context } from './decorator'
 export function applyRequestHandlers(
   handlersListOrObject: Context['parameters']['msw']
 ): void {
+  api?.resetHandlers();
+  
   if (handlersListOrObject == null) {
     return
   }
