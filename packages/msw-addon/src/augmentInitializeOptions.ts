@@ -1,4 +1,4 @@
-import { InitializeOptions } from "./initialize";
+import { InitializeOptions } from "./initialize.js";
 
 const fileExtensionPattern = /\.(js|jsx|ts|tsx|mjs|woff|woff2|ttf|otf|eot)$/;
 const filteredURLSubstrings = [

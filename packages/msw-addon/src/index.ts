@@ -1,3 +1,3 @@
 export { initialize, InitializeOptions, getWorker } from '@build-time/initialize'
-export * from './decorator'
-export * from './loader'
+export * from './decorator.js'
+export * from './loader.js'

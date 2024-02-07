@@ -1,5 +1,5 @@
-import type { Context } from './decorator'
-import { applyRequestHandlers } from './applyRequestHandlers'
+import type { Context } from './decorator.js'
+import { applyRequestHandlers } from './applyRequestHandlers.js'
 
 export const mswLoader = async (context: Context) => {
   applyRequestHandlers(context.parameters.msw)

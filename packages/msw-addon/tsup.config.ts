@@ -6,7 +6,7 @@ const browser = defineConfig({
   },
   outDir: './dist',
   target: ['chrome112'],
-  format: 'cjs',
+  format: 'esm',
   esbuildOptions(options) {
     options.alias = {
       ...(options.alias || {}),
@@ -24,7 +24,7 @@ const node = defineConfig({
   },
   outDir: './dist',
   target: 'node18',
-  format: 'cjs',
+  format: 'esm',
   esbuildOptions(options) {
     options.alias = {
       ...(options.alias || {}),
@@ -42,7 +42,7 @@ const reactNative = defineConfig({
   },
   outDir: './dist',
   target: 'esnext',
-  format: 'cjs',
+  format: 'esm',
   esbuildOptions(options) {
     options.alias = {
       ...(options.alias || {}),

@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'msw'
 import { api } from '@build-time/initialize'
-import type { Context } from './decorator'
+import type { Context } from './decorator.js'
 
 export function applyRequestHandlers(
   handlersListOrObject: Context['parameters']['msw']

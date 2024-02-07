@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'msw'
-import { applyRequestHandlers } from './applyRequestHandlers'
+import { applyRequestHandlers } from './applyRequestHandlers.js'
 
 export type MswParameters = {
   msw?:

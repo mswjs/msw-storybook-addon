@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'msw'
 import type { SetupWorker } from 'msw/browser'
 import { setupWorker } from 'msw/browser'
-import { augmentInitializeOptions } from './augmentInitializeOptions'
+import { augmentInitializeOptions } from './augmentInitializeOptions.js'
 
 export let api: SetupWorker
 
