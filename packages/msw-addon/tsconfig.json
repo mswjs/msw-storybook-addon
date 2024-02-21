@@ -3,12 +3,9 @@
     "strict": true,
     "outDir": "./dist",
     "noImplicitAny": true,
-    "module": "commonjs",
+    "module": "Node16",
     "target": "es5",
-    "skipLibCheck": true,
     "allowJs": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
     "declaration": true,
     "baseUrl": ".",
     "paths": {

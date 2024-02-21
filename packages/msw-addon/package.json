@@ -2,20 +2,16 @@
   "name": "msw-storybook-addon",
   "description": "Mock API requests in Storybook with Mock Service Worker.",
   "version": "1.6.0",
+  "type": "module",
   "main": "./dist/index.browser.js",
   "types": "./dist/index.browser.d.ts",
   "exports": {
-    "browser": {
+    ".": {
       "types": "./dist/index.browser.d.ts",
+      "browser": "./dist/index.browser.js",
+      "react-native": "./dist/index.react-native.js",
+      "node": "./dist/index.node.js",
       "default": "./dist/index.browser.js"
-    },
-    "react-native": {
-      "types": "./dist/index.react-native.d.ts",
-      "default": "./dist/index.react-native.js"
-    },
-    "node": {
-      "types": "./dist/index.node.d.ts",
-      "default": "./dist/index.node.js"
     }
   },
   "scripts": {
