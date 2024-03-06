@@ -7,7 +7,7 @@ export const mswLoader = async (context: Context) => {
   if (
     typeof window !== 'undefined' &&
     'navigator' in window &&
-    navigator.serviceWorker.controller
+    navigator.serviceWorker?.controller
   ) {
     // No need to rely on the MSW Promise exactly
     // since only 1 worker can control 1 scope at a time.
