@@ -4,10 +4,10 @@ jobs:
   chromatic-deployment:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 18.x
 
@@ -16,7 +16,7 @@ jobs:
       - name: Build addon
         run: yarn workspace msw-storybook-addon build
       - name: Publish to Chromatic
-        uses: chromaui/action@v1
+        uses: chromaui/action@latest
         with:
           workingDir: ./packages/docs
           token: ${{ secrets.GITHUB_TOKEN }}
