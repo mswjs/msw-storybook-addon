@@ -1,7 +1,8 @@
 import type { RequestHandler } from 'msw'
-import type { SetupServer } from 'msw/node'
 import { setupServer } from 'msw/native'
 import { augmentInitializeOptions } from './augmentInitializeOptions.js'
+
+type SetupServer = ReturnType<typeof setupServer>
 
 export let api: SetupServer
 
