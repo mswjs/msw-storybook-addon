@@ -1,9 +1,10 @@
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom'
 
-import { startServer } from './test-utils';
+// eslint-disable-next-line import/first
+const { startServer } = require('./test-utils')
 
-const server = startServer();
+const server = startServer()
 
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())

@@ -1,20 +1,23 @@
-import React from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { rest } from 'msw';
-import { App } from './App';
+import React from 'react'
+import { QueryClient, QueryClientProvider } from 'react-query'
+import { http, HttpResponse, delay } from 'msw'
 
-export default {
+import { App } from './App'
+
+const meta = {
   title: 'Demos/React Query',
   component: App,
-};
+}
 
-const defaultQueryClient = new QueryClient();
+export default meta;
+
+const defaultQueryClient = new QueryClient()
 
 export const DefaultBehavior = () => (
   <QueryClientProvider client={defaultQueryClient}>
     <App />
   </QueryClientProvider>
-);
+)
 
 const mockedQueryClient = new QueryClient({
   defaultOptions: {
@@ -22,13 +25,13 @@ const mockedQueryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})
 
 const MockTemplate = () => (
   <QueryClientProvider client={mockedQueryClient}>
     <App />
   </QueryClientProvider>
-);
+)
 
 const films = [
   {
@@ -46,7 +49,7 @@ const films = [
     episode_id: 6,
     opening_crawl: `(Mocked) Luke Skywalker has returned to his home planet of Tatooine to rescue Han Solo.`,
   },
-];
+]
 
 export const MockedSuccess = {
   render: MockTemplate,
@@ -54,17 +57,15 @@ export const MockedSuccess = {
   parameters: {
     msw: {
       handlers: [
-        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-          return res(
-            ctx.json({
-              results: films,
-            })
-          );
+        http.get('https://swapi.dev/api/films/', () => {
+          return HttpResponse.json({
+            results: films,
+          })
         }),
       ],
     },
   },
-};
+}
 
 export const MockedError = {
   render: MockTemplate,
@@ -72,10 +73,13 @@ export const MockedError = {
   parameters: {
     msw: {
       handlers: [
-        rest.get('https://swapi.dev/api/films/', (req, res, ctx) => {
-          return res(ctx.delay(800), ctx.status(403));
+        http.get('https://swapi.dev/api/films/', async () => {
+          await delay(300)
+          return new HttpResponse(null, {
+            status: 403,
+          })
         }),
       ],
     },
   },
-};
+}

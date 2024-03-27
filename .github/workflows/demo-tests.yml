@@ -4,7 +4,7 @@ jobs:
   jest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
       - name: Build addon

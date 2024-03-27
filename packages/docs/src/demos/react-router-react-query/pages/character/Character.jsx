@@ -15,9 +15,14 @@ export default function Character() {
   const homeworldUrlParts = data.homeworld.split('/').filter(Boolean);
   const homeworldId = homeworldUrlParts[homeworldUrlParts.length - 1];
 
-  if (status !== 'success') {
+  if (status !== 'success' && status !== 'error') {
     return null;
   }
+
+  if (status === 'error') {
+    return `error fetching id: ${characterId}`;
+  }
+
   return (
     <div>
       <h2>{data.name}</h2>
@@ -74,9 +79,14 @@ function Film(props) {
     fetch(`https://swapi.dev/api/films/${id}/`),
   );
 
-  if (status !== 'success') {
+  if (status !== 'success' && status !== 'error') {
     return null;
   }
+
+  if (status === 'error') {
+    return `error fetching id: ${id}`;
+  }
+
   return (
     <article key={id}>
       <Link to={`/films/${id}`}>
@@ -94,8 +104,12 @@ function Homeworld(props) {
     fetch(`https://swapi.dev/api/planets/${id}/`),
   );
 
-  if (status !== 'success') {
+  if (status !== 'success' && status !== 'error') {
     return null;
+  }
+
+  if (status === 'error') {
+    return `error fetching id: ${id}`;
   }
 
   return data.name;
