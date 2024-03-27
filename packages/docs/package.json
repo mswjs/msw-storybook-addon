@@ -3,13 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "npx jest",
-    "eject": "react-scripts eject",
-    "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "msw:update": "msw init public"
+    "chromatic": "npx chromatic",
+    "eject": "react-scripts eject",
+    "msw:update": "msw init public",
+    "start": "react-scripts start",
+    "storybook": "storybook dev -p 6006",
+    "test": "npx jest"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "eslintConfig": {
     "extends": [
@@ -25,18 +38,6 @@
           "import/no-anonymous-default-export": "off"
         }
       }
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
     ]
   },
   "dependencies": {

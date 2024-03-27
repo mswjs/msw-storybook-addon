@@ -1,6 +1,6 @@
 {
-  "private": true,
   "name": "msw-storybook-addon-workspace",
+  "private": true,
   "workspaces": [
     "packages/*"
   ],
