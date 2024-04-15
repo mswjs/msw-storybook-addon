@@ -15,6 +15,8 @@ module.exports = {
   moduleNameMapper: {
     '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
     '^msw-storybook-addon$': '<rootDir>/../msw-addon/dist/index.node.js',
+    // Temporary workaround for a Storybook issue
+    '^@storybook/react-dom-shim$': '<rootDir>/../../node_modules/@storybook/react-dom-shim/dist/react-16.js',
   },
   resetMocks: true,
   resetModules: false,

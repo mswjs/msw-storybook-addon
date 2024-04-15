@@ -2,14 +2,15 @@
  * @jest-environment jsdom
  */
 import { render, screen } from '@testing-library/react'
-import { composeStories } from '@storybook/react'
+import { composeStories, setProjectAnnotations } from '@storybook/react'
 
-import { getWorker, initialize, applyRequestHandlers } from 'msw-storybook-addon'
+import { getWorker, applyRequestHandlers } from 'msw-storybook-addon'
 import * as stories from './App.stories'
+import *  as projectAnnotations from '../../../.storybook/preview'
+
+setProjectAnnotations(projectAnnotations)
 
 const { MockedSuccess, MockedError } = composeStories(stories)
-
-initialize()
 
 // Useful in scenarios where the addon runs on node, such as with portable stories
 describe('Running msw-addon on node', () => {
@@ -18,8 +19,8 @@ describe('Running msw-addon on node', () => {
   })
 
   it('renders film cards for each film', async () => {
-    await applyRequestHandlers(MockedSuccess.parameters.msw)
 
+    await MockedSuccess.load()
     // Story + msw addon decorator, which resets and applies the server handlers based on story parameters
     render(<MockedSuccess />)
 
