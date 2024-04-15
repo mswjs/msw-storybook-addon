@@ -1,34 +1,7 @@
 {
   "name": "msw-storybook-addon",
+  "version": "2.0.0-beta.2",
   "description": "Mock API requests in Storybook with Mock Service Worker.",
-  "version": "1.6.0",
-  "type": "module",
-  "main": "./dist/index.browser.js",
-  "types": "./dist/index.browser.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.browser.d.ts",
-      "browser": "./dist/index.browser.js",
-      "react-native": "./dist/index.react-native.js",
-      "node": "./dist/index.node.js",
-      "default": "./dist/index.browser.js"
-    }
-  },
-  "scripts": {
-    "dev": "yarn build --watch",
-    "clean": "rimraf ./dist",
-    "build": "tsup",
-    "prepublishOnly": "yarn clean && yarn build",
-    "release": "auto shipit"
-  },
-  "files": [
-    "dist/"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
-    "directory": "packages/msw-addon"
-  },
   "keywords": [
     "storybook-addon",
     "msw",
@@ -38,12 +11,38 @@
     "network",
     "data-state"
   ],
-  "author": "Aditya Agarwal (@dev__adi)",
+  "homepage": "https://msw-sb.vercel.app/",
   "bugs": {
     "url": "https://github.com/mswjs/msw-storybook-addon/issues"
   },
-  "homepage": "https://msw-sb.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
+    "directory": "packages/msw-addon"
+  },
   "license": "MIT",
+  "author": "Aditya Agarwal (@dev__adi)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.browser.d.ts",
+      "browser": "./dist/index.browser.js",
+      "react-native": "./dist/index.react-native.js",
+      "node": "./dist/index.node.js",
+      "default": "./dist/index.browser.js"
+    }
+  },
+  "main": "./dist/index.browser.js",
+  "types": "./dist/index.browser.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "yarn build --watch",
+    "prepublishOnly": "yarn build",
+    "release": "auto shipit"
+  },
   "dependencies": {
     "is-node-process": "^1.0.1"
   },
@@ -51,16 +50,12 @@
     "@auto-it/released": "^11.1.1",
     "auto": "^11.1.1",
     "msw": "^2.0.9",
-    "rimraf": "^5.0.5",
+    "ts-dedent": "^2.2.0",
     "tsup": "^8.0.1",
     "typescript": "^5.2.2"
   },
   "peerDependencies": {
     "msw": "^2.0.0"
-  },
-  "storybook": {
-    "displayName": "Mock Service Worker",
-    "icon": "https://user-images.githubusercontent.com/1671563/144888802-84346d8f-77c9-4377-98c7-4b0364797978.png"
   },
   "auto": {
     "prereleaseBranches": [
@@ -71,5 +66,9 @@
       "npm",
       "released"
     ]
+  },
+  "storybook": {
+    "displayName": "Mock Service Worker",
+    "icon": "https://user-images.githubusercontent.com/1671563/144888802-84346d8f-77c9-4377-98c7-4b0364797978.png"
   }
 }
