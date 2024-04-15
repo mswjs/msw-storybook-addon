@@ -248,7 +248,11 @@ initialize({}, [
 
 #### Using the addon in Node.js with Portable Stories
 
-If you're using [portable stories](https://storybook.js.org/docs/writing-tests/stories-in-unit-tests), you need to make sure you call the `load` function of your story, so that the MSW loaders are applied correctly.
+If you're using [portable stories](https://storybook.js.org/docs/writing-tests/stories-in-unit-tests), you need to make sure the MSW loaders are applied correctly.
+
+### Storybook 8
+
+You do so by calling the `load` function of your story before rendering it:
 
 ```ts
 import { composeStories } from '@storybook/react'
@@ -257,11 +261,32 @@ import * as stories from './MyComponent.stories'
 const { Success } = composeStories(stories)
 
 test('<Success />', async() => {
-  // crucial step, so that the msw loaders are applied
+  // 👇 Crucial step, so that the MSW loaders are applied
   await Success.load()
   render(<Success />)
 })
 ```
+
+### Storybook 7
+
+You do so by calling the `applyRequestHandlers`  helper before rendering your story:
+
+```ts
+import { applyRequestHandlers } from 'msw-storybook-addon'
+import { composeStories } from '@storybook/react'
+import * as stories from './MyComponent.stories'
+
+const { Success } = composeStories(stories)
+
+test('<Success />', async() => {
+  // 👇 Crucial step, so that the MSW loaders are applied
+  await applyRequestHandlers(Success.parameters.msw)
+  render(<Success />)
+})
+```
+
+> Note:
+> The `applyRequestHandlers` utility should be an internal detail that is called automatically by the portable stories, however as it's not possible in Storybook 7, it's exported by the addon. It will be removed in upcoming releases, so it is recommended that you upgrade to Storybook 8 when possible.
 
 ### Troubleshooting
 

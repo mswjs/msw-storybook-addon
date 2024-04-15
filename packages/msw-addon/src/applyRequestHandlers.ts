@@ -2,6 +2,8 @@ import type { RequestHandler } from 'msw'
 import { api } from '@build-time/initialize'
 import type { Context } from './decorator.js'
 
+// P.S. this is used by Storybook 7 users as a way to help them migrate.
+// This should be removed from the package exports in a future release.
 export function applyRequestHandlers(
   handlersListOrObject: Context['parameters']['msw']
 ): void {
