@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
 export default function Film() {
-  const { filmId } = useParams();
+  const { filmId } = useParams<any>();
   const { data, status } = useQuery(`film-${filmId}`, () =>
     fetch(`https://swapi.dev/api/films/${filmId}/`),
   );
@@ -19,7 +19,7 @@ export default function Film() {
       <p>{data.opening_crawl}</p>
       <br />
       <h3>Characters</h3>
-      {data.characters.map((character) => {
+      {data.characters.map((character: any) => {
         const characterUrlParts = character.split('/').filter(Boolean);
         const characterId = characterUrlParts[characterUrlParts.length - 1];
         return <Character id={characterId} key={characterId} />;
@@ -28,7 +28,7 @@ export default function Film() {
   );
 }
 
-function Character(props) {
+function Character(props: any) {
   const { id } = props;
   const { data, status } = useQuery(`character-${id}`, () =>
     fetch(`https://swapi.dev/api/people/${props.id}/`),

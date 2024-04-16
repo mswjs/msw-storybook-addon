@@ -16,7 +16,7 @@ export default function Films() {
   return (
     <div>
       <h2>Films</h2>
-      {data.results.map((film) => {
+      {data.results.map((film: any) => {
         const filmUrlParts = film.url.split('/').filter(Boolean);
         const filmId = filmUrlParts[filmUrlParts.length - 1];
         return (

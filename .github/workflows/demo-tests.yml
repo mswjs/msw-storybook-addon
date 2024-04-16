@@ -1,7 +1,7 @@
 name: 'Tests for Demos'
 on: push
 jobs:
-  jest:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -10,4 +10,4 @@ jobs:
       - name: Build addon
         run: yarn workspace msw-storybook-addon build
       - name: Test Demos
-        run: yarn workspace msw-storybook-docs test --colors
+        run: yarn workspace msw-storybook-docs test

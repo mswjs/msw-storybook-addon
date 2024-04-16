@@ -1,6 +1,7 @@
 import React from 'react'
 import { composeStories } from '@storybook/react'
 import { render, screen } from '@testing-library/react'
+import { it, expect } from 'vitest'
 
 import { getServer } from '../../test-utils'
 import * as stories from './App.stories'

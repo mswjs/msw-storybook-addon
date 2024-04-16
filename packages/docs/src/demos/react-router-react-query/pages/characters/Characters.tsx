@@ -14,7 +14,7 @@ export default function Characters() {
   return (
     <div>
       <h2>Characters</h2>
-      {data.results.map((person) => {
+      {data.results.map((person: any) => {
         const personUrlParts = person.url.split('/').filter(Boolean);
         const personId = personUrlParts[personUrlParts.length - 1];
         return (

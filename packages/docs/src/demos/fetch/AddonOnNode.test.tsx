@@ -3,10 +3,11 @@
  */
 import { render, screen } from '@testing-library/react'
 import { composeStories, setProjectAnnotations } from '@storybook/react'
+import { describe, afterAll, it, expect } from 'vitest'
 
 import { getWorker, applyRequestHandlers } from 'msw-storybook-addon'
 import * as stories from './App.stories'
-import *  as projectAnnotations from '../../../.storybook/preview'
+import projectAnnotations from '../../../.storybook/preview'
 
 setProjectAnnotations(projectAnnotations)
 
@@ -15,6 +16,7 @@ const { MockedSuccess, MockedError } = composeStories(stories)
 // Useful in scenarios where the addon runs on node, such as with portable stories
 describe('Running msw-addon on node', () => {
   afterAll(() => {
+    // @ts-expect-error TS(2339): Property 'close' does not exist on type 'SetupWork... Remove this comment to see the full error message
     getWorker().close()
   })
 

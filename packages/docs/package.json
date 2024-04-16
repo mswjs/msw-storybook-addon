@@ -2,15 +2,18 @@
   "name": "msw-storybook-docs",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "react-scripts build",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "chromatic": "npx chromatic",
     "eject": "react-scripts eject",
-    "msw:update": "msw init public",
-    "start": "react-scripts start",
-    "storybook": "storybook dev -p 6006",
-    "test": "npx jest"
+    "msw:update": "msw init public"
   },
   "browserslist": {
     "production": [
@@ -24,53 +27,43 @@
       "last 1 safari version"
     ]
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ],
-    "overrides": [
-      {
-        "files": [
-          "src/**/*.stories.js"
-        ],
-        "rules": {
-          "import/no-anonymous-default-export": "off"
-        }
-      }
-    ]
-  },
   "dependencies": {
     "@apollo/client": "^3.3.6",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
     "axios": "^0.21.1",
-    "graphql": "^15.4.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "graphql": "16.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-query": "^3.5.5",
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "^5.0.1",
-    "urql": "^1.11.4",
-    "web-vitals": "^0.2.4"
+    "urql": "^1.11.4"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@rollup/plugin-replace": "^5.0.5",
     "@storybook/addon-a11y": "^8.0.0",
     "@storybook/addon-actions": "^8.0.0",
     "@storybook/addon-essentials": "^8.0.0",
     "@storybook/addon-links": "^8.0.0",
+    "@storybook/addon-mdx-gfm": "^8.0.0",
     "@storybook/node-logger": "^8.0.0",
     "@storybook/preset-create-react-app": "^8.0.0",
     "@storybook/react": "^8.0.0",
-    "@storybook/react-webpack5": "^8.0.0",
+    "@storybook/react-vite": "^8.0.0",
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/react": "^18.0.27",
+    "@types/react-dom": "^18.0.10",
+    "@types/react-router-dom": "^5.3.3",
+    "@vitejs/plugin-react": "^3.1.0",
     "chromatic": "^11.0.3",
+    "jsdom": "^23.0.0",
     "msw": "^2.0.9",
+    "msw-storybook-addon": "link:../msw-addon",
     "storybook": "^8.0.0",
-    "undici": "^5.28.1",
-    "webpack": "5"
+    "typescript": "^5.3.2",
+    "vite": "^4.1.0",
+    "vitest": "^0.29.2"
   },
   "msw": {
     "workerDirectory": "public"
