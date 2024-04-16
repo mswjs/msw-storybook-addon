@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 
 import { FilmCard } from '../../components/FilmCard';
 
@@ -10,15 +9,21 @@ function useFetchFilms() {
   useEffect(() => {
     setStatus('loading');
 
-    axios.get('https://swapi.dev/api/films/')
+    fetch('https://swapi.dev/api/films/')
       .then((res) => {
+        if (!res.ok) {
+          throw new Error(res.statusText);
+        }
+        return res;
+      })
+      .then((res) => res.json())
+      .then((data) => {
         setStatus('success');
-        setData(res.data.results);
+        setData(data.results);
       })
       .catch(() => {
         setStatus('error');
       });
-
   }, []);
 
   return {
@@ -40,7 +45,7 @@ export function App() {
 
   return (
     <div className="films-grid">
-      {films.map((film) => (
+      {films.map((film: any) => (
         <FilmCard key={film.episode_id} film={film} />
       ))}
     </div>

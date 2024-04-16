@@ -1,6 +1,6 @@
 import { setupServer } from 'msw/node';
 
-let server;
+let server: any;
 
 export function startServer() {
   server = setupServer();

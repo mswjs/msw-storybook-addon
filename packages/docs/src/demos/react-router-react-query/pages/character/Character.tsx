@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import { fetch } from '../../utils';
 
 export default function Character() {
-  const { characterId } = useParams();
+  const { characterId } = useParams<any>();
   const { status, data } = useQuery(`character-${characterId}`, () =>
     fetch(`https://swapi.dev/api/people/${characterId}/`),
   );
@@ -15,10 +15,12 @@ export default function Character() {
   const homeworldUrlParts = data.homeworld.split('/').filter(Boolean);
   const homeworldId = homeworldUrlParts[homeworldUrlParts.length - 1];
 
+  // @ts-expect-error TS(2367): This condition will always return 'true' since the... Remove this comment to see the full error message
   if (status !== 'success' && status !== 'error') {
     return null;
   }
 
+  // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
   if (status === 'error') {
     return `error fetching id: ${characterId}`;
   }
@@ -64,16 +66,17 @@ export default function Character() {
       </table>
       <br />
       <h3>Films</h3>
-      {data.films.map((film) => {
+      {data.films.map((film: any) => {
         const filmUrlParts = film.split('/').filter(Boolean);
         const filmId = filmUrlParts[filmUrlParts.length - 1];
+        // @ts-expect-error TS(2786): 'Film' cannot be used as a JSX component.
         return <Film id={filmId} key={`Film-${filmId}`} />;
       })}
     </div>
   );
 }
 
-function Film(props) {
+function Film(props: any) {
   const { id } = props;
   const { data, status } = useQuery(`film-${id}`, () =>
     fetch(`https://swapi.dev/api/films/${id}/`),
@@ -98,7 +101,7 @@ function Film(props) {
   );
 }
 
-function Homeworld(props) {
+function Homeworld(props: any) {
   const { id } = props;
   const { data, status } = useQuery(`homeworld-${id}`, () =>
     fetch(`https://swapi.dev/api/planets/${id}/`),

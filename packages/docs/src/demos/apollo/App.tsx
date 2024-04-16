@@ -36,9 +36,7 @@ export function App() {
 
   return (
     <div className="films-grid">
-      {films.map((film) => (
-        <FilmCard key={film.episode_id} film={film} />
-      ))}
+      {films.map((film: any) => <FilmCard key={film.episode_id} film={film} />)}
     </div>
   );
 }

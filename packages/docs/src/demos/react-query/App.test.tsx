@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { composeStories } from '@storybook/react'
-import { vi } from 'vitest'
+import { vi, afterAll, it, expect } from 'vitest'
 
 import { getServer } from '../../test-utils'
 import * as stories from './App.stories'

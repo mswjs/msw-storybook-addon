@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom'
+import { afterAll, beforeAll, afterEach } from 'vitest'
+
 
 // eslint-disable-next-line import/first
 import { startServer } from './test-utils'
