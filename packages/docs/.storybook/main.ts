@@ -5,7 +5,11 @@ import { StorybookConfig } from "@storybook/react-vite";
 import { mergeConfig } from "vite";
 
 const config: StorybookConfig = {
-  stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|ts|tsx)"],
+  stories: [
+    "../src/**/Introduction.mdx", 
+    "../src/**/*.mdx", 
+    "../src/**/*.stories.@(js|jsx|ts|tsx)"
+  ],
 
   addons: [
     getAbsolutePath("@storybook/addon-links"),
