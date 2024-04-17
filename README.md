@@ -15,8 +15,16 @@
 
 ### Install MSW and the addon
 
+With npm:
+
 ```sh
-npx storybook@latest add msw-storybook-addon
+npm i msw msw-storybook-addon -D
+```
+
+Or with yarn:
+
+```sh
+yarn add msw msw-storybook-addon -D
 ```
 
 ### Generate service worker for MSW in your public folder.
