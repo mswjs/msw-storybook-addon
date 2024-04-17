@@ -1,13 +1,13 @@
 name: 'Tests for Demos'
 on: push
 jobs:
-  jest:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
       - name: Build addon
         run: yarn workspace msw-storybook-addon build
       - name: Test Demos
-        run: yarn workspace msw-storybook-docs test --colors
+        run: yarn workspace msw-storybook-docs test

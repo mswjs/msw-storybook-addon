@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@build-time/initialize": ["./src/initialize.node.ts"]
+    }
+  },
+  "include": [
+    "./src/index.ts",
+    "./src/loader.ts",
+    "./src/decorator.ts",
+    "./src/initialize.node.ts"
+  ]
+}
