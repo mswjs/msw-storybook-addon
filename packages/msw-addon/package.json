@@ -30,7 +30,8 @@
       "react-native": "./dist/index.react-native.js",
       "node": "./dist/index.node.js",
       "default": "./dist/index.browser.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "main": "./dist/index.browser.js",
   "types": "./dist/index.browser.d.ts",
