@@ -19,7 +19,7 @@ jobs:
           node-version: 18.x
 
       - name: Install dependencies
-        uses: bahmutov/npm-install@v1
+        run: yarn install
 
       - name: Build
         run: yarn build
