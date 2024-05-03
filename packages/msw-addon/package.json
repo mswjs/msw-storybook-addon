@@ -41,7 +41,6 @@
   "scripts": {
     "build": "tsup",
     "dev": "yarn build --watch",
-    "prepublishOnly": "yarn build",
     "release": "auto shipit"
   },
   "dependencies": {
