@@ -1,3 +1,18 @@
+# v2.0.1 (Fri May 03 2024)
+
+#### 🐛 Bug Fix
+
+- Fix: Use CJS for node entrypoint [#152](https://github.com/mswjs/msw-storybook-addon/pull/152) ([@yannbf](https://github.com/yannbf))
+- Maintenance: Migrate monorepo to Yarn 4 [#151](https://github.com/mswjs/msw-storybook-addon/pull/151) ([@yannbf](https://github.com/yannbf))
+- Add package.json to exports map [#150](https://github.com/mswjs/msw-storybook-addon/pull/150) ([@yannbf](https://github.com/yannbf))
+- update install instructions [#144](https://github.com/mswjs/msw-storybook-addon/pull/144) ([@yannbf](https://github.com/yannbf))
+
+#### Authors: 1
+
+- Yann Braga ([@yannbf](https://github.com/yannbf))
+
+---
+
 # v1.10.0 (Thu Oct 26 2023)
 
 #### 🚀 Enhancement
