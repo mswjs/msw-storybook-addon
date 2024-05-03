@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mswjs/msw-storybook-addon.git",
+    "url": "https://github.com/mswjs/msw-storybook-addon.git",
     "directory": "packages/msw-addon"
   },
   "license": "MIT",
@@ -41,7 +41,6 @@
   "scripts": {
     "build": "tsup",
     "dev": "yarn build --watch",
-    "prepublishOnly": "yarn build",
     "release": "auto shipit"
   },
   "dependencies": {

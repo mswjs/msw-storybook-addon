@@ -25,6 +25,9 @@ const config: StorybookConfig = {
     return mergeConfig(config, {
       resolve: {
         preserveSymlinks: true,
+        alias: {
+          'msw-storybook-addon': join(__dirname, '../../msw-addon'),
+        },
       },
       plugins: [
         // Workaround necessary because of a bug in Vite
