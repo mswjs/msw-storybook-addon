@@ -29,6 +29,7 @@ const node = defineConfig({
     'index.node': './src/index.ts',
   },
   target: 'node18',
+  format: 'cjs',
   esbuildOptions(options) {
     options.alias = {
       ...(options.alias || {}),

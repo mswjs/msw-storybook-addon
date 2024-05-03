@@ -28,7 +28,7 @@
       "types": "./dist/index.browser.d.ts",
       "browser": "./dist/index.browser.js",
       "react-native": "./dist/index.react-native.js",
-      "node": "./dist/index.node.js",
+      "node": "./dist/index.node.cjs",
       "default": "./dist/index.browser.js"
     },
     "./package.json": "./package.json"
