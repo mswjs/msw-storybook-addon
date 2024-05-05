@@ -1,3 +1,15 @@
+# v2.0.2 (Sun May 05 2024)
+
+#### 🐛 Bug Fix
+
+- Fix `MswParameters` handlers type [#146](https://github.com/mswjs/msw-storybook-addon/pull/146) ([@jarojasm95](https://github.com/jarojasm95))
+
+#### Authors: 1
+
+- Jose Rojas ([@jarojasm95](https://github.com/jarojasm95))
+
+---
+
 # v2.0.1 (Fri May 03 2024)
 
 #### 🐛 Bug Fix
