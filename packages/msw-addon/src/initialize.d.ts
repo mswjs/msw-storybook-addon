@@ -13,4 +13,6 @@ export declare function initialize(
   initialHandlers?: RequestHandler[]
 ): SetupApi<LifeCycleEventsMap>
 
+export declare function waitForMswReady(): Promise<void>
+
 export declare function getWorker(): typeof api

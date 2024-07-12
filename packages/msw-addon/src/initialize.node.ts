@@ -18,6 +18,11 @@ export function initialize(
   return server
 }
 
+export async function waitForMswReady() {
+  // in Node MSW is activated instantly upon registration. Still we need to check the presence of the worker
+  getWorker()
+}
+
 export function getWorker(): SetupServer {
   if (api === undefined) {
     throw new Error(
