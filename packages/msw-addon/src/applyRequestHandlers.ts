@@ -1,21 +1,21 @@
 import type { RequestHandler } from 'msw'
 import { api } from '@build-time/initialize'
 import type { Context } from './decorator.js'
-import { deprecate } from './util.js';
+import { deprecate } from './util.js'
 
-const deprecateMessage =  deprecate(`
+const deprecateMessage = deprecate(`
 [msw-storybook-addon] You are using parameters.msw as an Array instead of an Object with a property "handlers". This usage is deprecated and will be removed in the next release. Please use the Object syntax instead.
 
 More info: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#parametersmsw-array-notation-deprecated-in-favor-of-object-notation
 `)
 
-// P.S. this is used by Storybook 7 users as a way to help them migrate.
+// P.S. this is publicly exported as it is used by Storybook 7 users as a way to help them migrate.
 // This should be removed from the package exports in a future release.
 export function applyRequestHandlers(
   handlersListOrObject: Context['parameters']['msw']
 ): void {
-  api?.resetHandlers();
-  
+  api?.resetHandlers()
+
   if (handlersListOrObject == null) {
     return
   }

@@ -257,11 +257,11 @@ initialize({}, [
 
 #### Using the addon in Node.js with Portable Stories
 
-If you're using [portable stories](https://storybook.js.org/docs/writing-tests/stories-in-unit-tests), you need to make sure the MSW loaders are applied correctly.
+If you're using [portable stories](https://storybook.js.org/docs/api/portable-stories/portable-stories-vitest), you need to make sure the MSW loaders are applied correctly.
 
-### Storybook 8
+### Storybook 8.2 or higher
 
-You do so by calling the `load` function of your story before rendering it:
+If you [set up the project annotations](https://storybook.js.org/docs/api/portable-stories/portable-stories-vitest#setprojectannotations) correctly, by calling the `play` function of your story, the MSW loaders will be applied automatically:
 
 ```ts
 import { composeStories } from '@storybook/react'
@@ -270,13 +270,12 @@ import * as stories from './MyComponent.stories'
 const { Success } = composeStories(stories)
 
 test('<Success />', async() => {
-  // 👇 Crucial step, so that the MSW loaders are applied
-  await Success.load()
-  render(<Success />)
+  // The MSW loaders are applied automatically via the play function
+  await Success.play()
 })
 ```
 
-### Storybook 7
+### Storybook < 8.2
 
 You do so by calling the `applyRequestHandlers`  helper before rendering your story:
 
