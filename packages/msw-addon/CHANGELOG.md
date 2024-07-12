@@ -1,3 +1,16 @@
+# v2.0.3 (Fri Jul 12 2024)
+
+#### 🐛 Bug Fix
+
+- Fix: Make sure MSW loader is resolved only when mocking is enabled [#157](https://github.com/mswjs/msw-storybook-addon/pull/157) ([@yannbf](https://github.com/yannbf))
+- fix docs [#155](https://github.com/mswjs/msw-storybook-addon/pull/155) ([@yannbf](https://github.com/yannbf))
+
+#### Authors: 1
+
+- Yann Braga ([@yannbf](https://github.com/yannbf))
+
+---
+
 # v2.0.2 (Sun May 05 2024)
 
 #### 🐛 Bug Fix
