@@ -26,16 +26,7 @@ export function initialize(
 
 export async function waitForMswReady() {
   const msw = getWorker() as ContextfulWorker
-
-  // scenario: MSW is registered and enabled
-  if (!!msw.context?.isMockingEnabled) {
-    return
-  }
-
-  // scenario: MSW is registered but not enabled yet
-  if (msw.context.activationPromise) {
-    return await msw.context.activationPromise
-  }
+  await msw.context.activationPromise
 }
 
 export function getWorker(): SetupWorker {
