@@ -1,3 +1,15 @@
+# v2.0.4 (Tue Nov 05 2024)
+
+#### 🐛 Bug Fix
+
+- fix: update the license holder [#165](https://github.com/mswjs/msw-storybook-addon/pull/165) ([@kettanaito](https://github.com/kettanaito))
+
+#### Authors: 1
+
+- Artem Zakharchenko ([@kettanaito](https://github.com/kettanaito))
+
+---
+
 # v2.0.3 (Fri Jul 12 2024)
 
 #### 🐛 Bug Fix
