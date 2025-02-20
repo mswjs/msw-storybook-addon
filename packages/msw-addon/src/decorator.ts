@@ -2,7 +2,7 @@ import type { RequestHandler } from 'msw'
 import { applyRequestHandlers } from './applyRequestHandlers.js'
 import { deprecate } from './util.js'
 
-export type MswParameters = {
+export interface MswParameters {
   msw?:
     | RequestHandler[]
     | {
@@ -10,7 +10,7 @@ export type MswParameters = {
       }
 }
 
-export type Context = {
+export interface Context {
   parameters: MswParameters
 }
 
