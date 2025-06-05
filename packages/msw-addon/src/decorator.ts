@@ -3,6 +3,7 @@ import { applyRequestHandlers } from './applyRequestHandlers.js'
 import { deprecate } from './util.js'
 
 export type MswParameters = {
+  [key: string]: any;
   msw?:
     | RequestHandler[]
     | {
