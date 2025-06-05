@@ -1,3 +1,15 @@
+# v2.0.5 (Thu Jun 05 2025)
+
+#### 🐛 Bug Fix
+
+- fix: updates types to increase compatibility with storybook types [#169](https://github.com/mswjs/msw-storybook-addon/pull/169) ([@rhuanbarreto](https://github.com/rhuanbarreto))
+
+#### Authors: 1
+
+- Rhuan Barreto ([@rhuanbarreto](https://github.com/rhuanbarreto))
+
+---
+
 # v2.0.4 (Tue Nov 05 2024)
 
 #### 🐛 Bug Fix
