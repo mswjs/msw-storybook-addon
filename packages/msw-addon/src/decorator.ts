@@ -21,6 +21,10 @@ const deprecateMessage = deprecate(`
 More info: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#mswdecorator-is-deprecated-in-favor-of-mswloader
 `)
 
+/**
+ * @deprecated The `mswDecorator` is deprecated and will be removed in the next release. Please use the `mswLoader` instead.
+ * More info: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#mswdecorator-is-deprecated-in-favor-of-mswloader
+ */
 export const mswDecorator = <Story extends (...args: any[]) => any>(
   storyFn: Story,
   context: Context
