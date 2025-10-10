@@ -1,3 +1,15 @@
+# v2.0.6 (Fri Oct 10 2025)
+
+#### 🐛 Bug Fix
+
+- fix: add a `@deprecated` tag to the `mswDecorator` [#178](https://github.com/mswjs/msw-storybook-addon/pull/178) ([@connorshea](https://github.com/connorshea))
+
+#### Authors: 1
+
+- Connor Shea ([@connorshea](https://github.com/connorshea))
+
+---
+
 # v2.0.5 (Thu Jun 05 2025)
 
 #### 🐛 Bug Fix
