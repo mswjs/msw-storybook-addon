@@ -12,3 +12,4 @@
 *.log*
 .idea
 test-results
+storybook-static
