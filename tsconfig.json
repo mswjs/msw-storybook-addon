@@ -1,0 +1,11 @@
+{
+  "include": ["./src"],
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "lib": ["ES2024"],
+  },
+}
