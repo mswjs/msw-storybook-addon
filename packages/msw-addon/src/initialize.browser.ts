@@ -6,27 +6,25 @@ type SetupWorker = ReturnType<typeof setupWorker>
 
 export let api: SetupWorker
 
-type ContextfulWorker = SetupWorker & {
-  context: { isMockingEnabled: boolean; activationPromise?: any }
-}
-
 export type InitializeOptions = Parameters<SetupWorker['start']>[0]
+
+let activationPromise: Promise<void>
 
 export function initialize(
   options?: InitializeOptions,
   initialHandlers: RequestHandler[] = []
 ): SetupWorker {
-  const worker = setupWorker(...initialHandlers) as ContextfulWorker
-  worker.context.activationPromise = worker.start(
-    augmentInitializeOptions(options)
-  )
+  const worker = setupWorker(...initialHandlers)
+  activationPromise = worker
+    .start(augmentInitializeOptions(options))
+    .then(() => {})
   api = worker
   return worker
 }
 
 export async function waitForMswReady() {
-  const msw = getWorker() as ContextfulWorker
-  await msw.context.activationPromise
+  getWorker()
+  await activationPromise
 }
 
 export function getWorker(): SetupWorker {
