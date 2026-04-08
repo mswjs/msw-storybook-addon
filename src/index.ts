@@ -21,7 +21,7 @@ async function defaultSetup(): Promise<MswApi> {
 
 let mswInstance: MswApi | undefined
 
-export function enableMocking(
+export default function addonMsw(
   setup: () => MswApi | Promise<MswApi> = defaultSetup,
 ) {
   return definePreviewAddon({

@@ -1,9 +1,9 @@
 import { definePreview } from '@storybook/react-vite'
-import { enableMocking } from '@msw/storybook'
+import addonMsw from '@msw/storybook'
 import { http, HttpResponse } from 'msw'
 
 export default definePreview({
-  addons: [enableMocking()],
+  addons: [addonMsw()],
   beforeEach({ msw }) {
     msw.use(
       http.get('https://api.example.com/user', () => {
