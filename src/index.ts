@@ -1,4 +1,3 @@
-import { isNodeProcess } from 'is-node-process'
 import type { SetupApi, LifeCycleEventsMap } from 'msw'
 import { definePreviewAddon } from 'storybook/internal/csf'
 
@@ -14,13 +13,6 @@ export type MswApi = Pick<
 >
 
 async function defaultSetup(): Promise<MswApi> {
-  // if (isNodeProcess()) {
-  //   const { setupServer } = await import('msw/node')
-  //   const server = setupServer()
-  //   server.listen()
-  //   return server
-  // }
-
   const { setupWorker } = await import('msw/browser')
   const worker = setupWorker()
   await worker.start({ quiet: true })
