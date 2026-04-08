@@ -5,7 +5,11 @@
   "description": "Mock APIs in Storybook using Mock Service Worker.",
   "main": "./build/index.mjs",
   "exports": {
-    ".": "./build/index.mjs"
+    ".": "./build/index.mjs",
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "default": "./dist/preview.js"
+    }
   },
   "storybook": {
     "displayName": "Mock Service Worker"
@@ -14,7 +18,7 @@
     "dev": "tsdown --watch",
     "lint": "publint",
     "install:browsers": "pnpm exec playwright install chromium --with-deps",
-    "storybook": "storybook dev --config-dir ./tests/base/.storybook",
+    "storybook": "storybook dev --config-dir ./tests/base/.storybook --port 6006",
     "test:stories": "playwright test",
     "test:play": "vitest -c ./tests/base/vitest.config.ts --project storybook",
     "build": "tsdown"
@@ -62,9 +66,6 @@
   "peerDependencies": {
     "msw": ">=2",
     "storybook": ">=9"
-  },
-  "dependencies": {
-    "is-node-process": "^1.2.0"
   },
   "msw": {
     "workerDirectory": [
