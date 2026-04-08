@@ -2,6 +2,6 @@
   "extends": "../tsconfig.json",
   "include": ["."],
   "compilerOptions": {
-    "types": ["@msw/storybook/types"],
+    "types": ["msw-storybook-addon/types"],
   },
 }

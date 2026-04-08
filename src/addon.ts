@@ -1,5 +1,8 @@
-import type { MswApi } from './types'
+// import type { MswApi } from './types'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
+
+type MswApi = any
+
 export type SetupFunction = () => MswApi | Promise<MswApi>
 
 const defaultSetup: SetupFunction = async () => {
