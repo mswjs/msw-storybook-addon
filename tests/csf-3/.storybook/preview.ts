@@ -1,9 +1,7 @@
-import { definePreview } from '@storybook/react-vite'
-import addonMsw from '@msw/storybook'
 import { http, HttpResponse } from 'msw'
+import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
 
-export default definePreview({
-  addons: [addonMsw()],
+export default {
   beforeEach({ msw }) {
     msw.use(
       http.get('https://api.example.com/user', () => {
@@ -11,4 +9,4 @@ export default definePreview({
       }),
     )
   },
-})
+} satisfies ProjectAnnotations<Renderer>

@@ -1,5 +1,5 @@
 {
-  "include": ["./src"],
+  "include": ["./src", "types.d.ts"],
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true,
