@@ -103,6 +103,8 @@ type MswParameter = {
 }
 ```
 
+_**Note:** Handler inheritance only works when the root `handlers` is an object; arrays of handlers will not be merged._
+
 Suppose you have an application where almost every component needs to mock requests to `/login` and `/logout` the same way.
 You can set global MSW handlers in preview.js for those requests and bundle them into a property called `auth`, for example:
 
