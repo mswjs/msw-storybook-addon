@@ -1,3 +1,15 @@
+# v2.0.7 (Wed Apr 08 2026)
+
+#### 🐛 Bug Fix
+
+- fix: stop relying on `worker.context` [#184](https://github.com/mswjs/msw-storybook-addon/pull/184) ([@kettanaito](https://github.com/kettanaito))
+
+#### Authors: 1
+
+- Artem Zakharchenko ([@kettanaito](https://github.com/kettanaito))
+
+---
+
 # v2.0.6 (Fri Oct 10 2025)
 
 #### 🐛 Bug Fix
