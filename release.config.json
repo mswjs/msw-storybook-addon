@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/@ossjs/release/schema.json",
+  "profiles": [
+    {
+      "name": "default",
+      "use": "NPM_CONFIG_PROVENANCE=true pnpm publish --no-git-checks"
+    }
+  ]
+}

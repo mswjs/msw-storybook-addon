@@ -3,7 +3,6 @@
   "name": "msw-storybook-addon",
   "version": "0.0.0",
   "description": "Mock APIs in Storybook using Mock Service Worker.",
-  "main": "./build/index.mjs",
   "exports": {
     ".": "./build/index.mjs",
     "./preview": "./build/preview.mjs",
@@ -19,7 +18,8 @@
     "storybook": "storybook dev --config-dir ./tests/base/.storybook",
     "test:stories": "playwright test",
     "test:play": "vitest -c ./tests/base/vitest.config.ts --project storybook",
-    "build": "tsdown"
+    "build": "tsdown",
+    "release": "release publish"
   },
   "files": [
     "./build"
@@ -46,14 +46,15 @@
     "access": "public"
   },
   "devDependencies": {
+    "@ossjs/release": "^0.10.1",
     "@playwright/test": "^1.59.1",
     "@storybook/addon-vitest": "^10.3.4",
     "@storybook/react-vite": "^10.3.4",
     "@types/react": "^19.2.14",
     "@vitest/browser-playwright": "4.1.2",
     "@vitest/coverage-v8": "4.1.2",
-    "msw-storybook-addon": "link:.",
     "msw": "^2.12.14",
+    "msw-storybook-addon": "link:.",
     "publint": "^0.3.18",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
