@@ -22,6 +22,9 @@
   "storybook": {
     "displayName": "Mock Service Worker"
   },
+  "bin": {
+    "msw-storybook-migrate": "./codemod/dist/bin.mjs"
+  },
   "scripts": {
     "dev": "tsdown --watch",
     "lint": "publint",
@@ -31,11 +34,14 @@
     "test:stories": "playwright test",
     "test:stories:csf-3": "playwright test --config=playwright.csf-3.config.ts",
     "test:play": "vitest -c ./tests/base/vitest.config.ts --project storybook",
-    "build": "tsdown",
+    "test:codemod": "vitest -c ./codemod/vitest.config.ts run",
+    "build": "tsdown && pnpm build:codemod",
+    "build:codemod": "tsdown -c ./codemod/tsdown.config.ts",
     "release": "release publish"
   },
   "files": [
-    "./build"
+    "./build",
+    "./codemod/dist"
   ],
   "keywords": [
     "storybook-addon",
@@ -67,11 +73,15 @@
     "@types/react": "^19.2.14",
     "@vitest/browser-playwright": "4.1.2",
     "@vitest/coverage-v8": "4.1.2",
+    "globby": "^14.0.2",
     "msw": "^2.12.14",
     "msw-storybook-addon": "link:.",
+    "p-limit": "^6.1.0",
+    "picocolors": "^1.1.1",
     "publint": "^0.3.18",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "slash": "^5.1.0",
     "storybook": "^10.3.4",
     "tsdown": "^0.21.7",
     "typescript": "^5.9.3",
