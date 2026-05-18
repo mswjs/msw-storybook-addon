@@ -1,6 +1,7 @@
 <h1>Migration</h1>
 
 - [From 2.x.x to 3.x.x](#from-2xx-to-3xx)
+  - [Automated migration](#automated-migration)
   - [Handlers move from `parameters.msw` to `beforeEach({ msw })`](#handlers-move-from-parametersmsw-to-beforeeach-msw-)
   - [`mswLoader` and `mswDecorator` are removed](#mswloader-and-mswdecorator-are-removed)
   - [`initialize()` is now only for CSF 3.0 customization](#initialize-is-now-only-for-csf-30-customization)
@@ -17,6 +18,22 @@
 `beforeEach` hook. This removes the long-standing race where the service
 worker could fail to register before a story rendered: the worker is now
 started and awaited before any story (or its `play` function) runs.
+
+### Automated migration
+
+Run the bundled codemod from your project root:
+
+```sh
+npx msw-storybook-migrate
+```
+
+It rewrites recognised `parameters.msw` shapes into `beforeEach({ msw })`,
+removes `mswLoader` wiring from `.storybook/preview.*`, ensures
+`msw-storybook-addon` is in `.storybook/main.*` `addons`, and adds
+`mswAddon()` to `definePreview({ addons: [...] })` if you use CSF factories.
+Use `--dry-run` to preview changes, `--help` for options. Stories whose
+`parameters.msw` uses an unrecognised shape are reported and must be
+hand-migrated using the pattern below.
 
 ### Handlers move from `parameters.msw` to `beforeEach({ msw })`
 
@@ -45,7 +62,7 @@ top-level `beforeEach({ msw })`.
 The addon's `beforeEach` now builds and awaits the worker automatically, so
 there is nothing to register. Remove the `mswLoader`/`mswDecorator` import
 and any `loaders: [mswLoader]` / `decorators: [mswDecorator]` entry from
-`.storybook/preview.*`.
+`.storybook/preview.*` (the codemod does this for you).
 
 ### `initialize()` is now only for CSF 3.0 customization
 
@@ -62,7 +79,7 @@ free of `msw/browser`. Update the import:
 +import { initialize } from 'msw-storybook-addon/csf3'
 ```
 
-Other exports (`MswApi`, `InitializeOptions`) remain on the main
+Other exports like `MswApi` remain on the main
 `msw-storybook-addon` entry.
 
 ## From 1.x.x to 2.x.x
