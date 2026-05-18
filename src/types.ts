@@ -1,7 +1,9 @@
+import type { MswApi } from './shared-state'
+
 declare module 'storybook/internal/csf' {
   interface StoryContext {
-    msw: number
+    msw: MswApi
   }
 }
 
-export {}
+export type { MswApi }

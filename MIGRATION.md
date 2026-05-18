@@ -1,9 +1,69 @@
 <h1>Migration</h1>
 
+- [From 2.x.x to 3.x.x](#from-2xx-to-3xx)
+  - [Handlers move from `parameters.msw` to `beforeEach({ msw })`](#handlers-move-from-parametersmsw-to-beforeeach-msw-)
+  - [`mswLoader` and `mswDecorator` are removed](#mswloader-and-mswdecorator-are-removed)
+  - [`initialize()` is now only for CSF 3.0 customization](#initialize-is-now-only-for-csf-30-customization)
 - [From 1.x.x to 2.x.x](#from-1xx-to-2xx)
   - [MSW required version is now ^2.0.0](#msw-required-version-is-now-200)
   - [mswDecorator is deprecated in favor of mswLoader](#mswdecorator-is-deprecated-in-favor-of-mswloader)
   - [parameters.msw Array notation deprecated in favor of Object notation](#parametersmsw-array-notation-deprecated-in-favor-of-object-notation)
+
+## From 2.x.x to 3.x.x
+
+3.x reworks how handlers are provided. Instead of declaring handlers as
+`parameters.msw` and registering an `mswLoader`, you now receive a live
+`msw` worker on the story context and call `msw.use(...)` from a
+`beforeEach` hook. This removes the long-standing race where the service
+worker could fail to register before a story rendered: the worker is now
+started and awaited before any story (or its `play` function) runs.
+
+### Handlers move from `parameters.msw` to `beforeEach({ msw })`
+
+```diff
+ export const UserProfile = {
+-  parameters: {
+-    msw: {
+-      handlers: [
+-        http.get('https://api.acme.com/user', () => HttpResponse.json({ name: 'John' })),
+-      ],
+-    },
+-  },
++  beforeEach({ msw }) {
++    msw.use(
++      http.get('https://api.acme.com/user', () => HttpResponse.json({ name: 'John' })),
++    )
++  },
+ }
+```
+
+Global handlers move the same way, from `parameters.msw` in `preview.*` to a
+top-level `beforeEach({ msw })`.
+
+### `mswLoader` and `mswDecorator` are removed
+
+The addon's `beforeEach` now builds and awaits the worker automatically, so
+there is nothing to register. Remove the `mswLoader`/`mswDecorator` import
+and any `loaders: [mswLoader]` / `decorators: [mswDecorator]` entry from
+`.storybook/preview.*`.
+
+### `initialize()` is now only for CSF 3.0 customization
+
+You no longer need to call `initialize()` for the addon to work — it is
+auto-wired. Keep `initialize(options, initialHandlers)` only if you are using
+CSF 3.0 and need custom `start()` options or initial handlers.
+When using [CSF factories](https://storybook.js.org/docs/api/csf/csf-next) path, pass a setup function to `mswAddon(setup)` instead.
+
+`initialize` has also moved to a dedicated subpath so the main entry stays
+free of `msw/browser`. Update the import:
+
+```diff
+-import { initialize } from 'msw-storybook-addon'
++import { initialize } from 'msw-storybook-addon/csf3'
+```
+
+Other exports (`MswApi`, `InitializeOptions`) remain on the main
+`msw-storybook-addon` entry.
 
 ## From 1.x.x to 2.x.x
 

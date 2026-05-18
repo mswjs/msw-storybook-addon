@@ -95,6 +95,60 @@ export const UserProfileNetworkError: Story = {
 }
 ```
 
+### Customizing the worker
+
+By default the addon starts a bare worker for you. To pass MSW
+[`start()` options](https://mswjs.io/docs/api/setup-worker/start) or
+register initial handlers that survive `resetHandlers()` between stories:
+
+- **CSF factories** — pass a setup function to `addonMsw()`:
+
+  ```ts
+  // .storybook/preview.ts
+  export default definePreview({
+    addons: [
+      addonMsw(async () => {
+        const { setupWorker } = await import('msw/browser')
+        const worker = setupWorker(...defaultHandlers)
+        await worker.start({ onUnhandledRequest: 'bypass' })
+        return worker
+      }),
+    ],
+  })
+  ```
+
+- **CSF 3.0** — call `initialize(options, initialHandlers)` in `preview.ts`:
+
+  ```ts
+  // .storybook/preview.ts
+  import { initialize } from 'msw-storybook-addon/csf3'
+
+  initialize({ onUnhandledRequest: 'bypass' }, [
+    http.get('https://api.acme.com/user', () => HttpResponse.json({ name: 'John' })),
+  ])
+  ```
+
+## Handler precedence
+
+When more than one source registers a handler for the same request, the
+last one to apply wins (MSW resolves the most recently registered handler
+first). From highest to lowest priority:
+
+1. **`parameters.msw`** (deprecated - please migrate away from it) — applied at render, so it overrides everything below it
+2. story-level `beforeEach({ msw })`
+3. component/meta-level `beforeEach({ msw })`
+4. preview-level `beforeEach({ msw })`
+5. initial handlers from `initialize(_, [...])` / `mswAddon(setup)` — the
+   baseline, restored between stories
+
+Do **not** define both `parameters.msw` and `beforeEach({ msw })` for the
+same request: the deprecated `parameters.msw` will silently win regardless
+of where each is declared. Use `beforeEach` instead.
+
+## Migrating from older versions
+
+See [MIGRATION.md](./MIGRATION.md) for details and hand-migration steps.
+
 ## Related materials
 
 - [Mock Service Worker](https://mswjs.io/docs)

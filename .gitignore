@@ -1,5 +1,8 @@
 /node_modules
+**/node_modules
 /build
+*.tsbuildinfo
+**/dist
 
 # misc
 .DS_Store

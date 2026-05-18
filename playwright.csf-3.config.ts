@@ -1,10 +1,12 @@
 import { defineConfig } from '@playwright/test'
 
-const PORT = 56789
+// CSF3 suite — separate Storybook instance/port because its preview/main
+// config (addon via `main.ts addons`) is incompatible with the base
+// (factories) setup.
+const PORT = 56790
 
 export default defineConfig({
-  // Base suite only; the CSF3 suite has its own config + Storybook port.
-  testDir: './tests/base',
+  testDir: './tests/csf-3',
   testMatch: '*.test.ts',
   timeout: 5000,
   forbidOnly: !!process.env.CI,
@@ -15,7 +17,7 @@ export default defineConfig({
     serviceWorkers: 'allow',
   },
   webServer: {
-    command: `pnpm storybook -p ${PORT}`,
+    command: `pnpm storybook:csf-3 -p ${PORT}`,
     port: PORT,
     reuseExistingServer: true,
   },

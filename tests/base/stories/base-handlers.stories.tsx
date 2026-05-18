@@ -26,35 +26,77 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+// No handler here — falls back to the preview default.
 export const PreviewHandlers: Story = {
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'John Maverick',
+        'handler defined in preview beforeEach',
       )
     })
   },
 }
 
+// Overrides the preview default for this story only.
 export const StoryOverrides: Story = {
   name: 'Per-Story Handlers',
   beforeEach({ msw }) {
     msw.use(
       http.get('https://api.example.com/user', () => {
-        return HttpResponse.json({ name: 'Alice Sunwell' })
+        return HttpResponse.json({ name: 'handler overriden in story beforeEach' })
       }),
     )
   },
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'Alice Sunwell',
+        'handler overriden in story beforeEach',
       )
     })
   },
 }
 
-export const LoadingState: Story = {
+// Deprecated `parameters.msw`, still applied by the compat shim. Both the
+// object and bare-array forms must keep working.
+export const LegacyParametersObject: Story = {
+  name: 'Legacy parameters.msw (object form)',
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('https://api.example.com/user', () => {
+          return HttpResponse.json({ name: 'legacy handler defined in story with parameters.msw' })
+        }),
+      ],
+    },
+  },
+  async play({ canvas }) {
+    await waitFor(async () => {
+      await expect(canvas.getByRole('paragraph')).toHaveTextContent(
+        'legacy handler defined in story with parameters.msw',
+      )
+    })
+  },
+}
+
+export const LegacyParametersArray: Story = {
+  name: 'Legacy parameters.msw (array form)',
+  parameters: {
+    msw: [
+      http.get('https://api.example.com/user', () => {
+        return HttpResponse.json({ name: 'legacy handler defined in story with parameters.msw array form' })
+      }),
+    ],
+  },
+  async play({ canvas }) {
+    await waitFor(async () => {
+      await expect(canvas.getByRole('paragraph')).toHaveTextContent(
+        'legacy handler defined in story with parameters.msw array form',
+      )
+    })
+  },
+}
+
+export const DelayFunctionLoadingState: Story = {
   beforeEach({ msw }) {
     msw.use(
       http.get('https://api.example.com/user', async () => {
