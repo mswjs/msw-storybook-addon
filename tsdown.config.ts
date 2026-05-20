@@ -5,7 +5,7 @@ export default defineConfig({
     './src/index.ts',
     './src/preview.ts',
     './src/types.ts',
-    './src/csf3/index.ts',
+    './src/csf3.ts',
   ],
   outDir: './build',
   format: ['esm'],
