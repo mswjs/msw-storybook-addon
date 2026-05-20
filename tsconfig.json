@@ -7,5 +7,6 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "lib": ["ES2024"],
+    "verbatimModuleSyntax": true,
   },
 }

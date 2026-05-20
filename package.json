@@ -6,7 +6,8 @@
   "exports": {
     ".": "./build/index.mjs",
     "./preview": "./build/preview.mjs",
-    "./types": "./build/index.d.mts"
+    "./types": "./build/index.d.mts",
+    "./csf3": "./build/csf3/index.mjs"
   },
   "storybook": {
     "displayName": "Mock Service Worker"
@@ -15,9 +16,10 @@
     "dev": "tsdown --watch",
     "lint": "publint",
     "install:browsers": "pnpm exec playwright install chromium --with-deps",
-    "storybook": "storybook dev --config-dir ./tests/base/.storybook",
+    "storybook": "storybook dev --config-dir ./tests/factory/.storybook",
+    "storybook:csf3": "storybook dev --config-dir ./tests/csf3/.storybook",
     "test:stories": "playwright test",
-    "test:play": "vitest -c ./tests/base/vitest.config.ts --project storybook",
+    "test:play": "vitest -c ./tests/factory/vitest.config.ts --project storybook",
     "build": "tsdown",
     "release": "release publish"
   },
@@ -50,10 +52,11 @@
     "@playwright/test": "^1.59.1",
     "@storybook/addon-vitest": "^10.3.4",
     "@storybook/react-vite": "^10.3.4",
+    "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@vitest/browser-playwright": "4.1.2",
     "@vitest/coverage-v8": "4.1.2",
-    "msw": "^2.12.14",
+    "msw": "^2.14.6",
     "msw-storybook-addon": "link:.",
     "publint": "^0.3.18",
     "react": "^19.2.4",

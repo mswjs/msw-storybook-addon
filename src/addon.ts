@@ -1,7 +1,5 @@
-// import type { MswApi } from './types'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
-
-type MswApi = any
+import type { MswApi } from './shared'
 
 export type SetupFunction = () => MswApi | Promise<MswApi>
 

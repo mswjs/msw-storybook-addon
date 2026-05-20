@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
 
@@ -38,12 +38,12 @@ export const PreviewHandlers: Story = {
 
 export const StoryOverrides: Story = {
   name: 'Per-Story Handlers',
-  beforeEach({ msw }) {
-    msw.use(
+  parameters: {
+    msw: [
       http.get('https://api.example.com/user', () => {
         return HttpResponse.json({ name: 'Alice Sunwell' })
       }),
-    )
+    ],
   },
   async play({ canvas }) {
     await waitFor(async () => {
@@ -51,5 +51,20 @@ export const StoryOverrides: Story = {
         'Alice Sunwell',
       )
     })
+  },
+}
+
+export const LoadingState: Story = {
+  parameters: {
+    msw: [
+      http.get('https://api.example.com/user', async () => {
+        await delay('infinite')
+      }),
+    ],
+  },
+  async play({ canvas }) {
+    await expect(canvas.getByRole('paragraph')).toHaveTextContent('Loading')
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    await expect(canvas.getByRole('paragraph')).toHaveTextContent('Loading')
   },
 }
