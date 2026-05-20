@@ -62,7 +62,6 @@ export function withMsw(
       '[msw-storybook-addon] `parameters.msw` is deprecated and will be remove in the future major release. Run `npx msw-storybook-migrate` to migrate.',
     )
 
-    console.log('applying overrides...')
     worker.use(...handlers)
 
     return storyFn()
