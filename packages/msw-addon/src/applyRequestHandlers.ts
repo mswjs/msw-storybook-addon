@@ -22,7 +22,7 @@ export function applyRequestHandlers(
 
   if (Array.isArray(handlersListOrObject) && handlersListOrObject.length > 0) {
     deprecateMessage()
-    // Support an Array of request handlers (backwards compatability).
+    // Support an Array of request handlers (backwards compatibility).
     api.use(...handlersListOrObject)
     return
   }

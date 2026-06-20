@@ -40,7 +40,7 @@ export const augmentInitializeOptions = (options: InitializeOptions) => {
 
   return {
     ...options,
-    // Filter requests that we know are not relevant to the user e.g. HMR, builder requests, statics assets, etc.
+    // Filter requests that we know are not relevant to the user e.g. HMR, builder requests, static assets, etc.
     onUnhandledRequest: (...args) => {
       const [{ url }, print] = args
       if (shouldFilterUrl(url)) {

@@ -153,7 +153,7 @@ export const SuccessBehavior = {
 }
 ```
 
-Now suppose you want to ovewrite the global handlers for auth. All you have to do is set them again in your story and these values will take precedence:
+Now suppose you want to overwrite the global handlers for auth. All you have to do is set them again in your story and these values will take precedence:
 
 ```ts
 import { http, HttpResponse } from 'msw'

@@ -21,7 +21,7 @@ This project uses Yarn Workspaces to organize packages.
 - Node.js
 - Yarn
 
-### Bootstraping
+### Bootstrapping
 
 In the root folder, run the following command to install the dependencies:
 
