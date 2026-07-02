@@ -6,7 +6,7 @@
   "exports": {
     ".": "./build/index.mjs",
     "./preview": "./build/preview.mjs",
-    "./types": "./build/index.d.mts",
+    "./types": "./build/types.d.mts",
     "./csf3": "./build/csf3.mjs"
   },
   "storybook": {
@@ -20,6 +20,7 @@
     "storybook:csf3": "storybook dev --config-dir ./tests/csf3/.storybook",
     "test:stories": "playwright test",
     "test:play": "vitest -c ./tests/factory/vitest.config.ts --project storybook",
+    "test:ts": "vitest --typecheck",
     "build": "tsdown",
     "release": "release publish"
   },

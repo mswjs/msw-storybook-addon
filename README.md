@@ -26,6 +26,8 @@ npx msw init ./public --save
 
 #### CSF 3.0
 
+> The loader API for CSF 3.0 is _deprecated_. Please consider using the [CSF Factories](#csf-factories) API instead.
+
 ```ts
 // .storybook/main.ts
 export default {
@@ -45,12 +47,13 @@ export default {
 }
 ```
 
-Include the addon's types in your `tsconfig.json` to have the `StoryContext` type extended automatically in all your stories:
+Include the addon's types in your `tsconfig.json` for a type safe `parameters.msw` experience in your setup and stories:
 
 ```json
 {
+  "include": [".storybook/preview.ts", "..."],
   "compilerOptions": {
-    "types": ["msw-storybook-addon/types"]
+    "types": ["msw-storybook-addon/csf3"]
   }
 }
 ```
@@ -66,6 +69,17 @@ import addonMsw from 'msw-storybook-addon'
 export default definePreview({
   addons: [addonMsw()],
 })
+```
+
+Include the addon's types in your `tsconfig.json` for a type-safe experience in your setup and stories:
+
+```json
+{
+  "include": [".storybook/preview.ts", "..."],
+  "compilerOptions": {
+    "types": ["msw-storybook-addon/types"]
+  }
+}
 ```
 
 ### Provide handlers

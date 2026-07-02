@@ -48,6 +48,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Test (Types)
+        run: pnpm test:ts
+
       - name: Test (Stories)
         run: pnpm test:stories
 

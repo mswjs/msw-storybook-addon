@@ -3,13 +3,19 @@ import type { AnyHandler } from 'msw'
 import { defaultSetup, type SetupFunction } from './addon'
 import type { MswApi } from './shared'
 
-type MswParameter =
+export type MswParameter =
   | Array<AnyHandler>
   | {
       handlers?:
         | Array<AnyHandler>
         | Record<string, AnyHandler | Array<AnyHandler>>
     }
+
+declare module 'storybook/internal/csf' {
+  interface Parameters {
+    msw: MswParameter | undefined
+  }
+}
 
 /**
  * Resolve the legacy `parameters.msw` handler definitions to a flat list of handlers.
@@ -35,7 +41,7 @@ let hasPrintedDeprecationWarning = false
 function printDeprecationWarning() {
   if (!hasPrintedDeprecationWarning) {
     console.warn(
-      '[msw-storybook-addon] The loader API (CSF3) is deprecated and will be removed in the future major release. Run `npx msw-storybook-migrate` to migrate.',
+      '[msw-storybook-addon] The loader API (CSF3) is deprecated and will be removed in the future major release. Run `npx msw-storybook-migrate` to migrate.'
     )
     hasPrintedDeprecationWarning = true
   }
@@ -59,7 +65,7 @@ let mswInstancePromise: Promise<MswApi> | undefined
  * }
  */
 export function mswLoader(
-  setup: SetupFunction = defaultSetup,
+  setup: SetupFunction = defaultSetup
 ): LoaderFunction<Renderer> {
   return async (context) => {
     printDeprecationWarning()

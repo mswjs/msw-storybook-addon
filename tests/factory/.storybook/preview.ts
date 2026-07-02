@@ -8,7 +8,7 @@ export default definePreview({
     msw.use(
       http.get('https://api.example.com/user', () => {
         return HttpResponse.json({ name: 'John Maverick' })
-      }),
+      })
     )
-  },
+  }
 })

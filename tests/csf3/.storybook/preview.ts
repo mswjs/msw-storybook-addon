@@ -1,4 +1,4 @@
-import { type Preview } from '@storybook/react-vite'
+import type { Preview } from '@storybook/react-vite'
 import { http, HttpResponse } from 'msw'
 import { mswLoader } from 'msw-storybook-addon/csf3'
 
@@ -8,7 +8,7 @@ export default {
     msw: [
       http.get('https://api.example.com/user', () => {
         return HttpResponse.json({ name: 'John Maverick' })
-      }),
-    ],
-  },
+      })
+    ]
+  }
 } satisfies Preview

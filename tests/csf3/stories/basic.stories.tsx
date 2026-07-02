@@ -3,12 +3,16 @@ import { http, HttpResponse, delay } from 'msw'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
 
+type User = {
+  name: string
+}
+
 function UserProfile() {
-  const [user, setUser] = useState<{ name: string } | null>(null)
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     fetch('https://api.example.com/user')
-      .then((response) => response.json())
+      .then((response) => response.json() as Promise<User>)
       .then(setUser)
   }, [])
 
@@ -19,7 +23,7 @@ function UserProfile() {
 
 const meta = {
   title: 'Scenarios',
-  component: UserProfile,
+  component: UserProfile
 } satisfies Meta<typeof UserProfile>
 
 export default meta
@@ -30,10 +34,10 @@ export const PreviewHandlers: Story = {
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'John Maverick',
+        'John Maverick'
       )
     })
-  },
+  }
 }
 
 export const StoryOverrides: Story = {
@@ -42,16 +46,16 @@ export const StoryOverrides: Story = {
     msw: [
       http.get('https://api.example.com/user', () => {
         return HttpResponse.json({ name: 'Alice Sunwell' })
-      }),
-    ],
+      })
+    ]
   },
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'Alice Sunwell',
+        'Alice Sunwell'
       )
     })
-  },
+  }
 }
 
 export const LoadingState: Story = {
@@ -59,12 +63,12 @@ export const LoadingState: Story = {
     msw: [
       http.get('https://api.example.com/user', async () => {
         await delay('infinite')
-      }),
-    ],
+      })
+    ]
   },
   async play({ canvas }) {
     await expect(canvas.getByRole('paragraph')).toHaveTextContent('Loading')
     await new Promise((resolve) => setTimeout(resolve, 500))
     await expect(canvas.getByRole('paragraph')).toHaveTextContent('Loading')
-  },
+  }
 }
