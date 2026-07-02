@@ -1,8 +1,7 @@
-import type { DecoratorFunction, Renderer } from 'storybook/internal/types'
-import { type AnyHandler } from 'msw'
-import { setupWorker, type StartOptions } from 'msw/browser'
-
-export type InitializeOptions = StartOptions
+import type { LoaderFunction, Renderer } from 'storybook/internal/types'
+import type { AnyHandler } from 'msw'
+import { defaultSetup, type SetupFunction } from './addon'
+import type { MswApi } from './shared'
 
 type MswParameter =
   | Array<AnyHandler>
@@ -24,46 +23,60 @@ function resolveHandlers(parameter: MswParameter): Array<AnyHandler> {
     return []
   }
 
-  if (Array.isArray(parameter.handlers)) {
-    return parameter.handlers
-  }
+  const handlers = Array.isArray(parameter.handlers)
+    ? parameter.handlers
+    : Object.values(parameter.handlers)
 
-  return Object.values(parameter.handlers).filter(Boolean).flat()
+  return handlers.flat().filter(Boolean)
 }
 
-/**
- * @deprecated Use the preview annotations (`addonMsw()`) instead.
- */
-export function withMsw(
-  options?: InitializeOptions,
-  initialHandlers: Array<AnyHandler> = [],
-): DecoratorFunction<Renderer> {
-  const worker = setupWorker(...initialHandlers)
-  worker.start(options).catch((error) => console.error(error))
+let hasPrintedDeprecationWarning = false
 
-  return (storyFn, context) => {
+function printDeprecationWarning() {
+  if (!hasPrintedDeprecationWarning) {
+    console.warn(
+      '[msw-storybook-addon] The loader API (CSF3) is deprecated and will be removed in the future major release. Run `npx msw-storybook-migrate` to migrate.',
+    )
+    hasPrintedDeprecationWarning = true
+  }
+}
+
+let mswInstancePromise: Promise<MswApi> | undefined
+
+/**
+ * Create a loader to initialize Mock Service Worker.
+ * @deprecated Use the preview annotations (`addonMsw()`) instead.
+ *
+ * @example
+ * // .storybook/preview.ts
+ * import { mswLoader } from 'msw-storybook-addon/csf3'
+ *
+ * export default {
+ *   loaders: [mswLoader()],
+ *   parameters: {
+ *     msw: [...initialHandlers]
+ *   }
+ * }
+ */
+export function mswLoader(
+  setup: SetupFunction = defaultSetup,
+): LoaderFunction<Renderer> {
+  return async (context) => {
+    printDeprecationWarning()
+
+    const worker = await (mswInstancePromise ??= Promise.resolve(setup()))
+    context.msw = worker
+
     worker.resetHandlers()
 
-    const mswParameter = Reflect.get(context.parameters, 'msw') as
-      | MswParameter
-      | undefined
+    const handlers = context.parameters.msw
+      ? resolveHandlers(context.parameters.msw)
+      : []
 
-    if (!mswParameter) {
-      return storyFn()
+    if (handlers.length !== 0) {
+      worker.use(...handlers)
     }
 
-    const handlers = resolveHandlers(mswParameter)
-
-    if (handlers.length === 0) {
-      return
-    }
-
-    console.warn(
-      '[msw-storybook-addon] `parameters.msw` is deprecated and will be remove in the future major release. Run `npx msw-storybook-migrate` to migrate.',
-    )
-
-    worker.use(...handlers)
-
-    return storyFn()
+    return {}
   }
 }

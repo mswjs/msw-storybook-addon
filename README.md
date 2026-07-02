@@ -33,6 +33,18 @@ export default {
 }
 ```
 
+```ts
+// .storybook/preview.ts
+import { mswLoader } from 'msw-storybook-addon/csf3'
+
+export default {
+  loaders: [mswLoader()],
+  parameters: {
+    msw: [...initialHandlers]
+  }
+}
+```
+
 Include the addon's types in your `tsconfig.json` to have the `StoryContext` type extended automatically in all your stories:
 
 ```json
