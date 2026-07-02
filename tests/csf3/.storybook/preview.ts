@@ -1,12 +1,14 @@
+import { type Preview } from '@storybook/react-vite'
 import { http, HttpResponse } from 'msw'
-import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
+import { mswLoader } from 'msw-storybook-addon/csf3'
 
 export default {
-  beforeEach({ msw }) {
-    msw.use(
+  loaders: [mswLoader()],
+  parameters: {
+    msw: [
       http.get('https://api.example.com/user', () => {
         return HttpResponse.json({ name: 'John Maverick' })
       }),
-    )
+    ],
   },
-} satisfies ProjectAnnotations<Renderer>
+} satisfies Preview
