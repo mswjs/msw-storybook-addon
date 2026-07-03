@@ -10,7 +10,8 @@
     "./csf3": "./build/csf3.mjs"
   },
   "storybook": {
-    "displayName": "Mock Service Worker"
+    "displayName": "Mock Service Worker",
+    "icon": "https://mswjs.io/msw-storybook-addon.png"
   },
   "scripts": {
     "dev": "tsdown --watch",
