@@ -14,16 +14,18 @@ import { promises as fs } from 'node:fs'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
 import { join, relative, resolve, sep } from 'node:path'
-import readline from 'node:readline/promises'
 
 import { formatFileContent, globToRegexp } from 'storybook/internal/common'
-import { logger } from 'storybook/internal/node-logger'
+import { CLI_COLORS, logger, prompt } from 'storybook/internal/node-logger'
+import { dedent } from 'ts-dedent'
 
 import { transformStory } from './transforms/stories'
 import { transformPreview } from './transforms/preview'
 import { transformMain } from './transforms/main'
 
 const DEFAULT_GLOB = '**/*.{stories,story}.{js,jsx,ts,tsx,mjs,mjsx,mts,mtsx}'
+const MIGRATION_URL =
+  'https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx'
 
 interface Args {
   glob: string
@@ -42,7 +44,7 @@ export function parseArgs(argv: string[]): Args {
     main: null,
     configDir: '.storybook',
     dryRun: false,
-    parameters: null,
+    parameters: null
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -90,16 +92,16 @@ function findConfigFile(configDir: string, basename: string): string | null {
 
 async function confirmParametersMigration(): Promise<boolean> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) return false
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    const answer = await rl.question(
-      '`parameters.msw` keeps working in v3 (CSF 3.0 only) but is deprecated.\n' +
-        'Also migrate `parameters.msw` to `beforeEach({ msw })` in your stories and preview? [y/N] ',
+  logger.log(
+    CLI_COLORS.muted(
+      'The `parameters.msw` approach is now deprecated, we advise to migrate to `beforeEach({ msw })` instead, which is more flexible and aligns with MSW practices.'
     )
-    return /^y(es)?$/i.test(answer.trim())
-  } finally {
-    rl.close()
-  }
+  )
+  return prompt.confirm({
+    message:
+      'Migrate `parameters.msw` to `beforeEach({ msw })` in your stories and preview file?',
+    initialValue: true
+  })
 }
 
 const IGNORED_DIRS = new Set([
@@ -107,7 +109,7 @@ const IGNORED_DIRS = new Set([
   'dist',
   'build',
   'storybook-static',
-  '.git',
+  '.git'
 ])
 
 /** Recursive story-file finder — `globToRegexp` from storybook internals
@@ -132,7 +134,7 @@ async function findStoryFiles(cwd: string, glob: string): Promise<string[]> {
           const rel = relative(cwd, abs).split(sep).join('/')
           if (pattern.test(rel)) out.push(abs)
         }
-      }),
+      })
     )
   }
 
@@ -166,78 +168,105 @@ async function main(): Promise<void> {
   const cwd = process.cwd()
   const configDir = resolve(cwd, args.configDir)
 
+  logger.intro(
+    `msw-storybook-addon migration${args.dryRun ? ' (dry run)' : ''}`
+  )
+
   const previewPath = args.preview
     ? resolve(cwd, args.preview)
     : findConfigFile(configDir, 'preview')
-  const mainPath = args.main ? resolve(cwd, args.main) : findConfigFile(configDir, 'main')
+  const mainPath = args.main
+    ? resolve(cwd, args.main)
+    : findConfigFile(configDir, 'main')
 
-  const migrateParameters = args.parameters ?? (await confirmParametersMigration())
+  const migrateParameters =
+    args.parameters ?? (await confirmParametersMigration())
 
-  let modified = 0
+  const transformed: string[] = []
+  const failed: string[] = []
   let unmodified = 0
-  let errors = 0
   const warnings: string[] = []
 
   let previewIsCsfNext: boolean | undefined
 
-  // -- Preview
+  const check = CLI_COLORS.success('✔')
+  // Flush the files transformed since the last phase as one block.
+  let flushedCount = 0
+  const flushPhase = () => {
+    const phaseFiles = transformed.slice(flushedCount).sort()
+    flushedCount = transformed.length
+    if (phaseFiles.length > 0) {
+      logger.log(phaseFiles.map((file) => `${check} ${file}`).join('\n'))
+    }
+  }
+
+  // -- Preview + main config
+  logger.step('Migrating your Storybook configuration...')
+
   if (previewPath && existsSync(previewPath)) {
     try {
       const source = await fs.readFile(previewPath, 'utf-8')
       const result = transformPreview(source, { migrateParameters })
       previewIsCsfNext = result.csfNext
-      for (const w of result.warnings) warnings.push(`  ${short(previewPath)}: ${w}`)
+      for (const w of result.warnings)
+        warnings.push(`${short(previewPath)}: ${w}`)
       if (result.code != null && result.code !== source) {
         if (!args.dryRun) {
-          await fs.writeFile(previewPath, await formatFileContent(previewPath, result.code), 'utf-8')
+          await fs.writeFile(
+            previewPath,
+            await formatFileContent(previewPath, result.code),
+            'utf-8'
+          )
         }
-        modified++
-        logger.log(`  ✓ ${short(previewPath)}`)
+        transformed.push(short(previewPath))
       } else {
         unmodified++
       }
     } catch (err) {
-      errors++
-      logger.error(`  ✗ ${short(previewPath)}: ${String(err)}`)
+      failed.push(`${short(previewPath)}: ${String(err)}`)
     }
   } else {
-    logger.warn(
-      `Preview file not found${args.preview ? `: ${args.preview}` : ` in ${short(configDir)}`}.`,
+    warnings.push(
+      `Preview file not found${args.preview ? `: ${args.preview}` : ` in ${short(configDir)}`}.`
     )
   }
 
-  // -- Main
   if (mainPath && existsSync(mainPath)) {
     try {
       const source = await fs.readFile(mainPath, 'utf-8')
       const out = transformMain(source)
       if (out != null && out !== source) {
         if (!args.dryRun) {
-          await fs.writeFile(mainPath, await formatFileContent(mainPath, out), 'utf-8')
+          await fs.writeFile(
+            mainPath,
+            await formatFileContent(mainPath, out),
+            'utf-8'
+          )
         }
-        modified++
-        logger.log(`  ✓ ${short(mainPath)}`)
+        transformed.push(short(mainPath))
       } else {
         unmodified++
       }
     } catch (err) {
-      errors++
-      logger.error(`  ✗ ${short(mainPath)}: ${String(err)}`)
+      failed.push(`${short(mainPath)}: ${String(err)}`)
     }
   } else {
-    logger.warn(
-      `Main config not found${args.main ? `: ${args.main}` : ` in ${short(configDir)}`}.`,
+    warnings.push(
+      `Main config not found${args.main ? `: ${args.main}` : ` in ${short(configDir)}`}.`
     )
   }
 
+  flushPhase()
+
   // -- Stories (opt-in)
   if (migrateParameters) {
+    logger.step('Migrating `parameters.msw` in your story files...')
     const limit = createLimiter(Math.max(1, os.cpus().length - 1))
 
     const storyFiles = await findStoryFiles(cwd, args.glob)
 
     if (storyFiles.length === 0) {
-      logger.warn(`No story files matched glob "${args.glob}".`)
+      warnings.push(`No story files matched glob "${args.glob}".`)
     }
 
     await Promise.all(
@@ -248,64 +277,90 @@ async function main(): Promise<void> {
             const result = transformStory(source)
             if (result.skippedStories.length > 0) {
               warnings.push(
-                `  ${short(file)}: ${result.skippedStories.join(', ')} — \`parameters.msw\` shape not recognised; hand-migrate.`,
+                `${short(file)}: ${result.skippedStories.join(', ')} — \`parameters.msw\` shape not recognised; hand-migrate.`
               )
             }
             if (result.code != null && result.code !== source) {
               if (!args.dryRun) {
-                await fs.writeFile(file, await formatFileContent(file, result.code), 'utf-8')
+                await fs.writeFile(
+                  file,
+                  await formatFileContent(file, result.code),
+                  'utf-8'
+                )
               }
-              modified++
-              logger.log(`  ✓ ${short(file)}`)
+              transformed.push(short(file))
             } else {
               unmodified++
             }
           } catch (err) {
-            errors++
-            logger.error(`  ✗ ${short(file)}: ${String(err)}`)
+            failed.push(`${short(file)}: ${String(err)}`)
           }
-        }),
-      ),
+        })
+      )
     )
   }
 
-  logger.log('')
+  flushPhase()
+
   logger.log(
-    `Summary: ${modified} transformed, ${unmodified} unmodified, ${errors} error(s)`,
+    CLI_COLORS.muted(
+      `${transformed.length} file(s) ${args.dryRun ? 'would be ' : ''}updated, ${unmodified} already up to date`
+    )
   )
 
-  if (warnings.length > 0) {
-    logger.log('')
-    logger.warn(`${warnings.length} thing(s) the codemod could not migrate:`)
-    for (const w of warnings) logger.log(w)
-    logger.log('  See MIGRATION.md in the msw-storybook-addon repository for hand-migration steps.')
+  if (failed.length > 0) {
+    logger.error(failed.join('\n'))
   }
 
-  logger.log('')
-  if (previewIsCsfNext === false) {
-    logger.log(
-      'This project uses CSF 3.0 — the migrated setup keeps working as-is. When you are ready, it is advisable to migrate to CSF Next:',
+  if (warnings.length > 0) {
+    logger.warn(
+      `The codemod could not migrate everything:\n${warnings.map((w) => `• ${w}`).join('\n')}\nSee the migration guide for the manual steps:\n${CLI_COLORS.cta(MIGRATION_URL)}`
     )
-    logger.log('  npx storybook automigrate csf-factories')
-    logger.log(
-      'Afterwards, run `npx msw-storybook-migrate` again — it replaces the loader wiring with `addonMsw()` and finishes the msw migration.',
+  }
+
+  if (previewIsCsfNext === false) {
+    logger.logBox(
+      dedent`
+        All set — your project keeps using CSF 3.0 and works as-is.
+
+        When you are ready, we recommend upgrading to CSF Next with:
+        ${CLI_COLORS.cta('npx storybook automigrate csf-factories')}
+
+        Then run ${CLI_COLORS.cta('npx msw-storybook-migrate')} once more and it will
+        move the addon to the new ${CLI_COLORS.cta('addonMsw()')} API for you.
+
+        To learn more about CSF Next, see the Storybook docs:
+        ${CLI_COLORS.cta('https://storybook.js.org/docs/api/csf/csf-next')}
+      `
     )
   } else if (previewIsCsfNext === true) {
-    logger.log(
-      'This project uses CSF Next — the msw addon is fully wired up via `addonMsw()`.',
+    logger.logBox(
+      dedent`
+        All set — your project uses CSF Next and the msw addon is
+        fully wired up via ${CLI_COLORS.cta('addonMsw()')}. Happy mocking!
+      `
     )
   } else {
-    logger.log(
-      'When you are ready to migrate to CSF Next, run `npx storybook automigrate csf-factories`, then run `npx msw-storybook-migrate` again to finish the msw migration.',
+    logger.logBox(
+      dedent`
+        When you are ready to upgrade to CSF Next, run:
+        ${CLI_COLORS.cta('npx storybook automigrate csf-factories')}
+
+        Then run ${CLI_COLORS.cta('npx msw-storybook-migrate')} once more to finish
+        the msw migration.
+      `
     )
   }
 
   if (args.dryRun) {
-    logger.log('')
-    logger.log('Dry run — re-run without --dry-run to apply.')
+    logger.outro(
+      'Dry run — nothing was written. Re-run without --dry-run to apply.'
+    )
+  } else {
+    logger.outro(failed.length > 0 ? 'Finished with errors.' : 'Done!')
   }
 
-  process.exit(errors > 0 ? 1 : 0)
+  process.exit(failed.length > 0 ? 1 : 0)
 }
 
 function short(p: string): string {
