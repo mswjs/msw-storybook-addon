@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { http, HttpResponse, delay } from 'msw'
+import { http, HttpResponse } from 'msw'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
 
@@ -29,35 +29,55 @@ function UserProfile() {
   return <p>{user.name}</p>
 }
 
+// Meta-level `parameters.msw` in the record form (`handlers` keyed by name),
+// inherited by every story in this file.
 const meta = {
-  title: 'Scenarios',
-  component: UserProfile
+  title: 'Parameters',
+  component: UserProfile,
+  parameters: {
+    msw: {
+      handlers: {
+        user: [
+          http.get('https://api.example.com/user', () => {
+            return HttpResponse.json({
+              name: 'John Maverick (meta parameters)'
+            })
+          })
+        ]
+      }
+    }
+  }
 } satisfies Meta<typeof UserProfile>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const PreviewHandlers: Story = {
+export const MetaParameters: Story = {
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'John Maverick (preview parameters)'
+        'John Maverick (meta parameters)'
       )
     })
   }
 }
 
-export const StoryOverrides: Story = {
-  name: 'Per-Story Handlers',
+// Overriding a single key of the inherited `handlers` record: the story's
+// `user` key replaces the meta's `user` key.
+export const StoryOverride: Story = {
   parameters: {
-    msw: [
-      http.get('https://api.example.com/user', () => {
-        return HttpResponse.json({
-          name: 'Alice Sunwell (story parameters)'
-        })
-      })
-    ]
+    msw: {
+      handlers: {
+        user: [
+          http.get('https://api.example.com/user', () => {
+            return HttpResponse.json({
+              name: 'Alice Sunwell (story parameters)'
+            })
+          })
+        ]
+      }
+    }
   },
   async play({ canvas }) {
     await waitFor(async () => {
@@ -65,20 +85,5 @@ export const StoryOverrides: Story = {
         'Alice Sunwell (story parameters)'
       )
     })
-  }
-}
-
-export const LoadingState: Story = {
-  parameters: {
-    msw: [
-      http.get('https://api.example.com/user', async () => {
-        await delay('infinite')
-      })
-    ]
-  },
-  async play({ canvas }) {
-    await expect(canvas.getByRole('paragraph')).toHaveTextContent('Loading')
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    await expect(canvas.getByRole('paragraph')).toHaveTextContent('Loading')
   }
 }

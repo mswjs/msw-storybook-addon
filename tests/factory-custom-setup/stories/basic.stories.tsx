@@ -8,12 +8,23 @@ type User = {
 
 function UserProfile() {
   const [user, setUser] = useState<User | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     fetch('https://api.example.com/user')
-      .then((response) => response.json() as Promise<User>)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`)
+        }
+        return response.json() as Promise<User>
+      })
       .then(setUser)
+      .catch(setError)
   }, [])
+
+  if (error) {
+    return <p role="alert">Error: {error.message}</p>
+  }
 
   if (!user) {
     return <p>Loading...</p>
@@ -35,7 +46,7 @@ export const CustomSetup: Story = {
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'Custom Setup User'
+        'Custom Setup User (custom setup)'
       )
     })
   }

@@ -9,7 +9,9 @@ export default definePreview({
 
       const worker = setupWorker(
         http.get('https://api.example.com/user', () => {
-          return HttpResponse.json({ name: 'Custom Setup User' })
+          return HttpResponse.json({
+            name: 'Custom Setup User (custom setup)'
+          })
         })
       )
 

@@ -9,13 +9,21 @@ type User = {
 
 function UserProfile() {
   const [user, setUser] = useState<User | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     fetch('https://api.example.com/user')
-      .then((response) => response.json() as Promise<User>)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`)
+        }
+        return response.json() as Promise<User>
+      })
       .then(setUser)
+      .catch(setError)
   }, [])
 
+  if (error) return <p role="alert">Error: {error.message}</p>
   if (!user) return <p>Loading...</p>
 
   return <p>{user.name}</p>
@@ -34,7 +42,7 @@ export const PreviewHandlers: Story = {
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'John Maverick'
+        'John Maverick (preview beforeEach)'
       )
     })
   }
@@ -45,14 +53,16 @@ export const StoryOverrides: Story = {
   beforeEach({ msw }) {
     msw.use(
       http.get('https://api.example.com/user', () => {
-        return HttpResponse.json({ name: 'Alice Sunwell' })
+        return HttpResponse.json({
+          name: 'Alice Sunwell (story beforeEach)'
+        })
       })
     )
   },
   async play({ canvas }) {
     await waitFor(async () => {
       await expect(canvas.getByRole('paragraph')).toHaveTextContent(
-        'Alice Sunwell'
+        'Alice Sunwell (story beforeEach)'
       )
     })
   }
