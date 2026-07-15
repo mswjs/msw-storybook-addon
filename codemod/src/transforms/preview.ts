@@ -52,6 +52,7 @@ import {
 
 const ADDON_PACKAGE = 'msw-storybook-addon'
 const CSF3_SUBPATH = 'msw-storybook-addon/csf3'
+const PREVIEW_SUBPATH = 'msw-storybook-addon/preview'
 const MSW_BROWSER = 'msw/browser'
 
 export interface PreviewTransformOptions {
@@ -65,6 +66,10 @@ export interface PreviewTransformResult {
   code: string | null
   /** Human-readable reasons for anything the codemod refused to migrate. */
   warnings: string[]
+  /** Whether the preview uses CSF Next (`definePreview`). Undefined when
+   *  the file could not be parsed. The CLI uses this to tailor its
+   *  follow-up guidance. */
+  csfNext?: boolean
 }
 
 interface AddonImports {
@@ -76,6 +81,10 @@ interface AddonImports {
   mswDecorator?: string
   /** Local name of the default export (`addonMsw`), if imported. */
   addonDefault?: string
+  /** Local name of `import * as x from 'msw-storybook-addon/preview'` —
+   *  what `storybook automigrate csf-factories` injects into `addons`.
+   *  A no-op at runtime in v3, so it gets replaced with `addonMsw()`. */
+  previewNamespace?: string
 }
 
 interface InitializeFold {
@@ -112,7 +121,7 @@ export function transformPreview(
   if (imports.initialize) {
     const analyzed = analyzeInitialize(parsed, imports.initialize, warnings)
     if (analyzed === 'skip') {
-      return { code: null, warnings }
+      return { code: null, warnings, csfNext: isFactories }
     }
     fold = analyzed
   }
@@ -129,7 +138,7 @@ export function transformPreview(
         'Could not find the preview config object (the default export); hand-migrate this file.'
       )
     }
-    return { code: null, warnings }
+    return { code: null, warnings, csfNext: isFactories }
   }
 
   const needsSetup =
@@ -139,31 +148,56 @@ export function transformPreview(
 
   if (isFactories) {
     // ---- CSF Next -------------------------------------------------------
+    // A setup function carried by an existing `mswLoader(setup)` moves onto
+    // `addonMsw(setup)`. Collected before stripping the loader.
+    const loaderSetup = imports.mswLoader
+      ? collectLoaderSetup(previewObj, imports.mswLoader)
+      : null
+    if (loaderSetup === 'conflict') {
+      warnings.push(
+        'Multiple `mswLoader(...)` setup functions found; migrate this file by hand.'
+      )
+      return { code: null, warnings, csfNext: true }
+    }
+    if (needsSetup && loaderSetup != null) {
+      warnings.push(
+        'Both `initialize(...)` options and a `mswLoader(...)` setup function exist; merge them into one setup function by hand.'
+      )
+      return { code: null, warnings, csfNext: true }
+    }
+
     const strippedLoader = imports.mswLoader
       ? stripMswRef(previewObj, 'loaders', imports.mswLoader)
       : false
     const strippedDecorator = imports.mswDecorator
       ? stripMswRef(previewObj, 'decorators', imports.mswDecorator)
       : false
-    const hasWiring = strippedLoader || strippedDecorator || fold != null
+    const hasNamespaceEntry =
+      imports.previewNamespace != null &&
+      findAddonsEntryIndex(previewObj, imports.previewNamespace) !== -1
+    const hasWiring =
+      strippedLoader || strippedDecorator || hasNamespaceEntry || fold != null
 
     if (!hasWiring) {
       if (options.migrateParameters) {
         if (migratePreviewParameters(previewObj, warnings)) changed = true
       }
-      return finish(parsed, source, changed, warnings)
+      return finish(parsed, source, changed, warnings, true)
     }
 
     // Ensure the addon is registered, folding the setup function in.
+    const setupFn = needsSetup
+      ? buildSetupFunction(fold as InitializeFold)
+      : (loaderSetup as t.Expression | null)
     const addonResult = ensureFactoriesAddon(
       parsed,
       previewObj,
       imports,
-      needsSetup ? buildSetupFunction(fold as InitializeFold) : null,
+      setupFn,
       warnings
     )
     if (addonResult === 'conflict') {
-      return { code: null, warnings }
+      return { code: null, warnings, csfNext: true }
     }
     changed = true
 
@@ -171,6 +205,7 @@ export function transformPreview(
       removeStatement(body, fold.stmt)
     }
     removeSpecifiers(parsed, ['initialize', 'mswLoader', 'mswDecorator'])
+    if (hasNamespaceEntry) removePreviewNamespaceImport(parsed)
     if (needsSetup) ensureSetupWorkerImport(parsed)
   } else {
     // ---- CSF 3.0 --------------------------------------------------------
@@ -183,7 +218,7 @@ export function transformPreview(
       if (options.migrateParameters) {
         if (migratePreviewParameters(previewObj, warnings)) changed = true
       }
-      return finish(parsed, source, changed, warnings)
+      return finish(parsed, source, changed, warnings, false)
     }
 
     const loaderName = imports.mswLoader ?? 'mswLoader'
@@ -201,7 +236,7 @@ export function transformPreview(
       warnings.push(
         '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. Merge them by hand.'
       )
-      return { code: null, warnings }
+      return { code: null, warnings, csfNext: false }
     }
     if (loaderResult === 'changed') changed = true
 
@@ -225,18 +260,19 @@ export function transformPreview(
     if (migratePreviewParameters(previewObj, warnings)) changed = true
   }
 
-  return finish(parsed, source, changed, warnings)
+  return finish(parsed, source, changed, warnings, isFactories)
 }
 
 function finish(
   parsed: ConfigFile,
   source: string,
   changed: boolean,
-  warnings: string[]
+  warnings: string[],
+  csfNext: boolean
 ): PreviewTransformResult {
-  if (!changed) return { code: null, warnings }
+  if (!changed) return { code: null, warnings, csfNext }
   const code = printConfig(parsed).code
-  return { code: code === source ? null : code, warnings }
+  return { code: code === source ? null : code, warnings, csfNext }
 }
 
 // -------- imports
@@ -246,6 +282,14 @@ function collectAddonImports(body: t.Statement[]): AddonImports {
   for (const stmt of body) {
     if (!t.isImportDeclaration(stmt)) continue
     const src = stmt.source.value
+    if (src === PREVIEW_SUBPATH) {
+      for (const spec of stmt.specifiers) {
+        if (t.isImportNamespaceSpecifier(spec)) {
+          out.previewNamespace = spec.local.name
+        }
+      }
+      continue
+    }
     if (src !== ADDON_PACKAGE && src !== CSF3_SUBPATH) continue
     for (const spec of stmt.specifiers) {
       if (t.isImportDefaultSpecifier(spec)) {
@@ -686,7 +730,7 @@ function ensureFactoriesAddon(
   parsed: ConfigFile,
   configObj: t.ObjectExpression,
   imports: AddonImports,
-  setupFn: t.ArrowFunctionExpression | null,
+  setupFn: t.Expression | null,
   warnings: string[]
 ): AddonOutcome {
   let localName = imports.addonDefault
@@ -696,6 +740,16 @@ function ensureFactoriesAddon(
     addonsProp && t.isArrayExpression(addonsProp.value)
       ? addonsProp.value
       : null
+
+  const removeNamespaceEntry = (): boolean => {
+    if (!imports.previewNamespace || !addonsArray) return false
+    const before = addonsArray.elements.length
+    addonsArray.elements = addonsArray.elements.filter(
+      (el) =>
+        !(el != null && t.isIdentifier(el) && el.name === imports.previewNamespace)
+    )
+    return addonsArray.elements.length !== before
+  }
 
   // Look for an existing registration first (conflict detection must run
   // before any mutation).
@@ -711,17 +765,19 @@ function ensureFactoriesAddon(
       if (setupFn) {
         if (isCall && (el as t.CallExpression).arguments.length > 0) {
           warnings.push(
-            '`initialize(...)` options could not be folded: the existing `addonMsw(...)` already receives a setup function. Merge them by hand.'
+            'A setup function could not be folded: the existing `addonMsw(...)` already receives one. Merge them by hand.'
           )
           return 'conflict'
         }
         if (isCall) {
           ;(el as t.CallExpression).arguments.push(setupFn)
+          removeNamespaceEntry()
           return 'changed'
         }
       }
-      // Registered and nothing to fold — done.
-      return 'unchanged'
+      // Registered and nothing to fold — done, but a leftover injected
+      // namespace entry still gets cleaned up.
+      return removeNamespaceEntry() ? 'changed' : 'unchanged'
     }
   }
 
@@ -751,6 +807,19 @@ function ensureFactoriesAddon(
     setupFn ? [setupFn] : []
   )
 
+  // The namespace entry injected by `storybook automigrate csf-factories`
+  // (`addons: [mswStorybookAddon]`) is replaced in place.
+  if (imports.previewNamespace && addonsArray) {
+    const nsIndex = addonsArray.elements.findIndex(
+      (el) =>
+        el != null && t.isIdentifier(el) && el.name === imports.previewNamespace
+    )
+    if (nsIndex !== -1) {
+      addonsArray.elements[nsIndex] = call
+      return 'changed'
+    }
+  }
+
   if (!addonsProp) {
     configObj.properties.unshift(
       t.objectProperty(t.identifier('addons'), t.arrayExpression([call]))
@@ -765,6 +834,60 @@ function ensureFactoriesAddon(
   }
   addonsArray.elements.unshift(call)
   return 'changed'
+}
+
+/** Setup function carried by `mswLoader(setup)` entries in `loaders`. */
+function collectLoaderSetup(
+  previewObj: t.ObjectExpression,
+  loaderName: string
+): t.Expression | null | 'conflict' {
+  const prop = findObjectProperty(previewObj, 'loaders')
+  if (!prop) return null
+
+  const calls: t.CallExpression[] = []
+  const consider = (el: t.Node | null | undefined) => {
+    if (
+      el != null &&
+      t.isCallExpression(el) &&
+      t.isIdentifier(el.callee) &&
+      el.callee.name === loaderName &&
+      el.arguments.length > 0
+    ) {
+      calls.push(el)
+    }
+  }
+  if (t.isArrayExpression(prop.value)) {
+    for (const el of prop.value.elements) consider(el)
+  } else {
+    consider(prop.value)
+  }
+
+  if (calls.length === 0) return null
+  if (calls.length > 1 || calls[0].arguments.length > 1) return 'conflict'
+  const arg = calls[0].arguments[0]
+  return t.isExpression(arg) ? arg : 'conflict'
+}
+
+/** Index of a bare-identifier entry in `addons: [...]`, or -1. */
+function findAddonsEntryIndex(
+  previewObj: t.ObjectExpression,
+  name: string
+): number {
+  const prop = findObjectProperty(previewObj, 'addons')
+  if (!prop || !t.isArrayExpression(prop.value)) return -1
+  return prop.value.elements.findIndex(
+    (el) => el != null && t.isIdentifier(el) && el.name === name
+  )
+}
+
+/** Drop `import * as x from 'msw-storybook-addon/preview'` once its
+ *  `addons` entry has been replaced. */
+function removePreviewNamespaceImport(parsed: ConfigFile): void {
+  parsed._ast.program.body = parsed._ast.program.body.filter((stmt) => {
+    if (!t.isImportDeclaration(stmt)) return true
+    if (stmt.source.value !== PREVIEW_SUBPATH) return true
+    return !stmt.specifiers.some((s) => t.isImportNamespaceSpecifier(s))
+  })
 }
 
 // -------- opt-in: preview-level `parameters.msw` → `beforeEach`

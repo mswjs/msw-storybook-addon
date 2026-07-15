@@ -178,11 +178,14 @@ async function main(): Promise<void> {
   let errors = 0
   const warnings: string[] = []
 
+  let previewIsCsfNext: boolean | undefined
+
   // -- Preview
   if (previewPath && existsSync(previewPath)) {
     try {
       const source = await fs.readFile(previewPath, 'utf-8')
       const result = transformPreview(source, { migrateParameters })
+      previewIsCsfNext = result.csfNext
       for (const w of result.warnings) warnings.push(`  ${short(previewPath)}: ${w}`)
       if (result.code != null && result.code !== source) {
         if (!args.dryRun) {
@@ -279,9 +282,23 @@ async function main(): Promise<void> {
   }
 
   logger.log('')
-  logger.log(
-    'When you are ready to migrate to CSF Next entirely, run `npx storybook automigrate csf-factories` — the msw addon will be wired up automatically.',
-  )
+  if (previewIsCsfNext === false) {
+    logger.log(
+      'This project uses CSF 3.0 — the migrated setup keeps working as-is. When you are ready, it is advisable to migrate to CSF Next:',
+    )
+    logger.log('  npx storybook automigrate csf-factories')
+    logger.log(
+      'Afterwards, run `npx msw-storybook-migrate` again — it replaces the loader wiring with `addonMsw()` and finishes the msw migration.',
+    )
+  } else if (previewIsCsfNext === true) {
+    logger.log(
+      'This project uses CSF Next — the msw addon is fully wired up via `addonMsw()`.',
+    )
+  } else {
+    logger.log(
+      'When you are ready to migrate to CSF Next, run `npx storybook automigrate csf-factories`, then run `npx msw-storybook-migrate` again to finish the msw migration.',
+    )
+  }
 
   if (args.dryRun) {
     logger.log('')

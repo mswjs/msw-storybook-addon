@@ -551,6 +551,147 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     `)
   })
 
+  it('reports csfNext so the CLI can tailor its guidance', () => {
+    const csf3 = transformPreview(`export default { parameters: {} }`)
+    expect(csf3.csfNext).toBe(false)
+
+    const csfNext = transformPreview(
+      dedent`
+        import { definePreview } from '@storybook/react-vite'
+        export default definePreview({})
+      `
+    )
+    expect(csfNext.csfNext).toBe(true)
+  })
+
+  it('moves a loader-carried setup function onto addonMsw(setup)', () => {
+    const src = dedent`
+      import { definePreview } from '@storybook/react-vite'
+      import { setupWorker } from 'msw/browser'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+
+      export default definePreview({
+        loaders: [mswLoader(async () => {
+          const worker = setupWorker()
+          await worker.start({ onUnhandledRequest: 'bypass' })
+          return worker
+        })],
+      })
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import addonMsw from "msw-storybook-addon";
+      import { definePreview } from '@storybook/react-vite'
+      import { setupWorker } from 'msw/browser'
+
+      export default definePreview({
+        addons: [addonMsw(async () => {
+          const worker = setupWorker()
+          await worker.start({ onUnhandledRequest: 'bypass' })
+          return worker
+        })],
+      })"
+    `)
+  })
+
+  it('cleans up the state left by `storybook automigrate csf-factories`', () => {
+    // The automigration injects a namespace import of the addon's /preview
+    // entry (a runtime no-op in v3) and keeps the old loader wiring.
+    const src = dedent`
+      import * as mswStorybookAddon from 'msw-storybook-addon/preview'
+      import { definePreview } from '@storybook/react-vite'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+
+      export default definePreview({
+        addons: [mswStorybookAddon],
+        loaders: [mswLoader()],
+      })
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import addonMsw from "msw-storybook-addon";
+      import { definePreview } from '@storybook/react-vite'
+
+      export default definePreview({
+        addons: [addonMsw()]
+      })"
+    `)
+  })
+
+  it('replaces an injected namespace entry even without leftover loader wiring', () => {
+    const src = dedent`
+      import * as mswStorybookAddon from 'msw-storybook-addon/preview'
+      import { definePreview } from '@storybook/react-vite'
+
+      export default definePreview({
+        addons: [mswStorybookAddon],
+      })
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import addonMsw from "msw-storybook-addon";
+      import { definePreview } from '@storybook/react-vite'
+
+      export default definePreview({
+        addons: [addonMsw()],
+      })"
+    `)
+  })
+
+  it('carries the loader setup when cleaning up the post-automigration state', () => {
+    const src = dedent`
+      import * as mswStorybookAddon from 'msw-storybook-addon/preview'
+      import { definePreview } from '@storybook/react-vite'
+      import { setupWorker } from 'msw/browser'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+
+      export default definePreview({
+        addons: [mswStorybookAddon],
+        loaders: [mswLoader(async () => {
+          const worker = setupWorker()
+          await worker.start({ quiet: true })
+          return worker
+        })],
+      })
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import addonMsw from "msw-storybook-addon";
+      import { definePreview } from '@storybook/react-vite'
+      import { setupWorker } from 'msw/browser'
+
+      export default definePreview({
+        addons: [addonMsw(async () => {
+          const worker = setupWorker()
+          await worker.start({ quiet: true })
+          return worker
+        })]
+      })"
+    `)
+  })
+
+  it('skips and warns when both initialize options and a loader setup exist', () => {
+    const src = dedent`
+      import { definePreview } from '@storybook/react-vite'
+      import { initialize } from 'msw-storybook-addon'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+
+      initialize({ quiet: true })
+
+      export default definePreview({
+        loaders: [mswLoader(async () => myWorker)],
+      })
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings[0]).toContain('merge them into one')
+  })
+
   it('treats a variable-declared definePreview as CSF Next', () => {
     const src = dedent`
       import { definePreview } from '@storybook/react-vite'
