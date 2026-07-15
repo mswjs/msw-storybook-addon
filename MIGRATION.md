@@ -7,7 +7,7 @@
   - [mswDecorator is removed](#mswdecorator-is-removed)
   - [Node.js support is dropped](#nodejs-support-is-dropped)
   - [parameters.msw is deprecated in favor of beforeEach](#parametersmsw-is-deprecated-in-favor-of-beforeeach)
-  - [New: CSF Factories support](#new-csf-factories-support)
+  - [New: CSF Next support](#new-csf-next-support)
 - [From 1.x.x to 2.x.x](#from-1xx-to-2xx)
   - [MSW required version is now ^2.0.0](#msw-required-version-is-now-200)
   - [mswDecorator is deprecated in favor of mswLoader](#mswdecorator-is-deprecated-in-favor-of-mswloader)
@@ -64,11 +64,11 @@ const preview = {
 export default preview
 ```
 
-The loader API is deprecated and will be removed in the next major release. It keeps working in v3, respecting the `parameters.msw` you set. When you are ready, migrate to [CSF Factories](#new-csf-factories-support) to stop using the loader altogether.
+The loader API is deprecated and will be removed in the next major release. It keeps working in v3, respecting the `parameters.msw` you set. When you are ready, migrate to [CSF Next](#new-csf-next-support) to stop using the loader altogether.
 
 ### mswDecorator is removed
 
-`mswDecorator` was deprecated in 2.x.x and is now removed. Please use `mswLoader` as described [in the 2.x.x migration](#mswdecorator-is-deprecated-in-favor-of-mswloader), or migrate to [CSF Factories](#new-csf-factories-support).
+`mswDecorator` was deprecated in 2.x.x and is now removed. Please use `mswLoader` as described [in the 2.x.x migration](#mswdecorator-is-deprecated-in-favor-of-mswloader), or migrate to [CSF Next](#new-csf-next-support).
 
 ### Node.js support is dropped
 
@@ -106,7 +106,7 @@ export default preview
 
 ### parameters.msw is deprecated in favor of beforeEach
 
-The addon now extends your story context with the `msw` property. Use it in `beforeEach` hooks to add request handlers, globally in `preview.ts` or on a per-story basis. Handlers are reset between stories automatically. This is much closer the standard way of using MSW, so it's highly recommended to switch.
+The addon now extends your story context with the `msw` property. Use it in `beforeEach` hooks to add request handlers, globally in `preview.ts` or on a per-story basis. Handlers are reset between stories automatically. This is much closer to the standard way of using MSW, so it's highly recommended to switch.
 
 ```ts
 // ❌ Instead of defining handlers in the msw parameter:
@@ -126,11 +126,11 @@ export const MyStory = {
 }
 ```
 
-`parameters.msw` keeps working in v3 and will be removed in the next major release.
+`parameters.msw` keeps working in v3 in CSF 3.0 setups only — it is preserved to make migration easier and will be removed in the next major release. It is not supported in [CSF Next](#new-csf-next-support).
 
-### New: CSF Factories support
+### New: CSF Next support
 
-If you are using the CSF Factory syntax, you don't need the loader at all. Import and call the addon function in `preview.ts`:
+If you are using the [CSF Next](https://storybook.js.org/docs/api/csf/csf-next) syntax (also known as CSF Factories), you don't need the loader at all. Import and call the addon function in `preview.ts`:
 
 ```ts
 // .storybook/preview.ts
@@ -141,7 +141,7 @@ export default definePreview({
 })
 ```
 
-`addonMsw` accepts the same custom setup function as `mswLoader` in case you need to customize the worker. Note that `parameters.msw` is not supported in this setup — use the `beforeEach` hook instead.
+`addonMsw` accepts the same custom setup function as `mswLoader` in case you need to customize the worker. Note that `parameters.msw` is not supported in CSF Next — use the `beforeEach` hook instead.
 
 ## From 1.x.x to 2.x.x
 
