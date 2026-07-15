@@ -26,7 +26,7 @@ npx msw init ./public --save
 
 #### CSF 3.0
 
-> The loader API for CSF 3.0 is _deprecated_. Please consider using the [CSF Factories](#csf-factories) API instead.
+> The loader API for CSF 3.0 is _deprecated_. Please consider using the [CSF Next](#csf-next) API instead.
 
 ```ts
 // .storybook/main.ts
@@ -58,9 +58,9 @@ Include the addon's types in your `tsconfig.json` for a type safe `parameters.ms
 }
 ```
 
-#### CSF Factories
+#### CSF Next
 
-If you are using the CSF Factory syntax, it's enough to import and call the addon function in `preview.ts`:
+If you are using the [CSF Next](https://storybook.js.org/docs/api/csf/csf-next) syntax (also known as CSF Factories), it's enough to import and call the addon function in `preview.ts`:
 
 ```ts
 // .storybook/preview.ts
@@ -70,6 +70,8 @@ export default definePreview({
   addons: [addonMsw()],
 })
 ```
+
+> `parameters.msw` is not supported in CSF Next. It is preserved only for CSF 3.0 to make migration easier — use the `beforeEach` hook instead.
 
 Include the addon's types in your `tsconfig.json` for a type-safe experience in your setup and stories:
 
@@ -81,6 +83,48 @@ Include the addon's types in your `tsconfig.json` for a type-safe experience in 
   }
 }
 ```
+
+#### Custom worker setup
+
+By default, the addon creates and starts the worker for you: it starts quietly and ignores common asset and Storybook-internal requests. To customize that behavior (e.g. `worker.start()` options or initial handlers), provide a setup function that creates the worker, starts it, and returns it.
+
+In CSF 3.0, pass it to `mswLoader`:
+
+```ts
+// .storybook/preview.ts
+import { setupWorker } from 'msw/browser'
+import { mswLoader } from 'msw-storybook-addon/csf3'
+
+export default {
+  loaders: [
+    mswLoader(async () => {
+      const worker = setupWorker()
+      await worker.start({ onUnhandledRequest: 'bypass' })
+      return worker
+    })
+  ]
+}
+```
+
+In CSF Next, pass it to `addonMsw`:
+
+```ts
+// .storybook/preview.ts
+import { setupWorker } from 'msw/browser'
+import addonMsw from 'msw-storybook-addon'
+
+export default definePreview({
+  addons: [
+    addonMsw(async () => {
+      const worker = setupWorker()
+      await worker.start({ onUnhandledRequest: 'bypass' })
+      return worker
+    })
+  ],
+})
+```
+
+> Handlers passed to `setupWorker()` act as initial handlers and survive the automatic handler reset between stories.
 
 ### Provide handlers
 

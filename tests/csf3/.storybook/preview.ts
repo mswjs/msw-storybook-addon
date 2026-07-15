@@ -7,7 +7,9 @@ export default {
   parameters: {
     msw: [
       http.get('https://api.example.com/user', () => {
-        return HttpResponse.json({ name: 'John Maverick' })
+        return HttpResponse.json({
+          name: 'John Maverick (preview parameters)'
+        })
       })
     ]
   }

@@ -7,7 +7,9 @@ export default definePreview({
   beforeEach({ msw }) {
     msw.use(
       http.get('https://api.example.com/user', () => {
-        return HttpResponse.json({ name: 'John Maverick' })
+        return HttpResponse.json({
+          name: 'John Maverick (preview beforeEach)'
+        })
       })
     )
   }
