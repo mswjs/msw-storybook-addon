@@ -15,6 +15,14 @@
 
 ## From 2.x.x to 3.x.x
 
+Most of this migration is automated: after upgrading the addon, run
+
+```sh
+npx msw-storybook-migrate
+```
+
+It rewrites your preview and main config, and can optionally migrate `parameters.msw` to `beforeEach` (pass `--parameters`, or answer the prompt). Anything it cannot migrate safely is listed for you to hand-migrate using the sections below.
+
 ### Storybook required version is now 9 or higher
 
 The addon now requires Storybook 9.0.0 or higher.

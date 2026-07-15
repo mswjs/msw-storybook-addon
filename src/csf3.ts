@@ -41,7 +41,7 @@ let hasPrintedDeprecationWarning = false
 function printDeprecationWarning() {
   if (!hasPrintedDeprecationWarning) {
     console.warn(
-      '[msw-storybook-addon] The loader API (CSF3) is deprecated and will be removed in the future major release. Run `npx msw-storybook-migrate` to migrate.'
+      '[msw-storybook-addon] The loader API (CSF3) is deprecated and will be removed in the next major release. Run `npx msw-storybook-migrate` to migrate. Learn more: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx'
     )
     hasPrintedDeprecationWarning = true
   }
