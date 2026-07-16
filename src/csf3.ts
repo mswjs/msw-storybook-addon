@@ -51,7 +51,10 @@ let mswInstancePromise: Promise<MswApi> | undefined
 
 /**
  * Create a loader to initialize Mock Service Worker.
- * @deprecated Use the preview annotations (`addonMsw()`) instead.
+ * @deprecated Use the preview annotations (`addonMsw()`) with CSF Next instead. Run
+ * `npx msw-storybook-migrate` to migrate automatically. See the
+ * {@link https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx migration guide}
+ * for details.
  *
  * @example
  * // .storybook/preview.ts
