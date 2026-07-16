@@ -13,7 +13,7 @@ export type MswParameter =
 
 declare module 'storybook/internal/csf' {
   interface Parameters {
-    msw: MswParameter | undefined
+    msw?: MswParameter
   }
 }
 
