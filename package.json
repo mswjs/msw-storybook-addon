@@ -9,6 +9,9 @@
     "./types": "./build/types.d.mts",
     "./csf3": "./build/csf3.mjs"
   },
+  "bin": {
+    "msw-storybook-migrate": "./build/migrate.mjs"
+  },
   "storybook": {
     "displayName": "Mock Service Worker",
     "icon": "https://mswjs.io/msw-storybook-addon.png"
@@ -23,6 +26,7 @@
     "test:stories": "playwright test",
     "test:play": "vitest -c ./tests/factory/vitest.config.ts --project storybook",
     "test:ts": "vitest --typecheck",
+    "test:codemod": "vitest run -c ./codemod/vitest.config.ts",
     "build": "tsdown",
     "release": "release publish"
   },
@@ -64,6 +68,7 @@
     "publint": "^0.3.21",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "ts-dedent": "^2.3.0",
     "storybook": "^10.3.4",
     "tsdown": "^0.22.3",
     "typescript": "^5.9.3",

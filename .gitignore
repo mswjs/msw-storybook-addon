@@ -13,3 +13,4 @@
 .idea
 test-results
 storybook-static
+/codemod/node_modules

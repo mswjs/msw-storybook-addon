@@ -41,7 +41,7 @@ let hasPrintedDeprecationWarning = false
 function printDeprecationWarning() {
   if (!hasPrintedDeprecationWarning) {
     console.warn(
-      '[msw-storybook-addon] The loader API (CSF3) is deprecated and will be removed in the future major release. Run `npx msw-storybook-migrate` to migrate.'
+      '[msw-storybook-addon] `mswLoader` is deprecated when using CSF Next — use `addonMsw()` instead. Run `npx msw-storybook-migrate` to migrate.\n\nLearn more: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx'
     )
     hasPrintedDeprecationWarning = true
   }
@@ -50,8 +50,13 @@ function printDeprecationWarning() {
 let mswInstancePromise: Promise<MswApi> | undefined
 
 /**
- * Create a loader to initialize Mock Service Worker.
- * @deprecated Use the preview annotations (`addonMsw()`) instead.
+ * Create a loader to initialize Mock Service Worker. This is the supported
+ * integration for CSF 3.0 projects.
+ *
+ * Deprecated when using CSF Next: use the preview annotations (`addonMsw()`)
+ * instead. Run `npx msw-storybook-migrate` to migrate automatically. See the
+ * {@link https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx migration guide}
+ * for details.
  *
  * @example
  * // .storybook/preview.ts
@@ -68,7 +73,12 @@ export function mswLoader(
   setup: SetupFunction = defaultSetup
 ): LoaderFunction<Renderer> {
   return async (context) => {
-    printDeprecationWarning()
+    // CSF Next's `meta()` stamps `csfFactory: true` on story parameters —
+    // the loader is only deprecated for CSF Next projects, so CSF 3.0
+    // users never see the warning.
+    if (context.parameters.csfFactory === true) {
+      printDeprecationWarning()
+    }
 
     const worker = await (mswInstancePromise ??= Promise.resolve(setup()))
     context.msw = worker
