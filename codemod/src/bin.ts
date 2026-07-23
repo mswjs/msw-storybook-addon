@@ -306,20 +306,24 @@ async function main(): Promise<void> {
     }
     if (unrecognizedShape.length > 0) {
       sections.push(
-        `These stories use a \`parameters.msw\` shape the codemod does not recognize — you will need to migrate them yourself:\n${unrecognizedShape
-          .map((w) => `• ${w}`)
+        `Could not recognize the \`parameters.msw\` shape — migrate them manually:\n${unrecognizedShape
+          .map((w) => `  • ${w}`)
           .join('\n')}`
       )
     }
     if (existingBeforeEach.length > 0) {
       sections.push(
-        `These stories already define \`beforeEach\` so were unmodified — you will need to move the \`parameters.msw\` handlers into it yourself:\n${existingBeforeEach
-          .map((w) => `• ${w}`)
+        `\`beforeEach\` already defined — migrate \`parameters.msw\` manually:\n${existingBeforeEach
+          .map((w) => `  • ${w}`)
           .join('\n')}`
       )
     }
+    sections.push(
+      "Don't worry — the addon still supports `parameters.msw`, so everything keeps working until you migrate."
+    )
+    sections.push(`See the migration guide:\n${CLI_COLORS.cta(MIGRATION_URL)}`)
     logger.warn(
-      `The codemod could not migrate everything:\n${sections.join('\n')}\nDon't worry — the addon still supports \`parameters.msw\`, so everything keeps working until you migrate.\nSee the migration guide:\n${CLI_COLORS.cta(MIGRATION_URL)}`
+      `The codemod could not migrate everything:\n${sections.join('\n\n')}`
     )
   }
 

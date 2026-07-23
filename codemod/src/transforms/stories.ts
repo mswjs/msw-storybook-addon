@@ -58,8 +58,16 @@ export function transformStory(source: string): StoryTransformResult {
     if (result === 'changed') changed = true
     else if (result !== 'noop') skipped.push({ story: name, reason: result })
   }
-  if (parsed._metaPath) {
-    const meta = resolveStoryObject(parsed, parsed._metaPath.node)
+  // CSF3 metas are default-exported (`_metaPath`); CSF factory metas are
+  // plain variables (`const meta = preview.meta({...})`) tracked only by
+  // name in `_metaVariableName`.
+  const metaNode =
+    parsed._metaPath?.node ??
+    (parsed._metaVariableName
+      ? findVariableDeclarator(parsed, parsed._metaVariableName)
+      : undefined)
+  if (metaNode) {
+    const meta = resolveStoryObject(parsed, metaNode)
     if (meta) {
       const result = migrateMswOnObject(meta, 'meta')
       if (result === 'changed') changed = true
@@ -293,11 +301,30 @@ function getStoryObject(node: t.Node): t.ObjectExpression | undefined {
     if (t.isTSSatisfiesExpression(init) || t.isTSAsExpression(init))
       init = init.expression
     if (init && t.isObjectExpression(init)) return init
+    if (init) return unwrapFactoryCall(init)
   } else if (t.isExportDefaultDeclaration(node)) {
     let init: t.Node | null | undefined = node.declaration
     if (init && (t.isTSSatisfiesExpression(init) || t.isTSAsExpression(init)))
       init = init.expression
     if (init && t.isObjectExpression(init)) return init
+  }
+  return undefined
+}
+
+// CSF factories wrap the annotations object in a call:
+// `preview.meta({...})` and `meta.story({...})`. An argument-less
+// `meta.story()` has nothing to migrate.
+function unwrapFactoryCall(node: t.Node): t.ObjectExpression | undefined {
+  if (
+    t.isCallExpression(node) &&
+    t.isMemberExpression(node.callee) &&
+    t.isIdentifier(node.callee.property) &&
+    (node.callee.property.name === 'meta' ||
+      node.callee.property.name === 'story') &&
+    node.arguments[0] != null &&
+    t.isObjectExpression(node.arguments[0])
+  ) {
+    return node.arguments[0]
   }
   return undefined
 }

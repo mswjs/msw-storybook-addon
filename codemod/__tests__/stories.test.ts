@@ -251,6 +251,55 @@ describe('transformStory', () => {
     `)
   })
 
+  it('migrates parameters.msw in CSF factory files (preview.meta / meta.story)', () => {
+    const src = dedent`
+      import preview from '../../../.storybook/preview'
+      import { http, HttpResponse } from 'msw'
+
+      const meta = preview.meta({
+        title: 'Pages/HomePage',
+        parameters: {
+          layout: 'fullscreen',
+          msw: {
+            handlers: [http.get('/x', () => HttpResponse.json({}))],
+          },
+        },
+      })
+
+      export const Default = meta.story()
+
+      export const WithParams = meta.story({
+        parameters: {
+          msw: [http.get('/y', () => HttpResponse.json({}))],
+        },
+      })
+    `
+    expect(transformStory(src).code).toMatchInlineSnapshot(`
+      "import preview from '../../../.storybook/preview'
+      import { http, HttpResponse } from 'msw'
+
+      const meta = preview.meta({
+        title: 'Pages/HomePage',
+
+        beforeEach({ msw }) {
+          msw.use(http.get('/x', () => HttpResponse.json({})))
+        },
+
+        parameters: {
+          layout: 'fullscreen'
+        }
+      })
+
+      export const Default = meta.story()
+
+      export const WithParams = meta.story({
+        beforeEach({ msw }) {
+          msw.use(http.get('/y', () => HttpResponse.json({})))
+        }
+      })"
+    `)
+  })
+
   it('migrates the v1-style Foo.story = { parameters: { msw: ... } } annotation', () => {
     const src = dedent`
       import { http, HttpResponse } from 'msw'
