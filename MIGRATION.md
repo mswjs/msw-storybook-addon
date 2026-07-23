@@ -21,7 +21,7 @@ Most of this migration is automated: after upgrading the addon, run
 npx msw-storybook-migrate
 ```
 
-It rewrites your preview and main config, and can optionally migrate `parameters.msw` to `beforeEach` (pass `--parameters`, or answer the prompt). Anything it cannot migrate safely is listed for you to hand-migrate using the sections below.
+It rewrites your preview and main config, and migrates `parameters.msw` to `beforeEach` in your stories. Anything it cannot migrate safely is listed for you to migrate yourself using the sections below — and don't worry, `parameters.msw` keeps working until you do.
 
 ### Storybook required version is now 9 or higher
 

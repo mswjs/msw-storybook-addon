@@ -20,17 +20,24 @@ import {
   printCsf
 } from 'storybook/internal/csf-tools'
 
+/** Why a story was left alone. The CLI phrases its guidance per reason. */
+export type SkipReason = 'unrecognized-shape' | 'existing-before-each'
+
+export interface SkippedStory {
+  story: string
+  reason: SkipReason
+}
+
 export interface StoryTransformResult {
   /** Transformed source, or null when no changes were needed. */
   code: string | null
-  /** Names of stories/files we refused to migrate because the
-   *  `parameters.msw` shape wasn't recognisable. The CLI surfaces these
-   *  as warnings so the user can hand-migrate. */
-  skippedStories: string[]
+  /** Stories we refused to migrate, with the reason. The CLI surfaces
+   *  these as warnings so the user can migrate them themselves. */
+  skippedStories: SkippedStory[]
 }
 
 export function transformStory(source: string): StoryTransformResult {
-  const skipped: string[] = []
+  const skipped: SkippedStory[] = []
   let parsed: CsfFile
   try {
     parsed = loadCsf(source, {
@@ -49,14 +56,14 @@ export function transformStory(source: string): StoryTransformResult {
     if (!obj) continue
     const result = migrateMswOnObject(obj, name)
     if (result === 'changed') changed = true
-    if (result === 'skipped') skipped.push(name)
+    else if (result !== 'noop') skipped.push({ story: name, reason: result })
   }
   if (parsed._metaPath) {
     const meta = resolveStoryObject(parsed, parsed._metaPath.node)
     if (meta) {
       const result = migrateMswOnObject(meta, 'meta')
       if (result === 'changed') changed = true
-      if (result === 'skipped') skipped.push('meta')
+      else if (result !== 'noop') skipped.push({ story: 'meta', reason: result })
     }
   }
 
@@ -86,7 +93,7 @@ export function transformStory(source: string): StoryTransformResult {
       propName
     )
     if (result === 'changed') changed = true
-    if (result === 'skipped') skipped.push(storyName)
+    else if (result !== 'noop') skipped.push({ story: storyName, reason: result })
   }
 
   if (!changed) {
@@ -97,7 +104,7 @@ export function transformStory(source: string): StoryTransformResult {
 
 // -------- per-object migration
 
-type MigrationOutcome = 'changed' | 'skipped' | 'noop'
+type MigrationOutcome = 'changed' | 'noop' | SkipReason
 
 function migrateMswOnObject(
   obj: t.ObjectExpression,
@@ -113,15 +120,16 @@ function migrateMswOnObject(
   const extracted = extractHandlers(mswProp.value)
   if (!extracted) {
     // Unrecognised shape — leave the file alone for THIS story.
-    return 'skipped'
+    return 'unrecognized-shape'
   }
 
-  // Refuse to silently overwrite an existing beforeEach. The user will
-  // hand-merge; we'd rather skip than blow away their code. `beforeEach`
-  // can appear as either a regular property (`beforeEach: () => {}`) or
-  // the method shorthand (`beforeEach() {}`); check for both.
+  // Refuse to silently overwrite an existing beforeEach. The user merges
+  // the handlers into it themselves; we'd rather skip than blow away their
+  // code. `beforeEach` can appear as either a regular property
+  // (`beforeEach: () => {}`) or the method shorthand (`beforeEach() {}`);
+  // check for both.
   if (extracted.length > 0 && hasAnyProperty(obj, 'beforeEach'))
-    return 'skipped'
+    return 'existing-before-each'
 
   if (extracted.length > 0) {
     const beforeEachProp = buildBeforeEachProperty(extracted)
@@ -375,11 +383,11 @@ function migrateCsf2Annotation(
   // a v1 `Foo.story = {...}` object) into `_storyAnnotations` — the
   // authoritative place to check for an existing `beforeEach`.
   if (parsed._storyAnnotations[storyName]?.beforeEach != null) {
-    return 'skipped'
+    return 'existing-before-each'
   }
 
   const handlers = extractHandlers(mswProp.value)
-  if (!handlers) return 'skipped'
+  if (!handlers) return 'unrecognized-shape'
 
   // Strip `msw` from the parameters object, then unwind empty containers:
   // an emptied `parameters` comes off the story object; an emptied

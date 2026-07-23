@@ -448,7 +448,7 @@ describe('transformPreview — parameters opt-in', () => {
     `
     const result = transformPreview(src, { migrateParameters: true })
     expect(result.warnings).toHaveLength(1)
-    expect(result.warnings[0]).toContain('not recognise')
+    expect(result.warnings[0]).toContain('not recognize')
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from "msw-storybook-addon/csf3";
       import { getHandlers } from './handlers'

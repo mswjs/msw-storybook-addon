@@ -7,8 +7,7 @@
 //     subpath), `mswDecorator` → loader, `initialize(...)` folded into a
 //     setup function. CSF Next (`definePreview`) files get `addonMsw()`.
 //   - `.storybook/main.*`: registers `'msw-storybook-addon'` in `addons`.
-//   - Opt-in (prompted, or `--parameters` / `--no-parameters`): migrates
-//     `parameters.msw` to `beforeEach({ msw })` in stories and preview.
+//   - story files: migrates `parameters.msw` to `beforeEach({ msw })`.
 
 import { promises as fs } from 'node:fs'
 import { existsSync } from 'node:fs'
@@ -16,7 +15,7 @@ import os from 'node:os'
 import { join, relative, resolve, sep } from 'node:path'
 
 import { formatFileContent, globToRegexp } from 'storybook/internal/common'
-import { CLI_COLORS, logger, prompt } from 'storybook/internal/node-logger'
+import { CLI_COLORS, logger } from 'storybook/internal/node-logger'
 import { dedent } from 'ts-dedent'
 
 import { transformStory } from './transforms/stories'
@@ -33,8 +32,6 @@ interface Args {
   main: string | null
   configDir: string
   dryRun: boolean
-  /** null = undecided (prompt when interactive, default no otherwise). */
-  parameters: boolean | null
 }
 
 export function parseArgs(argv: string[]): Args {
@@ -43,14 +40,11 @@ export function parseArgs(argv: string[]): Args {
     preview: null,
     main: null,
     configDir: '.storybook',
-    dryRun: false,
-    parameters: null
+    dryRun: false
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--dry-run') out.dryRun = true
-    else if (a === '--parameters') out.parameters = true
-    else if (a === '--no-parameters') out.parameters = false
     else if (a === '--glob') out.glob = argv[++i] ?? out.glob
     else if (a === '--preview') out.preview = argv[++i] ?? null
     else if (a === '--main') out.main = argv[++i] ?? null
@@ -69,10 +63,7 @@ function printUsage(): void {
 
 Usage: npx msw-storybook-migrate [options]
 
-  --parameters         Also migrate \`parameters.msw\` to \`beforeEach({ msw })\`
-                       in stories and preview (skips the prompt).
-  --no-parameters      Keep \`parameters.msw\` as-is (skips the prompt).
-  --glob <pattern>     Story-file glob (used with --parameters). Default:
+  --glob <pattern>     Story-file glob. Default:
                        ${DEFAULT_GLOB}
   --preview <path>     Path to preview file. Auto-detected from --config-dir.
   --main <path>        Path to main config. Auto-detected from --config-dir.
@@ -88,20 +79,6 @@ function findConfigFile(configDir: string, basename: string): string | null {
     if (existsSync(p)) return p
   }
   return null
-}
-
-async function confirmParametersMigration(): Promise<boolean> {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return false
-  logger.log(
-    CLI_COLORS.muted(
-      'The `parameters.msw` approach is now deprecated, we advise to migrate to `beforeEach({ msw })` instead, which is more flexible and aligns with MSW practices.'
-    )
-  )
-  return prompt.confirm({
-    message:
-      'Migrate `parameters.msw` to `beforeEach({ msw })` in your stories and preview file?',
-    initialValue: true
-  })
 }
 
 const IGNORED_DIRS = new Set([
@@ -179,13 +156,14 @@ async function main(): Promise<void> {
     ? resolve(cwd, args.main)
     : findConfigFile(configDir, 'main')
 
-  const migrateParameters =
-    args.parameters ?? (await confirmParametersMigration())
-
   const transformed: string[] = []
   const failed: string[] = []
   let unmodified = 0
   const warnings: string[] = []
+  // Stories skipped by the story transform, grouped per reason so the final
+  // report explains each group once instead of repeating itself per file.
+  const unrecognizedShape: string[] = []
+  const existingBeforeEach: string[] = []
 
   let previewIsCsfNext: boolean | undefined
 
@@ -206,7 +184,7 @@ async function main(): Promise<void> {
   if (previewPath && existsSync(previewPath)) {
     try {
       const source = await fs.readFile(previewPath, 'utf-8')
-      const result = transformPreview(source, { migrateParameters })
+      const result = transformPreview(source, { migrateParameters: true })
       previewIsCsfNext = result.csfNext
       for (const w of result.warnings)
         warnings.push(`${short(previewPath)}: ${w}`)
@@ -258,47 +236,52 @@ async function main(): Promise<void> {
 
   flushPhase()
 
-  // -- Stories (opt-in)
-  if (migrateParameters) {
-    logger.step('Migrating `parameters.msw` in your story files...')
-    const limit = createLimiter(Math.max(1, os.cpus().length - 1))
+  // -- Stories
+  logger.step('Migrating `parameters.msw` in your story files...')
+  const limit = createLimiter(Math.max(1, os.cpus().length - 1))
 
-    const storyFiles = await findStoryFiles(cwd, args.glob)
+  const storyFiles = await findStoryFiles(cwd, args.glob)
 
-    if (storyFiles.length === 0) {
-      warnings.push(`No story files matched glob "${args.glob}".`)
-    }
+  if (storyFiles.length === 0) {
+    warnings.push(`No story files matched glob "${args.glob}".`)
+  }
 
-    await Promise.all(
-      storyFiles.map((file: string) =>
-        limit(async () => {
-          try {
-            const source = await fs.readFile(file, 'utf-8')
-            const result = transformStory(source)
-            if (result.skippedStories.length > 0) {
-              warnings.push(
-                `${short(file)}: ${result.skippedStories.join(', ')} — \`parameters.msw\` shape not recognised; hand-migrate.`
+  await Promise.all(
+    storyFiles.map((file: string) =>
+      limit(async () => {
+        try {
+          const source = await fs.readFile(file, 'utf-8')
+          const result = transformStory(source)
+          const shapes = result.skippedStories
+            .filter((s) => s.reason === 'unrecognized-shape')
+            .map((s) => s.story)
+          const merges = result.skippedStories
+            .filter((s) => s.reason === 'existing-before-each')
+            .map((s) => s.story)
+          if (shapes.length > 0) {
+            unrecognizedShape.push(`${short(file)}: ${shapes.join(', ')}`)
+          }
+          if (merges.length > 0) {
+            existingBeforeEach.push(`${short(file)}: ${merges.join(', ')}`)
+          }
+          if (result.code != null && result.code !== source) {
+            if (!args.dryRun) {
+              await fs.writeFile(
+                file,
+                await formatFileContent(file, result.code),
+                'utf-8'
               )
             }
-            if (result.code != null && result.code !== source) {
-              if (!args.dryRun) {
-                await fs.writeFile(
-                  file,
-                  await formatFileContent(file, result.code),
-                  'utf-8'
-                )
-              }
-              transformed.push(short(file))
-            } else {
-              unmodified++
-            }
-          } catch (err) {
-            failed.push(`${short(file)}: ${String(err)}`)
+            transformed.push(short(file))
+          } else {
+            unmodified++
           }
-        })
-      )
+        } catch (err) {
+          failed.push(`${short(file)}: ${String(err)}`)
+        }
+      })
     )
-  }
+  )
 
   flushPhase()
 
@@ -312,22 +295,41 @@ async function main(): Promise<void> {
     logger.error(failed.join('\n'))
   }
 
-  if (warnings.length > 0) {
+  const skippedAnything =
+    warnings.length > 0 ||
+    unrecognizedShape.length > 0 ||
+    existingBeforeEach.length > 0
+  if (skippedAnything) {
+    const sections: string[] = []
+    if (warnings.length > 0) {
+      sections.push(warnings.map((w) => `• ${w}`).join('\n'))
+    }
+    if (unrecognizedShape.length > 0) {
+      sections.push(
+        `These stories use a \`parameters.msw\` shape the codemod does not recognize — you will need to migrate them yourself:\n${unrecognizedShape
+          .map((w) => `• ${w}`)
+          .join('\n')}`
+      )
+    }
+    if (existingBeforeEach.length > 0) {
+      sections.push(
+        `These stories already define \`beforeEach\` so were unmodified — you will need to move the \`parameters.msw\` handlers into it yourself:\n${existingBeforeEach
+          .map((w) => `• ${w}`)
+          .join('\n')}`
+      )
+    }
     logger.warn(
-      `The codemod could not migrate everything:\n${warnings.map((w) => `• ${w}`).join('\n')}\nSee the migration guide for the manual steps:\n${CLI_COLORS.cta(MIGRATION_URL)}`
+      `The codemod could not migrate everything:\n${sections.join('\n')}\nDon't worry — the addon still supports \`parameters.msw\`, so everything keeps working until you migrate.\nSee the migration guide:\n${CLI_COLORS.cta(MIGRATION_URL)}`
     )
   }
 
   if (previewIsCsfNext === false) {
     logger.logBox(
       dedent`
-        All set — your project keeps using CSF 3.0 and works as-is.
+        All set, happy mocking!
 
-        When you are ready, we recommend upgrading to CSF Next with:
+        v3 of this addon was designed to work best with CSF Next, which you can migrate to with this command:
         ${CLI_COLORS.cta('npx storybook automigrate csf-factories')}
-
-        Then run ${CLI_COLORS.cta('npx msw-storybook-migrate')} once more and it will
-        move the addon to the new ${CLI_COLORS.cta('addonMsw()')} API for you.
 
         To learn more about CSF Next, see the Storybook docs:
         ${CLI_COLORS.cta('https://storybook.js.org/docs/api/csf/csf-next')}
@@ -336,18 +338,17 @@ async function main(): Promise<void> {
   } else if (previewIsCsfNext === true) {
     logger.logBox(
       dedent`
-        All set — your project uses CSF Next and the msw addon is
-        fully wired up via ${CLI_COLORS.cta('addonMsw()')}. Happy mocking!
+        All set. Happy mocking!
       `
     )
   } else {
     logger.logBox(
       dedent`
-        When you are ready to upgrade to CSF Next, run:
+        v3 of this addon was designed to work best with CSF Next, which you can migrate to with this command:
         ${CLI_COLORS.cta('npx storybook automigrate csf-factories')}
 
-        Then run ${CLI_COLORS.cta('npx msw-storybook-migrate')} once more to finish
-        the msw migration.
+        To learn more about CSF Next, see the Storybook docs:
+        ${CLI_COLORS.cta('https://storybook.js.org/docs/api/csf/csf-next')}
       `
     )
   }

@@ -135,7 +135,7 @@ export function transformPreview(
   if (!previewObj) {
     if (usesMsw) {
       warnings.push(
-        'Could not find the preview config object (the default export); hand-migrate this file.'
+        'Could not find the preview config object (the default export); you will need to migrate this file yourself.'
       )
     }
     return { code: null, warnings, csfNext: isFactories }
@@ -155,13 +155,13 @@ export function transformPreview(
       : null
     if (loaderSetup === 'conflict') {
       warnings.push(
-        'Multiple `mswLoader(...)` setup functions found; migrate this file by hand.'
+        'Multiple `mswLoader(...)` setup functions found; you will need to migrate this file yourself.'
       )
       return { code: null, warnings, csfNext: true }
     }
     if (needsSetup && loaderSetup != null) {
       warnings.push(
-        'Both `initialize(...)` options and a `mswLoader(...)` setup function exist; merge them into one setup function by hand.'
+        'Both `initialize(...)` options and a `mswLoader(...)` setup function exist; you will need to merge them into one setup function yourself.'
       )
       return { code: null, warnings, csfNext: true }
     }
@@ -234,7 +234,7 @@ export function transformPreview(
     )
     if (loaderResult === 'conflict') {
       warnings.push(
-        '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. Merge them by hand.'
+        '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. You will need to merge them yourself.'
       )
       return { code: null, warnings, csfNext: false }
     }
@@ -477,7 +477,7 @@ function analyzeInitialize(
     countIdentifierReferences(parsed._ast.program, localName, knownNodes) > 0
   ) {
     warnings.push(
-      `\`${localName}\` is used in a way the codemod cannot rewrite (e.g. its return value is captured, or it is called conditionally). Migrate this file by hand — see the "initialize is removed" section of MIGRATION.md.`
+      `\`${localName}\` is used in a way the codemod cannot rewrite (e.g. its return value is captured, or it is called conditionally). You will need to migrate this file yourself — see the "initialize is removed" section of the migration guide.`
     )
     return 'skip'
   }
@@ -489,7 +489,7 @@ function analyzeInitialize(
 
   if (calls.length > 1) {
     warnings.push(
-      `Multiple \`${localName}(...)\` calls found; migrate this file by hand.`
+      `Multiple \`${localName}(...)\` calls found; you will need to migrate this file yourself.`
     )
     return 'skip'
   }
@@ -499,13 +499,13 @@ function analyzeInitialize(
 
   if (args.some((a) => !t.isExpression(a))) {
     warnings.push(
-      `\`${localName}(...)\` receives arguments the codemod cannot carry over (e.g. spreads); migrate this file by hand.`
+      `\`${localName}(...)\` receives arguments the codemod cannot carry over (e.g. spreads); you will need to migrate this file yourself.`
     )
     return 'skip'
   }
   if (args.length > 2) {
     warnings.push(
-      `\`${localName}(...)\` receives more than two arguments; migrate this file by hand.`
+      `\`${localName}(...)\` receives more than two arguments; you will need to migrate this file yourself.`
     )
     return 'skip'
   }
@@ -765,7 +765,7 @@ function ensureFactoriesAddon(
       if (setupFn) {
         if (isCall && (el as t.CallExpression).arguments.length > 0) {
           warnings.push(
-            'A setup function could not be folded: the existing `addonMsw(...)` already receives one. Merge them by hand.'
+            'A setup function could not be folded: the existing `addonMsw(...)` already receives one. You will need to merge them yourself.'
           )
           return 'conflict'
         }
@@ -828,7 +828,7 @@ function ensureFactoriesAddon(
   }
   if (!addonsArray) {
     warnings.push(
-      '`addons` in definePreview is not an array literal; register `addonMsw()` by hand.'
+      '`addons` in definePreview is not an array literal; you will need to register `addonMsw()` yourself.'
     )
     return 'conflict'
   }
@@ -906,14 +906,14 @@ function migratePreviewParameters(
   const handlers = extractHandlers(mswProp.value)
   if (!handlers) {
     warnings.push(
-      'Preview-level `parameters.msw` has a shape the codemod does not recognise; migrate it to `beforeEach({ msw })` by hand.'
+      'Preview-level `parameters.msw` has a shape the codemod does not recognize; you will need to migrate it to `beforeEach({ msw })` yourself.'
     )
     return false
   }
 
   if (handlers.length > 0 && hasAnyProperty(previewObj, 'beforeEach')) {
     warnings.push(
-      'The preview already defines `beforeEach`; merge the `parameters.msw` handlers into it by hand.'
+      'The preview already defines `beforeEach`; you will need to move the `parameters.msw` handlers into it yourself.'
     )
     return false
   }

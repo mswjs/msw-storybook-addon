@@ -195,7 +195,10 @@ describe('transformStory', () => {
       {
         "code": null,
         "skippedStories": [
-          "Foo",
+          {
+            "reason": "existing-before-each",
+            "story": "Foo",
+          },
         ],
       }
     `)
@@ -212,7 +215,10 @@ describe('transformStory', () => {
       {
         "code": null,
         "skippedStories": [
-          "Foo",
+          {
+            "reason": "unrecognized-shape",
+            "story": "Foo",
+          },
         ],
       }
     `)
@@ -306,7 +312,10 @@ describe('transformStory', () => {
       {
         "code": null,
         "skippedStories": [
-          "Foo",
+          {
+            "reason": "existing-before-each",
+            "story": "Foo",
+          },
         ],
       }
     `)
