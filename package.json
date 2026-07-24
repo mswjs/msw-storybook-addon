@@ -1,17 +1,86 @@
 {
-  "name": "msw-storybook-addon-workspace",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "type": "module",
+  "name": "msw-storybook-addon",
+  "version": "2.0.7",
+  "description": "Mock APIs in Storybook using Mock Service Worker.",
+  "exports": {
+    ".": "./build/index.mjs",
+    "./preview": "./build/preview.mjs",
+    "./types": "./build/types.d.mts",
+    "./csf3": "./build/csf3.mjs"
+  },
+  "bin": {
+    "msw-storybook-migrate": "./build/migrate.mjs"
+  },
+  "storybook": {
+    "displayName": "Mock Service Worker",
+    "icon": "https://mswjs.io/msw-storybook-addon.png"
+  },
   "scripts": {
-    "storybook": "yarn workspace msw-storybook-docs storybook",
-    "msw:dev": "yarn workspace msw-storybook-addon dev",
-    "start": "npm-run-all --parallel storybook msw:dev",
-    "build": "yarn workspace msw-storybook-addon build && yarn workspace msw-storybook-docs build-storybook"
+    "dev": "tsdown --watch",
+    "lint": "publint",
+    "install:browsers": "pnpm exec playwright install chromium --with-deps",
+    "storybook": "storybook dev --config-dir ./tests/factory/.storybook",
+    "storybook:csf3": "storybook dev --config-dir ./tests/csf3/.storybook",
+    "storybook:factory-custom-setup": "storybook dev --config-dir ./tests/factory-custom-setup/.storybook",
+    "test:stories": "playwright test",
+    "test:play": "vitest -c ./tests/factory/vitest.config.ts --project storybook",
+    "test:ts": "vitest --typecheck",
+    "test:codemod": "vitest run -c ./codemod/vitest.config.ts",
+    "build": "tsdown",
+    "release": "release publish"
+  },
+  "files": [
+    "./build"
+  ],
+  "keywords": [
+    "storybook-addon",
+    "api",
+    "mock",
+    "http",
+    "graphql",
+    "websocket",
+    "sse",
+    "network",
+    "request",
+    "intercept"
+  ],
+  "author": "Artem Zakharchenko <kettanaito@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "url": "https://github.com/mswjs/msw-storybook-addon"
+  },
+  "bugs": "https://github.com/mswjs/msw-storybook-addon/issues",
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
-    "npm-run-all": "^4.1.5"
+    "@ossjs/release": "^0.11.1",
+    "@playwright/test": "^1.61.1",
+    "@storybook/addon-vitest": "^10.5.3",
+    "@storybook/react-vite": "^10.5.3",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.17",
+    "@vitest/browser-playwright": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "msw": "^2.15.0",
+    "msw-storybook-addon": "link:.",
+    "publint": "^0.3.22",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "storybook": "^10.5.3",
+    "ts-dedent": "^2.3.0",
+    "tsdown": "^0.22.13",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   },
-  "packageManager": "yarn@4.2.1"
+  "peerDependencies": {
+    "msw": ">=2",
+    "storybook": ">=9"
+  },
+  "msw": {
+    "workerDirectory": [
+      "tests/public"
+    ]
+  }
 }

@@ -1,305 +1,170 @@
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/1671563/144888802-84346d8f-77c9-4377-98c7-4b0364797978.png" width="200">
-</p>
-<h1 align="center">MSW Storybook Addon</h1>
+# MSW Storybook Addon
 
-## Features
-
-- Mock Rest and GraphQL requests right inside your story.
-- Document how a component behaves in various scenarios.
-- Get a11y, snapshot and visual tests using other addons for free.
-
-[Full documentation and live demos](https://msw-sb.vercel.app/)
-
-## Installing and Setup
-
-### Install MSW and the addon
-
-With npm:
-
-```sh
-npm i msw msw-storybook-addon -D
-```
-
-Or with yarn:
-
-```sh
-yarn add msw msw-storybook-addon -D
-```
-
-### Generate service worker for MSW in your public folder.
-
-_If you already use MSW in your project, you have likely done this before so you can skip this step._
-
-```sh
-npx msw init public/
-```
-
-Refer to the [MSW official guide](https://mswjs.io/docs/integrations/browser) for framework specific paths if you don't use `public`.
-
-### Configure the addon
-
-Enable MSW in Storybook by initializing MSW and providing the MSW loader in `./storybook/preview.js`:
-
-```ts
-import { initialize, mswLoader } from 'msw-storybook-addon'
-
-// Initialize MSW
-initialize()
-
-const preview = {
-  parameters: {
-    // your other code...
-  },
-  // Provide the MSW addon loader globally
-  loaders: [mswLoader],
-}
-
-export default preview
-```
-
-### Start Storybook
-
-When running Storybook, you have to serve the `public` folder as an asset to Storybook, so that MSW is included, otherwise it will not be available in the browser.
-
-This means you should set the `staticDirs` field in the Storybook main config file. Refer to [the docs](https://storybook.js.org/docs/configure/images-and-assets#serving-static-files-via-storybook-configuration) if needed.
-
-```sh
-npm run storybook
-```
+Mock API requests in Storybook with Mock Service Worker.
 
 ## Usage
 
-You can pass request handlers (https://mswjs.io/docs/concepts/request-handler) into the `handlers` property of the `msw` parameter. This is commonly an array of handlers.
+### Install
 
-```ts
-import { http, HttpResponse } from 'msw'
-
-export const SuccessBehavior = {
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/user', () => {
-          return HttpResponse.json({
-            firstName: 'Neil',
-            lastName: 'Maverick',
-          })
-        }),
-      ],
-    },
-  },
-}
+```sh
+npm i msw-storybook-addon -D
 ```
 
-### Advanced Usage
+> Make sure you have `msw@2.x` installed as a peer dependency.
 
-#### Composing request handlers
+### Generate the worker script
 
-The `handlers` property can also be an object where the keys are either arrays of handlers or a handler itself. This enables you to inherit (and optionally overwrite/disable) handlers from preview.js using [parameter inheritance](https://storybook.js.org/docs/writing-stories/parameters#rules-of-parameter-inheritance):
+Next, use the MSW CLI to generate a worker script at the given path:
 
-```ts
-type MswParameter = {
-  handlers: RequestHandler[] | Record<string, RequestHandler | RequestHandler[]>
-}
+```sh
+npx msw init ./public --save
 ```
 
-Suppose you have an application where almost every component needs to mock requests to `/login` and `/logout` the same way.
-You can set global MSW handlers in preview.js for those requests and bundle them into a property called `auth`, for example:
+> Replace `./public` with the path to your static directory of Storybook.
+
+### Configure Storybook
+
+#### CSF 3.0
+
+> The loader API for CSF 3.0 is _deprecated_. Please consider using the [CSF Next](#csf-next) API instead.
 
 ```ts
-//preview.ts
-import { http, HttpResponse } from 'msw'
-
-// These handlers will be applied in every story
-export const parameters = {
-  msw: {
-    handlers: {
-      auth: [
-        http.get('/login', () => {
-          return HttpResponse.json({
-            success: true,
-          })
-        }),
-        http.get('/logout', () => {
-          return HttpResponse.json({
-            success: true,
-          })
-        }),
-      ],
-    },
-  },
+// .storybook/main.ts
+export default {
+  addons: ['msw-storybook-addon'],
 }
 ```
-
-Then, you can use other handlers in your individual story. Storybook will merge both global handlers and story handlers:
-
-```ts
-import { http, HttpResponse } from 'msw'
-
-// This story will include the auth handlers from .storybook/preview.ts and profile handlers
-export const SuccessBehavior = {
-  parameters: {
-    msw: {
-      handlers: {
-        profile: http.get('/profile', () => {
-          return HttpResponse.json({
-            firstName: 'Neil',
-            lastName: 'Maverick',
-          })
-        }),
-      },
-    },
-  },
-}
-```
-
-Now suppose you want to ovewrite the global handlers for auth. All you have to do is set them again in your story and these values will take precedence:
-
-```ts
-import { http, HttpResponse } from 'msw'
-
-// This story will overwrite the auth handlers from preview.ts
-export const FailureBehavior = {
-  parameters: {
-    msw: {
-      handlers: {
-        auth: http.get('/login', () => {
-          return HttpResponse.json(null, { status: 403 })
-        }),
-      },
-    },
-  },
-}
-```
-
-What if you want to disable global handlers? All you have to do is set them as null and they will be ignored for your story:
-
-```ts
-import { http, HttpResponse } from 'msw'
-
-// This story will disable the auth handlers from preview.ts
-export const NoAuthBehavior = {
-  parameters: {
-    msw: {
-      handlers: {
-        auth: null,
-        others: [
-          http.get('/numbers', () => {
-            return HttpResponse.json([1, 2, 3])
-          }),
-          http.get('/strings', () => {
-            return HttpResponse.json(['a', 'b', 'c'])
-          }),
-        ],
-      },
-    },
-  },
-}
-```
-
-#### Configuring MSW
-
-`msw-storybook-addon` starts MSW with default configuration. `initialize` takes two arguments:
-
-- `options`: this gets passed down to [`worker.start()`](https://mswjs.io/docs/api/setup-worker/start) when in the browser or [`server.listen()`](https://mswjs.io/docs/api/setup-server/listen) when in Node, so the same types are expected.
-- `initialHandlers`: a `RequestHandler[]` type, this array is spread to either [`setupWorker()`](https://mswjs.io/docs/api/setup-worker) when in the browser or [`setupServer()`](https://mswjs.io/docs/api/setup-server) when in Node.
-
-A common example is to configure the [onUnhandledRequest](https://mswjs.io/docs/api/setup-worker/start#onunhandledrequest) behavior, as MSW logs a warning in case there are requests which were not handled.
-
-If you want MSW to bypass unhandled requests and not do anything:
 
 ```ts
 // .storybook/preview.ts
-import { initialize } from 'msw-storybook-addon'
+import { mswLoader } from 'msw-storybook-addon/csf3'
 
-initialize({
-  onUnhandledRequest: 'bypass',
-})
+export default {
+  loaders: [mswLoader()],
+  parameters: {
+    msw: [...initialHandlers]
+  }
+}
 ```
 
-If you want to warn a helpful message in case stories make requests that should be handled but are not:
+Include the addon's types in your `tsconfig.json` for a type safe `parameters.msw` experience in your setup and stories:
+
+```json
+{
+  "include": [".storybook/preview.ts", "..."],
+  "compilerOptions": {
+    "types": ["msw-storybook-addon/csf3"]
+  }
+}
+```
+
+#### CSF Next
+
+If you are using the [CSF Next](https://storybook.js.org/docs/api/csf/csf-next) syntax (also known as CSF Factories), it's enough to import and call the addon function in `preview.ts`:
 
 ```ts
 // .storybook/preview.ts
-import { initialize } from 'msw-storybook-addon'
+import addonMsw from 'msw-storybook-addon'
 
-initialize({
-  onUnhandledRequest: ({ url, method }) => {
-    const pathname = new URL(url).pathname
-    if (pathname.startsWith('/my-specific-api-path')) {
-      console.error(`Unhandled ${method} request to ${url}.
-
-        This exception has been only logged in the console, however, it's strongly recommended to resolve this error as you don't want unmocked data in Storybook stories.
-
-        If you wish to mock an error response, please refer to this guide: https://mswjs.io/docs/recipes/mocking-error-responses
-      `)
-    }
-  },
+export default definePreview({
+  addons: [addonMsw()],
 })
 ```
 
-Although [composing handlers](#composing-request-handlers) is possible, that relies on Storybook's merging logic, which **only works when the handlers in your story's parameters are objects and not arrays**. To get around this limitation, you can pass initial request handlers directly the `initialize` function as a second argument.
+> `parameters.msw` is not supported in CSF Next. It is preserved only for CSF 3.0 to make migration easier — use the `beforeEach` hook instead.
+
+Include the addon's types in your `tsconfig.json` for a type-safe experience in your setup and stories:
+
+```json
+{
+  "include": [".storybook/preview.ts", "..."],
+  "compilerOptions": {
+    "types": ["msw-storybook-addon/types"]
+  }
+}
+```
+
+#### Custom worker setup
+
+By default, the addon creates and starts the worker for you: it starts quietly and ignores common asset and Storybook-internal requests. To customize that behavior (e.g. `worker.start()` options or initial handlers), provide a setup function that creates the worker, starts it, and returns it.
+
+In CSF 3.0, pass it to `mswLoader`:
+
+```ts
+// .storybook/preview.ts
+import { setupWorker } from 'msw/browser'
+import { mswLoader } from 'msw-storybook-addon/csf3'
+
+export default {
+  loaders: [
+    mswLoader(async () => {
+      const worker = setupWorker()
+      await worker.start({ onUnhandledRequest: 'bypass' })
+      return worker
+    })
+  ]
+}
+```
+
+In CSF Next, pass it to `addonMsw`:
+
+```ts
+// .storybook/preview.ts
+import { setupWorker } from 'msw/browser'
+import addonMsw from 'msw-storybook-addon'
+
+export default definePreview({
+  addons: [
+    addonMsw(async () => {
+      const worker = setupWorker()
+      await worker.start({ onUnhandledRequest: 'bypass' })
+      return worker
+    })
+  ],
+})
+```
+
+> Handlers passed to `setupWorker()` act as initial handlers and survive the automatic handler reset between stories.
+
+### Provide handlers
+
+If you have correctly installed and configured this addon, it will extend your story context with the `msw` property. Use that reference to control API mocking in your stories, e.g. by adding request handler overrides via `msw.use()`.
+
+#### Global handlers
+
+Provide request handlers in `preview.ts` to define the network behaviors that affect all your stories.
 
 ```ts
 // .storybook/preview.ts
 import { http, HttpResponse } from 'msw'
-import { initialize } from 'msw-storybook-addon'
 
-initialize({}, [
-  http.get('/numbers', () => {
-    return HttpResponse.json([1, 2, 3])
-  }),
-  http.get('/strings', () => {
-    return HttpResponse.json(['a', 'b', 'c'])
-  }),
-])
+export default {
+  beforeEach({ msw }) {
+    msw.use(
+      http.get('https://api.acme.com/user', () => {
+        return HttpResponse.json({ name: 'John Maverick' })
+      }),
+    )
+  },
+}
 ```
 
-#### Using the addon in Node.js with Portable Stories
+#### Story handlers
 
-If you're using [portable stories](https://storybook.js.org/docs/api/portable-stories/portable-stories-vitest), you need to make sure the MSW loaders are applied correctly.
-
-### Storybook 8.2 or higher
-
-If you [set up the project annotations](https://storybook.js.org/docs/api/portable-stories/portable-stories-vitest#setprojectannotations) correctly, by calling the `play` function of your story, the MSW loaders will be applied automatically:
+To describe network behaviors on a story basis, add them in the `beforeEach` hook of the respective story.
 
 ```ts
-import { composeStories } from '@storybook/react'
-import * as stories from './MyComponent.stories'
-
-const { Success } = composeStories(stories)
-
-test('<Success />', async() => {
-  // The MSW loaders are applied automatically via the play function
-  await Success.play()
-})
+export const UserProfileNetworkError: Story = {
+  beforeEach({ msw }) {
+    msw.use(
+      http.get('https://api.acme.com/user', () => {
+        return HttpResponse.error()
+      }),
+    )
+  },
+}
 ```
 
-### Storybook < 8.2
+## Related materials
 
-You do so by calling the `applyRequestHandlers`  helper before rendering your story:
-
-```ts
-import { applyRequestHandlers } from 'msw-storybook-addon'
-import { composeStories } from '@storybook/react'
-import * as stories from './MyComponent.stories'
-
-const { Success } = composeStories(stories)
-
-test('<Success />', async() => {
-  // 👇 Crucial step, so that the MSW loaders are applied
-  await applyRequestHandlers(Success.parameters.msw)
-  render(<Success />)
-})
-```
-
-> Note:
-> The `applyRequestHandlers` utility should be an internal detail that is called automatically by the portable stories, however as it's not possible in Storybook 7, it's exported by the addon. It will be removed in upcoming releases, so it is recommended that you upgrade to Storybook 8 when possible.
-
-### Troubleshooting
-
-#### MSW is interfering with HMR (Hot Module Replacement)
-
-If you're experiencing issues like `[MSW] Failed to mock a "GET" request to "http://localhost:6006/4cb31fa2eee22cf5b32f.hot-update.json"` in the console, it's likely that MSW is interfering with HMR. This is not common and it seems to only happen in Webpack projects, but if it happens to you, you can follow the steps in this issue to fix it:
-
-https://github.com/mswjs/msw-storybook-addon/issues/36#issuecomment-1496150729
+- [Mock Service Worker](https://mswjs.io/docs)
