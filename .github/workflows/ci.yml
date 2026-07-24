@@ -48,6 +48,14 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: build
+          path: build
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Test (Types)
         run: pnpm test:ts
 
@@ -88,10 +96,13 @@ jobs:
           git config --local user.email "kettanaito@gmail.com"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Download build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: build
+          path: build
 
       - name: Release
         run: pnpm release

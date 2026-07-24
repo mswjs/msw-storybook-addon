@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@ossjs/release':
-        specifier: ^0.11.0
-        version: 0.11.0
+        specifier: ^0.11.1
+        version: 0.11.1
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.61.1
@@ -414,8 +414,8 @@ packages:
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
 
-  '@ossjs/release@0.11.0':
-    resolution: {integrity: sha512-wdVXoTPqF3wfPrOhmyq1P61IZ9mGhpuxehnlYu0G2+j8zfqWjti6GvV//mL3gQepQcOXvHNUjpDAbX9DI5sfVQ==}
+  '@ossjs/release@0.11.1':
+    resolution: {integrity: sha512-tkneP+Jic6a7IpmOEaifAtMUl44uzh19Ij8GHogz2gVpfjwFkxqj0r2inUvKqsHLEEV0F3lDLKXNEzvwat/+Ug==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -934,9 +934,6 @@ packages:
 
   '@types/node@24.12.2':
     resolution: {integrity: sha512-A1sre26ke7HDIuY/M23nd9gfB+nrmhtYyMINbjI1zHJxYteKR6qSMX56FsmjMcDb3SMcjJg5BiRRgOCC/yBD0g==}
-
-  '@types/node@25.3.3':
-    resolution: {integrity: sha512-DpzbrH7wIcBaJibpKo9nnSQL0MTRdnWttGyE5haGwK86xgMOkFLp7vEyfQPGLOJh5wNYiJ3V9PmUMDhV9u8kkQ==}
 
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
@@ -1686,11 +1683,6 @@ packages:
   proto-list@1.2.4:
     resolution: {integrity: sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA==}
 
-  publint@0.3.18:
-    resolution: {integrity: sha512-JRJFeBTrfx4qLwEuGFPk+haJOJN97KnPuK01yj+4k/Wj5BgoOK5uNsivporiqBjk2JDaslg7qJOhGRnpltGeog==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   publint@0.3.21:
     resolution: {integrity: sha512-OqejcnMV6E9zel2oCrUOJEiiFkGiAAni0A6ibfQNh1k9Gu5z4F+Yso8lllam7AzmV6Do0vp7u3UpZNRBwuXaHQ==}
     engines: {node: '>=18'}
@@ -2082,9 +2074,6 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
-
-  undici-types@7.18.2:
-    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
   unplugin@2.3.11:
     resolution: {integrity: sha512-5uKD0nqiYVzlmCRs01Fhs2BdkEgBS3SAVP6ndrBsuK42iC2+JHyxM05Rm9G8+5mkmRtzMZGY8Ct5+mliZxU/Ww==}
@@ -2567,7 +2556,7 @@ snapshots:
 
   '@open-draft/until@2.1.0': {}
 
-  '@ossjs/release@0.11.0':
+  '@ossjs/release@0.11.1':
     dependencies:
       '@open-draft/deferred-promise': 2.2.0
       '@types/conventional-commits-parser': 5.0.2
@@ -2583,10 +2572,10 @@ snapshots:
       outvariant: 1.4.3
       pino: 7.11.0
       pino-pretty: 7.6.1
-      publint: 0.3.18
+      publint: 0.3.21
       rc: 1.2.8
       registry-auth-token: 5.1.1
-      semver: 7.7.4
+      semver: 7.8.5
       until-async: 3.0.2
       yargs: 18.0.0
 
@@ -2968,10 +2957,6 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/node@25.3.3':
-    dependencies:
-      undici-types: 7.18.2
-
   '@types/react@19.2.14':
     dependencies:
       csstype: 3.2.3
@@ -2982,7 +2967,7 @@ snapshots:
 
   '@types/set-cookie-parser@2.4.10':
     dependencies:
-      '@types/node': 25.3.3
+      '@types/node': 24.12.2
 
   '@types/statuses@2.0.6': {}
 
@@ -3694,13 +3679,6 @@ snapshots:
 
   proto-list@1.2.4: {}
 
-  publint@0.3.18:
-    dependencies:
-      '@publint/pack': 0.1.4
-      package-manager-detector: 1.6.0
-      picocolors: 1.1.1
-      sade: 1.8.1
-
   publint@0.3.21:
     dependencies:
       '@publint/pack': 0.1.4
@@ -4126,8 +4104,6 @@ snapshots:
       quansync: 1.0.0
 
   undici-types@7.16.0: {}
-
-  undici-types@7.18.2: {}
 
   unplugin@2.3.11:
     dependencies:

@@ -48,14 +48,14 @@
   "author": "Artem Zakharchenko <kettanaito@gmail.com>",
   "license": "MIT",
   "repository": {
-    "url": "https://github.com/mswjs/storybook"
+    "url": "https://github.com/mswjs/msw-storybook-addon"
   },
-  "bugs": "https://github.com/mswjs/storybook/issues",
+  "bugs": "https://github.com/mswjs/msw-storybook-addon/issues",
   "publishConfig": {
     "access": "public"
   },
   "devDependencies": {
-    "@ossjs/release": "^0.11.0",
+    "@ossjs/release": "^0.11.1",
     "@playwright/test": "^1.61.1",
     "@storybook/addon-vitest": "^10.3.4",
     "@storybook/react-vite": "^10.3.4",
@@ -68,8 +68,8 @@
     "publint": "^0.3.21",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "ts-dedent": "^2.3.0",
     "storybook": "^10.3.4",
+    "ts-dedent": "^2.3.0",
     "tsdown": "^0.22.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9"
