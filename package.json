@@ -6,7 +6,7 @@
   "exports": {
     ".": "./build/index.mjs",
     "./preview": "./build/preview.mjs",
-    "./types": "./build/types.d.mts",
+    "./types": "./build/index.d.mts",
     "./csf3": "./build/csf3.mjs"
   },
   "bin": {
