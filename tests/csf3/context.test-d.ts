@@ -1,7 +1,25 @@
 import { it, expectTypeOf } from 'vitest'
 import type { MswParameter } from 'msw-storybook-addon/csf3'
-import type { Parameters } from 'storybook/internal/csf'
+import type { MswApi } from 'msw-storybook-addon'
+import type { Parameters, StoryContext } from 'storybook/internal/csf'
 import type { Preview, StoryObj } from '@storybook/react-vite'
+
+// This fixture has no `types` entry in its `tsconfig.json`: importing the
+// addon is what augments the context, as it does in a CSF 3.0 preview.
+it('extends the story context type', () => {
+  expectTypeOf<StoryContext>().toExtend<{ msw: MswApi }>()
+})
+
+it('exposes the "msw" context in the story "beforeEach" hook', () => {
+  // The CSF 3.0 loader assigns `context.msw` too, not just the annotations.
+  const story: StoryObj = {
+    beforeEach({ msw }) {
+      expectTypeOf(msw).not.toBeAny()
+      expectTypeOf(msw).toEqualTypeOf<MswApi>()
+    }
+  }
+  expectTypeOf(story).toExtend<StoryObj>()
+})
 
 it('augments the "parameters" type', () => {
   expectTypeOf<Parameters>().toExtend<{
