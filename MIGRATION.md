@@ -18,7 +18,7 @@
 Most of this migration is automated: after upgrading the addon, run
 
 ```sh
-npx msw-storybook-migrate
+npx msw-storybook-addon
 ```
 
 It rewrites your preview and main config, and migrates `parameters.msw` to `beforeEach` in your stories. Anything it cannot migrate safely is listed for you to migrate yourself using the sections below — and don't worry, `parameters.msw` keeps working until you do.

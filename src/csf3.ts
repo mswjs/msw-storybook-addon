@@ -41,7 +41,7 @@ let hasPrintedDeprecationWarning = false
 function printDeprecationWarning() {
   if (!hasPrintedDeprecationWarning) {
     console.warn(
-      '[msw-storybook-addon] `mswLoader` is deprecated when using CSF Next — use `addonMsw()` instead. Run `npx msw-storybook-migrate` to migrate.\n\nLearn more: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx'
+      '[msw-storybook-addon] `mswLoader` is deprecated when using CSF Next — use `addonMsw()` instead. Run `npx msw-storybook-addon` to migrate.\n\nLearn more: https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx'
     )
     hasPrintedDeprecationWarning = true
   }
@@ -54,7 +54,7 @@ let mswInstancePromise: Promise<MswApi> | undefined
  * integration for CSF 3.0 projects.
  *
  * Deprecated when using CSF Next: use the preview annotations (`addonMsw()`)
- * instead. Run `npx msw-storybook-migrate` to migrate automatically. See the
+ * instead. Run `npx msw-storybook-addon` to migrate automatically. See the
  * {@link https://github.com/mswjs/msw-storybook-addon/blob/main/MIGRATION.md#from-2xx-to-3xx migration guide}
  * for details.
  *

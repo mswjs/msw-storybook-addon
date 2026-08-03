@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// CLI entry — `npx msw-storybook-migrate` (shipped as a bin of the
+// CLI entry — `npx msw-storybook-addon` (shipped as a bin of the
 // `msw-storybook-addon` package, so it resolves from the local install).
 //
 // Migrates a v2 setup to v3:
@@ -61,7 +61,7 @@ function printUsage(): void {
   // eslint-disable-next-line no-console
   console.log(`msw-storybook-migrate — migrate an msw-storybook-addon v2 setup to v3
 
-Usage: npx msw-storybook-migrate [options]
+Usage: npx msw-storybook-addon [options]
 
   --glob <pattern>     Story-file glob. Default:
                        ${DEFAULT_GLOB}
