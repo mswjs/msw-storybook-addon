@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "msw-storybook-addon",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Mock APIs in Storybook using Mock Service Worker.",
   "exports": {
     ".": "./build/index.mjs",
