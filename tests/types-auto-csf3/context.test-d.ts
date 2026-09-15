@@ -21,7 +21,6 @@ it('exposes "msw" in the story "beforeEach" hook', () => {
       msw: []
     },
     beforeEach({ msw, parameters }) {
-      expectTypeOf(msw).not.toBeAny()
       expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
       expectTypeOf(parameters).toExtend<{ msw?: MswParameter }>()
     }

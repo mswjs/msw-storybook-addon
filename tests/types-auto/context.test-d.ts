@@ -16,11 +16,9 @@ it('exposes "msw" in the CSF Next story hooks', () => {
 
   meta.story({
     beforeEach({ msw }) {
-      expectTypeOf(msw).not.toBeAny()
       expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
     },
     play({ msw }) {
-      expectTypeOf(msw).not.toBeAny()
       expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
     }
   })
@@ -29,7 +27,6 @@ it('exposes "msw" in the CSF Next story hooks', () => {
 it('exposes "msw" in the CSF 3.0 story hooks of the same program', () => {
   const story: StoryObj = {
     beforeEach({ msw }) {
-      expectTypeOf(msw).not.toBeAny()
       expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
     }
   }

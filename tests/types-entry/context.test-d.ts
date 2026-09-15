@@ -8,7 +8,6 @@ import type { StoryObj } from '@storybook/react-vite'
 it('types the story context through "msw-storybook-addon/types"', () => {
   const story: StoryObj = {
     beforeEach({ msw }) {
-      expectTypeOf(msw).not.toBeAny()
       expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
     }
   }
