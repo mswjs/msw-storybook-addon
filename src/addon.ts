@@ -1,11 +1,6 @@
 import { isCommonAssetRequest } from 'msw'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
-import type { MswApi } from './shared'
-// Every public entrypoint pulls in this module, so importing the addon from
-// anywhere in a TypeScript program (e.g. `.storybook/preview.ts`) is enough to
-// type `context.msw`. The same augmentation is also exposed explicitly as
-// `msw-storybook-addon/types` for programs that never import the addon.
-import './types'
+import type { MswApi } from './types'
 
 export type SetupFunction = () => MswApi | Promise<MswApi>
 
