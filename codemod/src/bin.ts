@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// CLI entry — `npx msw-storybook-addon` (shipped as a bin of the
+// CLI entry — `npx msw-storybook-addon migrate` (shipped as a bin of the
 // `msw-storybook-addon` package, so it resolves from the local install).
 //
-// Migrates a v2 setup to v3:
+// The `migrate` command migrates a v2 setup to v3:
 //   - `.storybook/preview.*`: `mswLoader` → `mswLoader()` (from the /csf3
 //     subpath), `mswDecorator` → loader, `initialize(...)` folded into a
 //     setup function. CSF Next (`definePreview`) files get `addonMsw()`.
@@ -59,9 +59,9 @@ export function parseArgs(argv: string[]): Args {
 
 function printUsage(): void {
   // eslint-disable-next-line no-console
-  console.log(`msw-storybook-migrate — migrate an msw-storybook-addon v2 setup to v3
+  console.log(`msw-storybook-addon migrate — migrate an msw-storybook-addon v2 setup to v3
 
-Usage: npx msw-storybook-addon [options]
+Usage: npx msw-storybook-addon migrate [options]
 
   --glob <pattern>     Story-file glob. Default:
                        ${DEFAULT_GLOB}
@@ -141,7 +141,21 @@ function createLimiter(concurrency: number) {
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2))
+  const [command, ...argv] = process.argv.slice(2)
+
+  if (command === undefined || command === '--help' || command === '-h') {
+    printUsage()
+    process.exit(command === undefined ? 1 : 0)
+  }
+
+  if (command !== 'migrate') {
+    // eslint-disable-next-line no-console
+    console.error(`Unknown command "${command}".\n`)
+    printUsage()
+    process.exit(1)
+  }
+
+  const args = parseArgs(argv)
   const cwd = process.cwd()
   const configDir = resolve(cwd, args.configDir)
 

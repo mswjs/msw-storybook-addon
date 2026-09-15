@@ -10,7 +10,7 @@
     "./csf3": "./build/csf3.mjs"
   },
   "bin": {
-    "msw-storybook-migrate": "./build/migrate.mjs"
+    "msw-storybook-addon": "./build/migrate.mjs"
   },
   "storybook": {
     "displayName": "Mock Service Worker",
