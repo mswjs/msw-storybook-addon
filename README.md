@@ -47,17 +47,6 @@ export default {
 }
 ```
 
-Include the addon's types in your `tsconfig.json` for a type safe `parameters.msw` experience in your setup and stories:
-
-```json
-{
-  "include": [".storybook/preview.ts", "..."],
-  "compilerOptions": {
-    "types": ["msw-storybook-addon/csf3"]
-  }
-}
-```
-
 #### CSF Next
 
 If you are using the [CSF Next](https://storybook.js.org/docs/api/csf/csf-next) syntax (also known as CSF Factories), it's enough to import and call the addon function in `preview.ts`:
@@ -73,16 +62,23 @@ export default definePreview({
 
 > `parameters.msw` is not supported in CSF Next. It is preserved only for CSF 3.0 to make migration easier — use the `beforeEach` hook instead.
 
-Include the addon's types in your `tsconfig.json` for a type-safe experience in your setup and stories:
+#### Types
+
+The addon types `context.msw` (and, for CSF 3.0, `parameters.msw`) through module augmentation. That augmentation ships with every entrypoint of the addon, so it is applied to any TypeScript program that imports the addon.
+
+**CSF Next**: nothing to do. Your stories import `preview`, and `preview` imports the addon, so the types reach every story automatically.
+
+**CSF 3.0**, or any setup where the stories are compiled without `.storybook/preview.ts` (e.g. a `tsconfig.json` whose `include` doesn't cover the `.storybook` directory): reference the types explicitly in your `tsconfig.json`:
 
 ```json
 {
-  "include": [".storybook/preview.ts", "..."],
   "compilerOptions": {
     "types": ["msw-storybook-addon/types"]
   }
 }
 ```
+
+> In CSF 3.0, reference `msw-storybook-addon/csf3` instead — it types `parameters.msw` as well.
 
 #### Custom worker setup
 

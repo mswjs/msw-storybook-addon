@@ -24,6 +24,39 @@ export default defineConfig({
             tsconfig: './tests/csf3/tsconfig.json'
           }
         }
+      },
+      {
+        test: {
+          name: 'types-entry',
+          typecheck: {
+            enabled: true,
+            only: true,
+            include: ['tests/types-entry/**/*.test-d.ts'],
+            tsconfig: './tests/types-entry/tsconfig.json'
+          }
+        }
+      },
+      {
+        test: {
+          name: 'types-auto',
+          typecheck: {
+            enabled: true,
+            only: true,
+            include: ['tests/types-auto/**/*.test-d.ts'],
+            tsconfig: './tests/types-auto/tsconfig.json'
+          }
+        }
+      },
+      {
+        test: {
+          name: 'types-auto-csf3',
+          typecheck: {
+            enabled: true,
+            only: true,
+            include: ['tests/types-auto-csf3/**/*.test-d.ts'],
+            tsconfig: './tests/types-auto-csf3/tsconfig.json'
+          }
+        }
       }
     ]
   }

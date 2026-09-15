@@ -1,6 +1,6 @@
 import { isCommonAssetRequest } from 'msw'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
-import type { MswApi } from './shared'
+import type { MswApi } from './types'
 
 export type SetupFunction = () => MswApi | Promise<MswApi>
 

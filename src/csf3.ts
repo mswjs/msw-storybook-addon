@@ -1,7 +1,7 @@
 import type { LoaderFunction, Renderer } from 'storybook/internal/types'
 import type { AnyHandler } from 'msw'
 import { defaultSetup, type SetupFunction } from './addon'
-import type { MswApi } from './shared'
+import type { MswApi } from './types'
 
 export type MswParameter =
   | Array<AnyHandler>

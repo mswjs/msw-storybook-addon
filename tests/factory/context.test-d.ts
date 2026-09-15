@@ -4,6 +4,8 @@ import type { StoryContext } from 'storybook/internal/csf'
 import { definePreview, type StoryObj } from '@storybook/react-vite'
 
 it('extends the story context type', () => {
+  // This fixture references `msw-storybook-addon/types` explicitly in its
+  // `tsconfig.json`. See `tests/types-auto` for the import-only path.
   expectTypeOf<StoryContext>().toExtend<{ msw: MswApi }>()
 })
 
