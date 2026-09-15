@@ -104,7 +104,17 @@ jobs:
           name: build
           path: build
 
+      # A release publishes to npm before it pushes to Git. If main moved on
+      # since this run was triggered, that push is rejected and the release
+      # is only half-done, so let the run for the newer commit release instead.
+      - name: Get the current main
+        id: origin
+        run: |
+          git fetch origin main
+          echo "main=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+
       - name: Release
+        if: ${{ steps.origin.outputs.main == github.sha }}
         run: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
