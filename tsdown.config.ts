@@ -13,7 +13,7 @@ export default defineConfig([
     dts: true,
     clean: true
   },
-  // For the `msw-storybook-migrate` command
+  // For the `npx msw-storybook-addon migrate` command
   {
     entry: { migrate: './codemod/src/bin.ts' },
     outDir: './build',
