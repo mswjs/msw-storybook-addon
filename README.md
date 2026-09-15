@@ -64,15 +64,11 @@ export default definePreview({
 
 #### Types
 
-`parameters.msw` and `context.msw` are typed as soon as the addon is imported anywhere in your TypeScript project, such as `.storybook/preview.ts`. Make sure that file is covered by the `include` of the `tsconfig.json` your stories use:
+The addon types `context.msw` (and, for CSF 3.0, `parameters.msw`) through module augmentation. That augmentation ships with every entrypoint of the addon, so it is applied to any TypeScript program that imports the addon.
 
-```json
-{
-  "include": [".storybook/*", "..."]
-}
-```
+**CSF Next**: nothing to do. Your stories import `preview`, and `preview` imports the addon, so the types reach every story automatically.
 
-If your preview lives outside that project, reference the types directly instead:
+**CSF 3.0**, or any setup where the stories are compiled without `.storybook/preview.ts` (e.g. a `tsconfig.json` whose `include` doesn't cover the `.storybook` directory): reference the types explicitly in your `tsconfig.json`:
 
 ```json
 {

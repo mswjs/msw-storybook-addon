@@ -1,18 +1,13 @@
 import { isCommonAssetRequest } from 'msw'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
 import type { MswApi } from './shared'
+// Every public entrypoint pulls in this module, so importing the addon from
+// anywhere in a TypeScript program (e.g. `.storybook/preview.ts`) is enough to
+// type `context.msw`. The same augmentation is also exposed explicitly as
+// `msw-storybook-addon/types` for programs that never import the addon.
+import './types'
 
 export type SetupFunction = () => MswApi | Promise<MswApi>
-
-// Every public entrypoint pulls in this module, so importing the addon is
-// enough to type `context.msw`. `StoryContext` has an `[key: string]: any`
-// index signature — without the augmentation, `msw` silently resolves to
-// `any` instead of failing to compile.
-declare module 'storybook/internal/csf' {
-  interface StoryContext {
-    msw: MswApi
-  }
-}
 
 function isCommonStorybookRequest(request: Request) {
   return /\.eot$|\.mdx$|sb-common-assets|__webpack_hmr|iframe.html|sb-vite|@vite|@react-refresh|\/virtual:|\.stories\./.test(

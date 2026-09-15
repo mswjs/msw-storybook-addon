@@ -1,4 +1,7 @@
 {
   "extends": "../tsconfig.json",
-  "include": [".storybook/*", "."]
+  "include": [".storybook/*", "."],
+  "compilerOptions": {
+    "types": ["msw-storybook-addon/types"]
+  }
 }
