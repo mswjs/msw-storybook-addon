@@ -35,6 +35,14 @@ export function createPreviewAnnotations(
 ): ProjectAnnotations<Renderer> {
   return {
     async beforeEach(context) {
+      // Loaders run before `beforeEach`. If `mswLoader()` has already put a
+      // worker on the context (CSF 3.0 projects also get these annotations
+      // when the addon is listed in `main.ts`), reuse it instead of starting
+      // another one.
+      if (context.msw != null) {
+        return
+      }
+
       if (mswInstance == null) {
         mswInstance = await setup()
       }
