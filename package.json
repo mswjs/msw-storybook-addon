@@ -63,7 +63,7 @@
     "@types/react": "^19.2.17",
     "@vitest/browser-playwright": "4.1.10",
     "@vitest/coverage-v8": "4.1.10",
-    "msw": "^2.15.0",
+    "msw": "https://pkg.pr.new/msw@2692",
     "msw-storybook-addon": "link:.",
     "publint": "^0.3.22",
     "react": "^19.2.8",
