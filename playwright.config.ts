@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test'
 const DEFAULT_PORT = 56789
 const CSF3_PORT = 56790
 const CUSTOM_SETUP_PORT = 56791
+const MSW_VITE_PLUGIN_PORT = 56792
 
 export default defineConfig({
   testMatch: '*.test.ts',
@@ -34,6 +35,13 @@ export default defineConfig({
       use: {
         baseURL: `http://localhost:${CUSTOM_SETUP_PORT}/`
       }
+    },
+    {
+      name: 'msw-vite-plugin',
+      testDir: './tests/msw-vite-plugin',
+      use: {
+        baseURL: `http://localhost:${MSW_VITE_PLUGIN_PORT}/`
+      }
     }
   ],
   webServer: [
@@ -50,6 +58,11 @@ export default defineConfig({
     {
       command: `pnpm storybook:factory-custom-setup -p ${CUSTOM_SETUP_PORT}`,
       port: CUSTOM_SETUP_PORT,
+      reuseExistingServer: true
+    },
+    {
+      command: `pnpm storybook:msw-vite-plugin -p ${MSW_VITE_PLUGIN_PORT}`,
+      port: MSW_VITE_PLUGIN_PORT,
       reuseExistingServer: true
     }
   ]

@@ -1,6 +1,7 @@
+/// <reference types="msw/vite/client" preserve="true" />
 import type { SetupWorker } from 'msw/browser'
 
-export type MswApi = SetupWorker
+export type MswApi = SetupWorker | typeof import('virtual:msw').network
 
 // Every public entrypoint imports `MswApi` from this module, so the
 // augmentation below ships with each of them: importing the addon from

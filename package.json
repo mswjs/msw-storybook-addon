@@ -23,6 +23,7 @@
     "storybook": "storybook dev --config-dir ./tests/factory/.storybook",
     "storybook:csf3": "storybook dev --config-dir ./tests/csf3/.storybook",
     "storybook:factory-custom-setup": "storybook dev --config-dir ./tests/factory-custom-setup/.storybook",
+    "storybook:msw-vite-plugin": "storybook dev --config-dir ./tests/msw-vite-plugin/.storybook",
     "test:stories": "playwright test",
     "test:play": "vitest -c ./tests/factory/vitest.config.ts --project storybook",
     "test:ts": "vitest --typecheck",
