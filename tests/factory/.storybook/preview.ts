@@ -1,6 +1,6 @@
 import { definePreview } from '@storybook/react-vite'
 import addonMsw from 'msw-storybook-addon'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw/http'
 
 export default definePreview({
   addons: [addonMsw()],
