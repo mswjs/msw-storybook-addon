@@ -10,26 +10,17 @@ Mock API requests in Storybook with Mock Service Worker.
 npm i msw-storybook-addon -D
 ```
 
-> Make sure you have `msw@3.x` installed as a peer dependency.
+> Make sure you have `msw@2.x` installed as a peer dependency.
 
-### Register the Vite plugin
+### Generate the worker script
 
-Add the `msw/vite` plugin to your Storybook's Vite config. The plugin serves the worker script itself, so there is no `msw init` step and no static directory to configure:
+Next, use the MSW CLI to generate a worker script at the given path:
 
-```ts
-// .storybook/main.ts
-import { msw } from 'msw/vite'
-
-export default {
-  framework: '@storybook/react-vite',
-  addons: ['msw-storybook-addon'],
-  viteFinal(config) {
-    config.plugins ??= []
-    config.plugins.push(msw())
-    return config
-  }
-}
+```sh
+npx msw init ./public --save
 ```
+
+> Replace `./public` with the path to your static directory of Storybook.
 
 ### Configure Storybook
 
@@ -89,23 +80,23 @@ The addon types `context.msw` (and, for CSF 3.0, `parameters.msw`) through modul
 
 > In CSF 3.0, reference `msw-storybook-addon/csf3` instead — it types `parameters.msw` as well.
 
-#### Custom network setup
+#### Custom worker setup
 
-By default, the addon enables the network of the `msw/vite` plugin for you: it ignores common asset and Storybook-internal requests and warns about the other unhandled requests. To customize that behavior (e.g. `onUnhandledFrame` or initial handlers), provide a setup function that configures the network, enables it, and returns it.
+By default, the addon creates and starts the worker for you: it starts quietly and ignores common asset and Storybook-internal requests. To customize that behavior (e.g. `worker.start()` options or initial handlers), provide a setup function that creates the worker, starts it, and returns it.
 
 In CSF 3.0, pass it to `mswLoader`:
 
 ```ts
 // .storybook/preview.ts
+import { setupWorker } from 'msw/browser'
 import { mswLoader } from 'msw-storybook-addon/csf3'
 
 export default {
   loaders: [
     mswLoader(async () => {
-      const { network } = await import('virtual:msw')
-      network.configure({ onUnhandledFrame: 'bypass' })
-      await network.enable()
-      return network
+      const worker = setupWorker()
+      await worker.start({ onUnhandledRequest: 'bypass' })
+      return worker
     })
   ]
 }
@@ -115,21 +106,21 @@ In CSF Next, pass it to `addonMsw`:
 
 ```ts
 // .storybook/preview.ts
+import { setupWorker } from 'msw/browser'
 import addonMsw from 'msw-storybook-addon'
 
 export default definePreview({
   addons: [
     addonMsw(async () => {
-      const { network } = await import('virtual:msw')
-      network.configure({ onUnhandledFrame: 'bypass' })
-      await network.enable()
-      return network
+      const worker = setupWorker()
+      await worker.start({ onUnhandledRequest: 'bypass' })
+      return worker
     })
   ],
 })
 ```
 
-> Handlers passed to `network.configure()` act as initial handlers and survive the automatic handler reset between stories.
+> Handlers passed to `setupWorker()` act as initial handlers and survive the automatic handler reset between stories.
 
 ### Provide handlers
 

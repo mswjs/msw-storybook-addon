@@ -1,5 +1,5 @@
 import { it, expectTypeOf } from 'vitest'
-type Network = typeof import('virtual:msw').network
+import type { SetupWorker } from 'msw/browser'
 import type { StoryObj } from '@storybook/react-vite'
 
 // A project that never imports the addon: no preview here, and the `include`
@@ -8,7 +8,7 @@ import type { StoryObj } from '@storybook/react-vite'
 it('types the story context through "msw-storybook-addon/types"', () => {
   const story: StoryObj = {
     beforeEach({ msw }) {
-      expectTypeOf(msw).toEqualTypeOf<Network>()
+      expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
     }
   }
   expectTypeOf(story).toExtend<StoryObj>()

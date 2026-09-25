@@ -1,11 +1,6 @@
-/// <reference types="msw/vite/client" preserve="true" />
+import type { SetupWorker } from 'msw/browser'
 
-/**
- * The network instance exposed on `context.msw`. It is the network of the
- * `msw/vite` plugin (`virtual:msw`), so the plugin must be registered in the
- * Vite config of the Storybook project.
- */
-export type MswApi = typeof import('virtual:msw').network
+export type MswApi = SetupWorker
 
 // Every public entrypoint imports `MswApi` from this module, so the
 // augmentation below ships with each of them: importing the addon from

@@ -1,5 +1,5 @@
 import { it, expectTypeOf } from 'vitest'
-type Network = typeof import('virtual:msw').network
+import type { SetupWorker } from 'msw/browser'
 import type { Parameters, StoryContext } from 'storybook/internal/csf'
 import type { StoryObj } from '@storybook/react-vite'
 import type { MswParameter } from 'msw-storybook-addon/csf3'
@@ -8,7 +8,7 @@ import type { MswParameter } from 'msw-storybook-addon/csf3'
 // directory is in `include`, and the preview imports `msw-storybook-addon/csf3`.
 // That import alone augments both the story context and the parameters.
 it('extends the story context type by importing the "csf3" entry', () => {
-  expectTypeOf<StoryContext>().toExtend<{ msw: Network }>()
+  expectTypeOf<StoryContext>().toExtend<{ msw: SetupWorker }>()
 })
 
 it('augments the "parameters" type by importing the "csf3" entry', () => {
@@ -21,7 +21,7 @@ it('exposes "msw" in the story "beforeEach" hook', () => {
       msw: []
     },
     beforeEach({ msw, parameters }) {
-      expectTypeOf(msw).toEqualTypeOf<Network>()
+      expectTypeOf(msw).toEqualTypeOf<SetupWorker>()
       expectTypeOf(parameters).toExtend<{ msw?: MswParameter }>()
     }
   }
