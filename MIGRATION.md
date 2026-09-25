@@ -2,6 +2,7 @@
 
 - [From 2.x.x to 3.x.x](#from-2xx-to-3xx)
   - [Storybook required version is now 9 or higher](#storybook-required-version-is-now-9-or-higher)
+  - [MSW required version is now 3 or higher and the worker script is served by msw/vite](#msw-required-version-is-now-3-or-higher-and-the-worker-script-is-served-by-mswvite)
   - [initialize is removed in favor of a custom setup function](#initialize-is-removed-in-favor-of-a-custom-setup-function)
   - [mswLoader moved to msw-storybook-addon/csf3 and is now a factory](#mswloader-moved-to-msw-storybook-addoncsf3-and-is-now-a-factory)
   - [mswDecorator is removed](#mswdecorator-is-removed)
@@ -27,16 +28,37 @@ It rewrites your preview and main config, and migrates `parameters.msw` to `befo
 
 The addon now requires Storybook 9.0.0 or higher.
 
+### MSW required version is now 3 or higher and the worker script is served by msw/vite
+
+The addon now requires `msw@3` and relies on its Vite plugin. Register `msw/vite` in your Storybook's Vite config, then delete the `mockServiceWorker.js` you generated with `msw init` and the `staticDirs`/`msw.workerDirectory` entries that pointed at it — the plugin serves the script itself:
+
+```diff
+// .storybook/main.ts
++import { msw } from 'msw/vite'
+
+export default {
+  framework: '@storybook/react-vite',
+  addons: ['msw-storybook-addon'],
+-  staticDirs: ['../public'],
++  viteFinal(config) {
++    config.plugins ??= []
++    config.plugins.push(msw())
++    return config
++  }
+}
+```
+
+`context.msw` is now the network instance of the plugin (`virtual:msw`) instead of a `setupWorker()` worker. `use`, `resetHandlers`, `restoreHandlers`, `listHandlers` and `events` are unchanged; `start`/`stop` are replaced by `enable`/`disable`.
+
 ### initialize is removed in favor of a custom setup function
 
-The addon now creates and starts the worker for you, with sensible defaults: it starts quietly and ignores common asset and Storybook-internal requests, so custom `onUnhandledRequest` functions written to silence those warnings are likely not needed anymore.
+The addon now enables the network for you, with sensible defaults: it ignores common asset and Storybook-internal requests, so custom `onUnhandledRequest` functions written to silence those warnings are likely not needed anymore.
 
-If you passed custom options or initial handlers to `initialize`, pass a setup function to `mswLoader` instead. The setup function creates the worker, starts it with your options, and returns it:
+If you passed custom options or initial handlers to `initialize`, pass a setup function to `mswLoader` instead. The setup function configures the network with your options, enables it, and returns it:
 
 ```diff
 // .storybook/preview.js
 -import { initialize, mswLoader } from 'msw-storybook-addon'
-+import { setupWorker } from 'msw/browser'
 +import { mswLoader } from 'msw-storybook-addon/csf3'
 
 -initialize({ onUnhandledRequest: 'bypass' })
@@ -45,9 +67,10 @@ const preview = {
 -  loaders: [mswLoader]
 +  loaders: [
 +    mswLoader(async () => {
-+      const worker = setupWorker()
-+      await worker.start({ onUnhandledRequest: 'bypass' })
-+      return worker
++      const { network } = await import('virtual:msw')
++      network.configure({ onUnhandledFrame: 'bypass' })
++      await network.enable()
++      return network
 +    })
 +  ]
 }
@@ -80,37 +103,26 @@ The loader API is deprecated and will be removed in the next major release. It k
 
 ### Node.js support is dropped
 
-The addon now always runs MSW in the browser, so you can import `msw/browser` unconditionally in your setup function.
+The addon now always runs MSW in the browser through the `msw/vite` plugin.
 
-If you render stories in Node.js and relied on `msw/node`, you can keep doing so with a custom setup function: the addon only interacts with the instance you return through methods that `setupServer` also implements. Decide which setup to use at runtime:
+If you render stories in Node.js, keep using a custom setup function: `virtual:msw` resolves to a Node.js network in Vite's server environment, and the addon only interacts with the instance you return through methods both networks implement:
 
 ```ts
 // .storybook/preview.ts
-import type { SetupWorker } from 'msw/browser'
 import { mswLoader } from 'msw-storybook-addon/csf3'
 
 const preview = {
   loaders: [
     mswLoader(async () => {
-      if (typeof document === 'undefined') {
-        const { setupServer } = await import('msw/node')
-        const server = setupServer()
-        server.listen()
-        return server as unknown as SetupWorker
-      }
-
-      const { setupWorker } = await import('msw/browser')
-      const worker = setupWorker()
-      await worker.start()
-      return worker
+      const { network } = await import('virtual:msw')
+      await network.enable()
+      return network
     })
   ]
 }
 
 export default preview
 ```
-
-> The setup function is typed to return a browser worker, so the Node.js branch needs a type cast.
 
 ### parameters.msw is deprecated in favor of beforeEach
 

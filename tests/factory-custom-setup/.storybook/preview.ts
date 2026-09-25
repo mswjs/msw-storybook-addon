@@ -5,22 +5,22 @@ import { http, HttpResponse } from 'msw/http'
 export default definePreview({
   addons: [
     addonMsw(async () => {
-      const { setupWorker } = await import('msw/browser')
+      const { network } = await import('virtual:msw')
 
-      const worker = setupWorker(
-        http.get('https://api.example.com/user', () => {
-          return HttpResponse.json({
-            name: 'Custom Setup User (custom setup)'
+      network.configure({
+        handlers: [
+          http.get('https://api.example.com/user', () => {
+            return HttpResponse.json({
+              name: 'Custom Setup User (custom setup)'
+            })
           })
-        })
-      )
-
-      await worker.start({
-        quiet: true,
-        onUnhandledRequest: 'bypass'
+        ],
+        onUnhandledFrame: 'bypass'
       })
 
-      return worker
+      await network.enable()
+
+      return network
     })
   ]
 })

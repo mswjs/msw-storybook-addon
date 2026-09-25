@@ -1,3 +1,5 @@
+/// <reference types="msw/vite/client" preserve="true" />
+import { HttpNetworkFrame } from 'msw/experimental'
 import { isCommonAssetRequest } from 'msw/utils/is-common-asset-request'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
 import type { MswApi } from './types'
@@ -10,22 +12,34 @@ function isCommonStorybookRequest(request: Request) {
   )
 }
 
+/**
+ * Enable the network provided by the `msw/vite` plugin (`virtual:msw`).
+ * The plugin serves the worker script itself, so there is nothing to
+ * generate with `msw init` and no static directory to configure.
+ */
 export const defaultSetup: SetupFunction = async () => {
-  const { setupWorker } = await import('msw/browser')
-  const worker = setupWorker()
+  const { network } = await import('virtual:msw')
 
-  await worker.start({
-    quiet: true,
-    onUnhandledRequest(request, print) {
-      if (isCommonAssetRequest(request) || isCommonStorybookRequest(request)) {
-        return
+  network.configure({
+    onUnhandledFrame({ frame, defaults }) {
+      if (frame instanceof HttpNetworkFrame) {
+        const { request } = frame.data
+
+        if (
+          isCommonAssetRequest(request) ||
+          isCommonStorybookRequest(request)
+        ) {
+          return
+        }
       }
 
-      print.warning()
+      defaults.warn()
     }
   })
 
-  return worker
+  await network.enable()
+
+  return network
 }
 
 let mswInstance: MswApi | undefined

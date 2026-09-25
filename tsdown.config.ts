@@ -11,7 +11,9 @@ export default defineConfig([
     outDir: './build',
     format: ['esm'],
     dts: true,
-    clean: true
+    clean: true,
+    // Provided by the `msw/vite` plugin in the consumer project.
+    external: ['virtual:msw']
   },
   // For the `npx msw-storybook-addon migrate` command
   {

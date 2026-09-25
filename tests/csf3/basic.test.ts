@@ -1,4 +1,11 @@
+import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { test, expect } from '@playwright/test'
+
+const mswWorkerScript = fs.readFileSync(
+  fileURLToPath(import.meta.resolve('msw/mockServiceWorker.js')),
+  'utf8'
+)
 
 test('uses the handlers from preview', async ({ page }) => {
   await page.goto('/')
@@ -47,4 +54,14 @@ test('supports overriding a single key of the handlers record', async ({
   await expect(page.getByRole('paragraph')).toHaveText(
     'Alice Sunwell (story parameters)'
   )
+})
+
+test('serves the worker script through the msw/vite plugin', async ({
+  request
+}) => {
+  const response = await request.get('/mockServiceWorker.js')
+
+  expect(response.status()).toBe(200)
+  expect(response.headers()['content-type']).toMatch(/javascript/)
+  await expect(response.text()).resolves.toBe(mswWorkerScript)
 })
