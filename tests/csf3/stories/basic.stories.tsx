@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { http, HttpResponse, delay } from 'msw'
+import { http, HttpResponse } from 'msw/http'
+import { delay } from 'msw/utils/delay'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
 

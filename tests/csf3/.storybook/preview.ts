@@ -1,5 +1,5 @@
 import type { Preview } from '@storybook/react-vite'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw/http'
 import { mswLoader } from 'msw-storybook-addon/csf3'
 
 export default {

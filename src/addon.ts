@@ -1,4 +1,4 @@
-import { isCommonAssetRequest } from 'msw'
+import { isCommonAssetRequest } from 'msw/utils/is-common-asset-request'
 import type { ProjectAnnotations, Renderer } from 'storybook/internal/types'
 import type { MswApi } from './types'
 
@@ -6,23 +6,29 @@ export type SetupFunction = () => MswApi | Promise<MswApi>
 
 function isCommonStorybookRequest(request: Request) {
   return /\.eot$|\.mdx$|sb-common-assets|__webpack_hmr|iframe.html|sb-vite|@vite|@react-refresh|\/virtual:|\.stories\./.test(
-    request.url,
+    request.url
   )
 }
 
 export const defaultSetup: SetupFunction = async () => {
   const { setupWorker } = await import('msw/browser')
+  const { HttpNetworkFrame } = await import('msw/experimental')
+
   const worker = setupWorker()
 
   await worker.start({
     quiet: true,
-    onUnhandledRequest(request, print) {
-      if (isCommonAssetRequest(request) || isCommonStorybookRequest(request)) {
+    onUnhandledFrame({ frame, defaults }) {
+      if (
+        frame instanceof HttpNetworkFrame &&
+        (isCommonAssetRequest(frame.data.request) ||
+          isCommonStorybookRequest(frame.data.request))
+      ) {
         return
       }
 
-      print.warning()
-    },
+      defaults.warn()
+    }
   })
 
   return worker
@@ -31,7 +37,7 @@ export const defaultSetup: SetupFunction = async () => {
 let mswInstance: MswApi | undefined
 
 export function createPreviewAnnotations(
-  setup: SetupFunction = defaultSetup,
+  setup: SetupFunction = defaultSetup
 ): ProjectAnnotations<Renderer> {
   return {
     async beforeEach(context) {
@@ -52,6 +58,6 @@ export function createPreviewAnnotations(
       return () => {
         context.msw?.resetHandlers()
       }
-    },
+    }
   }
 }

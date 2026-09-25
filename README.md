@@ -132,7 +132,7 @@ Provide request handlers in `preview.ts` to define the network behaviors that af
 
 ```ts
 // .storybook/preview.ts
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw/http'
 
 export default {
   beforeEach({ msw }) {

@@ -137,7 +137,7 @@ describe('transformPreview — CSF 3.0', () => {
 
   it('folds initialize(options, initialHandlers) — array form spreads into setupWorker', () => {
     const src = dedent`
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
       import { initialize, mswLoader } from 'msw-storybook-addon'
 
       initialize({ quiet: true }, [
@@ -150,7 +150,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { setupWorker } from "msw/browser";
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
       import { mswLoader } from "msw-storybook-addon/csf3";
 
       export default { loaders: [mswLoader(async () => {
@@ -351,7 +351,7 @@ describe('transformPreview — parameters opt-in', () => {
   it('does not touch parameters.msw without the option', () => {
     const src = dedent`
       import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default {
         loaders: [mswLoader()],
@@ -368,7 +368,7 @@ describe('transformPreview — parameters opt-in', () => {
   it('migrates preview-level parameters.msw (array form) to beforeEach', () => {
     const src = dedent`
       import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default {
         loaders: [mswLoader()],
@@ -381,7 +381,7 @@ describe('transformPreview — parameters opt-in', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default {
         loaders: [mswLoader()],
@@ -396,7 +396,7 @@ describe('transformPreview — parameters opt-in', () => {
   it('migrates the handlers record form and keeps other parameters', () => {
     const src = dedent`
       import { initialize, mswLoader } from 'msw-storybook-addon'
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       initialize()
 
@@ -416,7 +416,7 @@ describe('transformPreview — parameters opt-in', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from "msw-storybook-addon/csf3";
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default {
         loaders: [mswLoader()],
@@ -484,7 +484,7 @@ describe('transformPreview — parameters opt-in', () => {
 
   it('warns instead of overwriting an existing beforeEach', () => {
     const src = dedent`
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default {
         beforeEach() {},
@@ -795,7 +795,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     const src = dedent`
       import { definePreview } from '@storybook/react-vite'
       import addonMsw from 'msw-storybook-addon'
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default definePreview({
         addons: [addonMsw()],
@@ -809,7 +809,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { definePreview } from '@storybook/react-vite'
       import addonMsw from 'msw-storybook-addon'
-      import { http, HttpResponse } from 'msw'
+      import { http, HttpResponse } from 'msw/http'
 
       export default definePreview({
         addons: [addonMsw()],
