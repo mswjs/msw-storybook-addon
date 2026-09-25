@@ -1,5 +1,5 @@
 import { msw } from 'msw/vite'
 
 export default {
-  plugins: [msw()]
+  plugins: [msw({ mode: 'worker-only' })]
 }
