@@ -7,7 +7,8 @@
     ".": "./build/index.mjs",
     "./preview": "./build/preview.mjs",
     "./types": "./build/types.d.mts",
-    "./csf3": "./build/csf3.mjs"
+    "./csf3": "./build/csf3.mjs",
+    "./package.json": "./package.json"
   },
   "bin": {
     "msw-storybook-addon": "./build/migrate.mjs"
