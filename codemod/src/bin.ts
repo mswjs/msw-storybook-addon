@@ -311,8 +311,10 @@ async function main(): Promise<void> {
 
   flushPhase()
 
+  // Storybook 9's logger has no `muted` color.
+  const muted = CLI_COLORS.muted ?? ((text: string) => text)
   logger.log(
-    CLI_COLORS.muted(
+    muted(
       `${transformed.length} file(s) ${args.dryRun ? 'would be ' : ''}updated, ${unmodified} already up to date`
     )
   )
