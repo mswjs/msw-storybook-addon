@@ -18,9 +18,23 @@ import { formatFileContent, globToRegexp } from 'storybook/internal/common'
 import { CLI_COLORS, logger } from 'storybook/internal/node-logger'
 import { dedent } from 'ts-dedent'
 
-import { transformStory } from './transforms/stories'
-import { transformPreview } from './transforms/preview'
-import { transformMain } from './transforms/main'
+/**
+ * The transforms edit files through the ESTree-based csf-tools of
+ * Storybook 11. They are loaded only once the installed Storybook is known
+ * to have them, as importing them on an older one fails before any code
+ * runs.
+ */
+async function loadTransforms() {
+  const csfTools = await import('storybook/internal/csf-tools')
+  if (typeof csfTools.parseModule !== 'function') return null
+  const [{ transformStory }, { transformPreview }, { transformMain }] =
+    await Promise.all([
+      import('./transforms/stories'),
+      import('./transforms/preview'),
+      import('./transforms/main')
+    ])
+  return { transformStory, transformPreview, transformMain }
+}
 
 const DEFAULT_GLOB = '**/*.{stories,story}.{js,jsx,ts,tsx,mjs,mjsx,mts,mtsx}'
 const MIGRATION_URL =
@@ -156,6 +170,15 @@ async function main(): Promise<void> {
   }
 
   const args = parseArgs(argv)
+
+  const transforms = await loadTransforms()
+  if (!transforms) {
+    logger.error(
+      '`migrate` needs Storybook 11. Upgrade Storybook first, or run `npx -p storybook@10 -p msw-storybook-addon@3.0.3 msw-storybook-addon migrate` on your current Storybook.'
+    )
+    process.exit(1)
+  }
+  const { transformStory, transformPreview, transformMain } = transforms
   const cwd = process.cwd()
   const configDir = resolve(cwd, args.configDir)
 
