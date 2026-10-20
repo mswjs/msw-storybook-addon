@@ -356,6 +356,36 @@ describe('transformPreview — CSF 3.0', () => {
 })
 
 describe('transformPreview — edits csf-tools refuses', () => {
+  it('warns instead of dropping initialize when loaders is not an array', () => {
+    const src = dedent`
+      import { initialize } from 'msw-storybook-addon'
+      import { sharedLoaders } from './loaders'
+      initialize({ quiet: true })
+      export default { loaders: sharedLoaders }
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toMatchInlineSnapshot(`
+      [
+        "\`loaders\` is not an array literal; you will need to add \`mswLoader()\` to it yourself.",
+      ]
+    `)
+  })
+
+  it('warns when a spread in the preview could hold a beforeEach', () => {
+    const src = dedent`
+      import { shared } from './shared'
+      export default { ...shared, parameters: { msw: [handler] } }
+    `
+    const result = transformPreview(src, { migrateParameters: true })
+    expect(result.code).toBeNull()
+    expect(result.warnings).toMatchInlineSnapshot(`
+      [
+        "A spread in the preview could hold a \`beforeEach\`; you will need to migrate \`parameters.msw\` to \`beforeEach({ msw })\` yourself.",
+      ]
+    `)
+  })
+
   it('leaves a preview alone when a spread sits next to the field', () => {
     const src = dedent`
       import { initialize, mswDecorator } from 'msw-storybook-addon'
@@ -564,6 +594,27 @@ describe('transformPreview — parameters opt-in', () => {
 })
 
 describe('transformPreview — CSF Next (definePreview)', () => {
+  it('folds initialize options into a bare addonMsw entry', () => {
+    const src = dedent`
+      import { definePreview } from '@storybook/react-vite'
+      import addonMsw, { initialize } from 'msw-storybook-addon'
+      initialize({ quiet: true })
+      export default definePreview({ addons: [addonMsw] })
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import { definePreview } from '@storybook/react-vite'
+      import addonMsw from 'msw-storybook-addon'
+      import { setupWorker } from 'msw/browser'
+      export default definePreview({ addons: [addonMsw(async () => {
+        const worker = setupWorker()
+        await worker.start({ quiet: true })
+        return worker
+      })] })"
+    `)
+  })
+
   it('leaves a definePreview file with no msw wiring untouched', () => {
     const src = dedent`
       import { definePreview } from '@storybook/react-vite'

@@ -252,10 +252,7 @@ function migrateCsf3(
   if (!mswLoader && !mswDecorator && !initializeCall) return true
 
   const setup = initializeCall?.setup ?? null
-  if (!ensureLoaderCall(parsed, mswLoader ?? 'mswLoader', setup)) {
-    warnings.push(
-      '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. You will need to merge them yourself.'
-    )
+  if (!ensureLoaderCall(parsed, mswLoader ?? 'mswLoader', setup, warnings)) {
     return false
   }
 
@@ -275,7 +272,10 @@ function fieldValue(
   return findObjectProperty(parsed._exportsObject, name)?.value
 }
 
-/** Whether `node` is the identifier `name`. */
+/**
+ * Whether `node` is the identifier `name`. An undefined `name`, an import
+ * the file does not have, matches nothing.
+ */
 function isIdentifier(
   node: ESTreeNode | null | undefined,
   name: string | undefined
@@ -547,14 +547,12 @@ function setupFunction(
 
 // -------- CSF 3.0: ensure `loaders: [mswLoader(...)]`
 
-/**
- * Returns false when the existing `mswLoader(...)` already receives a
- * setup function, so `setup` cannot be passed to it.
- */
+/** Returns false, after adding a warning, when that cannot be done. */
 function ensureLoaderCall(
   parsed: ConfigFile,
   loaderName: string,
-  setup: string | null
+  setup: string | null,
+  warnings: string[]
 ): boolean {
   const call = callText(loaderName, setup ? [setup] : [], parsed._editor.indent)
   // The field as written: an identifier is not followed into a shared list.
@@ -565,7 +563,12 @@ function ensureLoaderCall(
     parsed.set(['loaders'], parseExpression(`[${call}]`))
     return true
   }
-  if (loaders.type !== 'ArrayExpression') return true
+  if (loaders.type !== 'ArrayExpression') {
+    warnings.push(
+      `\`loaders\` is not an array literal; you will need to add \`${loaderName}()\` to it yourself.`
+    )
+    return false
+  }
 
   const entry = loaders.elements.find((el) => isRef(el, loaderName))
   if (!entry) {
@@ -575,7 +578,12 @@ function ensureLoaderCall(
     replaceNode(parsed, entry, call)
   } else if (setup) {
     // `loaders: [mswLoader()]`
-    if (entry.arguments.length > 0) return false
+    if (entry.arguments.length > 0) {
+      warnings.push(
+        '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. You will need to merge them yourself.'
+      )
+      return false
+    }
     addFirstArgument(parsed, entry, setup)
   }
   return true
@@ -650,7 +658,14 @@ function ensureFactoriesAddon(
     isRef(el, addonDefault)
   )
   if (registered) {
-    if (setup && registered.type === 'CallExpression') {
+    if (setup && registered.type === 'Identifier') {
+      // `addons: [addonMsw]`
+      replaceNode(
+        parsed,
+        registered,
+        callText(registered.name, [setup], editor.indent)
+      )
+    } else if (setup && registered.type === 'CallExpression') {
       if (registered.arguments.length > 0) {
         warnings.push(
           'A setup function could not be folded: the existing `addonMsw(...)` already receives one. You will need to merge them yourself.'
@@ -660,14 +675,7 @@ function ensureFactoriesAddon(
       addFirstArgument(parsed, registered, setup)
     }
     // A leftover injected namespace entry still goes.
-    const addons = addonsArrayOf(parsed)
-    const leftover = addons?.elements.filter((el) =>
-      isIdentifier(el, previewNamespace)
-    )
-    if (addons && leftover?.length) {
-      removeFromList(editor, arrayList(editor, addons), leftover)
-      editor.commit()
-    }
+    stripMswRef(parsed, 'addons', previewNamespace)
     return true
   }
 
@@ -736,13 +744,17 @@ function migratePreviewParameters(
     return
   }
 
-  // A spread in the preview could hold a `beforeEach` as well.
-  if (
-    handlers.length > 0 &&
-    parsed.inspect(['beforeEach']).kind !== 'missing'
-  ) {
+  const beforeEach =
+    handlers.length > 0 ? parsed.inspect(['beforeEach']).kind : 'missing'
+  if (beforeEach === 'value') {
     warnings.push(
       'The preview already defines `beforeEach`; you will need to move the `parameters.msw` handlers into it yourself.'
+    )
+    return
+  }
+  if (beforeEach === 'unreadable') {
+    warnings.push(
+      'A spread in the preview could hold a `beforeEach`; you will need to migrate `parameters.msw` to `beforeEach({ msw })` yourself.'
     )
     return
   }
