@@ -9,12 +9,34 @@
  *   - `{ handlers: Record<string, RequestHandler | RequestHandler[]> }`
  * Anything else (custom keys, dynamic values, etc.) is skipped while
  * the user gets a warning to migrate by hand.
- * CSF3 (story-as-object) and CSF2 (post-export `Story.parameters = ...` annotation) are both handled.
+ * CSF3 (story-as-object), CSF factories and CSF2 (post-export
+ * `Story.parameters = ...` annotation) are handled.
+ *
+ * The edits go through Storybook's csf-tools: `CsfFile.objects()` gives an
+ * editor per meta, story and CSF2 annotation, and code nobody edits stays
+ * as written.
  */
 
-import * as t from '@babel/types'
-import { type CsfFile, loadCsf } from 'storybook/internal/csf-tools'
-import { parse, print } from './ast'
+import {
+  arrayList,
+  type CsfFile,
+  type CsfObject,
+  type CsfObjectTarget,
+  type ESTree as E,
+  type ESTreeNode,
+  itemText,
+  lineIndent,
+  loadCsf,
+  parseExpression,
+  placeableTextOf,
+  printCsf,
+  reindent,
+  removeStatement,
+  type SourceEditor,
+  statementSpan,
+  staticKey,
+  unwrapExpression
+} from 'storybook/internal/csf-tools'
 
 /** Why a story was left alone. The CLI phrases its guidance per reason. */
 export type SkipReason = 'unrecognized-shape' | 'existing-before-each'
@@ -32,163 +54,138 @@ export interface StoryTransformResult {
   skippedStories: SkippedStory[]
 }
 
+const MSW_PATH = ['parameters', 'msw']
+
 export function transformStory(source: string): StoryTransformResult {
   const skipped: SkippedStory[] = []
-  // Storybook's CSF parser decides which exports are stories and, for CSF
-  // factories, which variable is the meta. Only those names are read from
-  // `parsed`; everything else happens on the codemod's own AST (see ./ast),
-  // as the nodes Storybook exposes differ between Storybook 10 (Babel) and
-  // 11 (ESTree).
   let parsed: CsfFile
-  let ast: t.File
   try {
     parsed = loadCsf(source, {
       makeTitle: (title?: string) => title || 'default'
     }).parse()
-    ast = parse(source)
   } catch {
     // Not parseable as CSF — leave alone.
     return { code: null, skippedStories: [] }
   }
 
   let changed = false
-
-  // CSF3: meta export + each story export are object literals — walk them.
-  for (const name of Object.keys(parsed._storyExports)) {
-    const obj = getStoryObject(findStoryDeclarator(ast, name))
-    if (!obj) continue
-    const result = migrateMswOnObject(obj, name)
+  for (const object of parsed.objects()) {
+    const result =
+      object.target.kind === 'story-annotation'
+        ? migrateCsf2Annotation(parsed, object, object.target)
+        : migrateMswOnObject(parsed, object)
     if (result === 'changed') changed = true
-    else if (result !== 'noop') skipped.push({ story: name, reason: result })
-  }
-  // CSF3 metas are default-exported; CSF factory metas are plain variables
-  // (`const meta = preview.meta({...})`) tracked only by name in
-  // `_metaVariableName`.
-  const metaNode =
-    ast.program.body.find((stmt) => t.isExportDefaultDeclaration(stmt)) ??
-    (parsed._metaVariableName
-      ? findVariableDeclarator(ast, parsed._metaVariableName)
-      : undefined)
-  if (metaNode) {
-    const meta = resolveStoryObject(ast, metaNode)
-    if (meta) {
-      const result = migrateMswOnObject(meta, 'meta')
-      if (result === 'changed') changed = true
-      else if (result !== 'noop') skipped.push({ story: 'meta', reason: result })
-    }
-  }
-
-  // CSF2: `Story.parameters = { msw: ... }` annotation statements at the
-  // top level of the file. The RHS of that assignment IS the parameters
-  // object — not a story object — so we need a different emit path that
-  // produces a parallel `Story.beforeEach = ({ msw }) => { msw.use(...) }`
-  // annotation rather than mutating an enclosing object literal.
-  for (let i = ast.program.body.length - 1; i >= 0; i--) {
-    const stmt = ast.program.body[i]
-    if (!isCsf2Annotation(stmt, parsed._storyExports)) continue
-    const assign = (stmt as t.ExpressionStatement)
-      .expression as t.AssignmentExpression
-    const left = assign.left as t.MemberExpression
-    const storyName = (left.object as t.Identifier).name
-    const propName =
-      (t.isIdentifier(left.property) && left.property.name) ||
-      (t.isStringLiteral(left.property) && left.property.value) ||
-      null
-    if (propName !== 'parameters' && propName !== 'story') continue
-    if (!t.isObjectExpression(assign.right)) continue
-    const result = migrateCsf2Annotation(
-      ast,
-      stmt as t.ExpressionStatement,
-      storyName,
-      i,
-      propName
-    )
-    if (result === 'changed') changed = true
-    else if (result !== 'noop') skipped.push({ story: storyName, reason: result })
+    else if (result !== 'noop')
+      skipped.push({ story: storyName(object.target), reason: result })
   }
 
   if (!changed) {
     return { code: null, skippedStories: skipped }
   }
-  return { code: print(ast), skippedStories: skipped }
+  return { code: printCsf(parsed).code, skippedStories: skipped }
+}
+
+function storyName(target: CsfObjectTarget): string {
+  return 'exportName' in target ? target.exportName : 'meta'
 }
 
 // -------- per-object migration
 
 type MigrationOutcome = 'changed' | 'noop' | SkipReason
 
+/** CSF3 and CSF factory metas and stories: object literals. */
 function migrateMswOnObject(
-  obj: t.ObjectExpression,
-  storyName: string
+  parsed: CsfFile,
+  object: CsfObject
 ): MigrationOutcome {
-  const parametersProp = findObjectProperty(obj, 'parameters')
-  if (!parametersProp || !t.isObjectExpression(parametersProp.value))
-    return 'noop'
-  const parameters = parametersProp.value
-  const mswProp = findObjectProperty(parameters, 'msw')
-  if (!mswProp) return 'noop'
-
-  const extracted = extractHandlers(mswProp.value)
-  if (!extracted) {
+  if (!object.get(MSW_PATH)) return 'noop'
+  const mswValue = mswValueOf(objectNodeOf(parsed, object.target))
+  const handlers = mswValue && extractHandlers(parsed._editor, mswValue)
+  if (!handlers) {
     // Unrecognised shape — leave the file alone for THIS story.
     return 'unrecognized-shape'
   }
 
   // Refuse to silently overwrite an existing beforeEach. The user merges
   // the handlers into it themselves; we'd rather skip than blow away their
-  // code. `beforeEach` can appear as either a regular property
-  // (`beforeEach: () => {}`) or the method shorthand (`beforeEach() {}`);
-  // check for both.
-  if (extracted.length > 0 && hasAnyProperty(obj, 'beforeEach'))
+  // code. `get` reads both `beforeEach: () => {}` and `beforeEach() {}`.
+  if (handlers.length > 0 && object.get(['beforeEach']))
     return 'existing-before-each'
 
-  if (extracted.length > 0) {
-    const beforeEachProp = buildBeforeEachProperty(extracted)
-    // Inserted BEFORE parameters so the migrated file reads naturally.
-    const insertIdx = obj.properties.indexOf(parametersProp)
-    obj.properties.splice(insertIdx, 0, beforeEachProp)
-  }
+  // Strip `msw` from `parameters`; `parameters` goes as well once empty.
   // An empty handler list (`msw: []`) has nothing to carry over — the
   // parameter is simply dropped.
-
-  // Strip `msw` from `parameters`; drop `parameters` itself if empty.
-  parameters.properties = parameters.properties.filter((p) => p !== mswProp)
-  if (parameters.properties.length === 0) {
-    obj.properties = obj.properties.filter((p) => p !== parametersProp)
+  if (!object.remove(MSW_PATH).ok) return 'unrecognized-shape'
+  if (handlers.length > 0) {
+    object.set(
+      ['beforeEach'],
+      parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
+    )
   }
   return 'changed'
 }
 
+/** The object literal a meta or story editor edits. */
+export function objectNodeOf(
+  parsed: CsfFile,
+  target: CsfObjectTarget
+): E.ObjectExpression | undefined {
+  if (target.kind === 'meta') {
+    return parsed._metaNodeIsSynthetic ? undefined : parsed._metaNode
+  }
+  if (target.kind !== 'story') return undefined
+  const decl = parsed._storyExports[target.exportName] as ESTreeNode | undefined
+  let node = decl?.type === 'VariableDeclarator' ? decl.init : decl
+  node = node && unwrapExpression(node)
+  // CSF factories: `meta.story({...})`.
+  if (node?.type === 'CallExpression' && node.arguments[0]) {
+    node = unwrapExpression(node.arguments[0])
+  }
+  return node?.type === 'ObjectExpression' ? node : undefined
+}
+
+/** The value of `parameters.msw` in an object literal. */
+export function mswValueOf(
+  obj: E.ObjectExpression | undefined
+): ESTreeNode | undefined {
+  const parameters = obj && findObjectProperty(obj, 'parameters')
+  if (parameters?.value.type !== 'ObjectExpression') return undefined
+  return findObjectProperty(parameters.value, 'msw')?.value
+}
+
 // -------- handler extraction
 //
-// Returns an array of Expressions to spread into `msw.use(...)`, or null
-// if the shape isn't one we know how to migrate.
+// Returns the source of each expression to spread into `msw.use(...)`, or
+// null if the shape isn't one we know how to migrate. The sources keep the
+// comments that lead them, with continuation lines dedented.
 
 export function extractHandlers(
-  value: t.Expression | t.PatternLike
-): t.Expression[] | null {
+  editor: SourceEditor,
+  value: ESTreeNode
+): string[] | null {
   // Legacy array form: `parameters: { msw: [...handlers] }`
-  if (t.isArrayExpression(value)) {
-    return collectArrayElements(value)
+  if (value.type === 'ArrayExpression') {
+    return collectArrayElements(editor, value)
   }
   // Object form: `parameters: { msw: { handlers: ... } }`
-  if (t.isObjectExpression(value)) {
+  if (value.type === 'ObjectExpression') {
     const handlersProp = findObjectProperty(value, 'handlers')
     if (!handlersProp) return null
     const hv = handlersProp.value
     // `handlers: [h1, h2]`
-    if (t.isArrayExpression(hv)) return collectArrayElements(hv)
+    if (hv.type === 'ArrayExpression') return collectArrayElements(editor, hv)
     // `handlers: { name1: h, name2: [h, h] }` — flatten the values.
-    if (t.isObjectExpression(hv)) {
-      const acc: t.Expression[] = []
+    if (hv.type === 'ObjectExpression') {
+      const acc: string[] = []
       for (const prop of hv.properties) {
-        if (!t.isObjectProperty(prop)) return null // spread/computed → unsupported
-        if (t.isArrayExpression(prop.value)) {
-          const elems = collectArrayElements(prop.value)
+        // spread/method/accessor → unsupported
+        if (!isPlainProperty(prop)) return null
+        if (prop.value.type === 'ArrayExpression') {
+          const elems = collectArrayElements(editor, prop.value)
           if (!elems) return null
           acc.push(...elems)
         } else if (isHandlerLikeExpression(prop.value)) {
-          acc.push(prop.value as t.Expression)
+          acc.push(nodeText(editor, prop.value))
         } else {
           return null
         }
@@ -200,313 +197,178 @@ export function extractHandlers(
   return null
 }
 
-function collectArrayElements(arr: t.ArrayExpression): t.Expression[] | null {
-  const acc: t.Expression[] = []
-  for (const el of arr.elements) {
+/** Sources of an array's elements, or null if one is not handler-like. */
+export function collectArrayElements(
+  editor: SourceEditor,
+  arr: E.ArrayExpression
+): string[] | null {
+  const list = arrayList(editor, arr)
+  const acc: string[] = []
+  for (let i = 0; i < arr.elements.length; i++) {
+    const el = arr.elements[i]
     if (el === null) return null // sparse array
-    if (t.isSpreadElement(el)) {
-      // Allow spreads like `...sharedHandlers` to flow through.
-      acc.push(el as unknown as t.Expression)
-      continue
-    }
-    if (!isHandlerLikeExpression(el)) return null
-    acc.push(el as t.Expression)
+    // Spreads like `...sharedHandlers` flow through as written.
+    if (el.type !== 'SpreadElement' && !isHandlerLikeExpression(el)) return null
+    acc.push(itemText(editor, list, list.items[i]))
   }
   return acc
 }
 
-function isHandlerLikeExpression(node: t.Node): boolean {
+function isHandlerLikeExpression(node: ESTreeNode): boolean {
   // Anything that can sensibly be spread into `msw.use(...)` — calls,
   // identifiers, member expressions, conditionals, etc. Reject literal
   // primitives so we don't migrate something obviously wrong.
-  return (
-    !t.isStringLiteral(node) &&
-    !t.isNumericLiteral(node) &&
-    !t.isBooleanLiteral(node)
+  return !(
+    node.type === 'Literal' &&
+    (typeof node.value === 'string' ||
+      typeof node.value === 'number' ||
+      typeof node.value === 'boolean')
   )
 }
 
-// -------- AST builders
+// -------- source builders
 //
-// The `beforeEach` shells are parsed from source templates WITH recast so
-// they keep original tokens and print compactly (`beforeEach({ msw })`);
-// nodes built via `t.*` get exploded across lines by recast's pretty
-// printer. Only the `msw.use(...)` arguments are spliced in.
+// New code is built as text indented from column zero; csf-tools and
+// `reindent` move it to where it goes, leaving the content of string and
+// template literals alone.
 
-function parseTemplate(template: string): t.ObjectExpression {
-  const parsed = parse(template)
-  const stmt = parsed.program.body[0] as t.ExpressionStatement
-  return stmt.expression as t.ObjectExpression
+/** `({ msw }) => { msw.use(...handlers) }` */
+export function beforeEachArrow(handlers: string[], step: string): string {
+  const use = reindent(callText('msw.use', handlers, step), '', step)
+  return `({ msw }) => {\n${step}${use}\n}`
 }
 
-export function buildBeforeEachProperty(
-  handlers: t.Expression[]
-): t.ObjectMethod {
-  // beforeEach({ msw }) { msw.use(...handlers) }
-  const obj = parseTemplate(
-    '({\n  beforeEach({ msw }) {\n    msw.use()\n  }\n})'
-  )
-  const method = obj.properties[0] as t.ObjectMethod
-  const call = (method.body.body[0] as t.ExpressionStatement)
-    .expression as t.CallExpression
-  call.arguments.push(...(handlers as (t.Expression | t.SpreadElement)[]))
-  return method
+/**
+ * `callee(args)`: a single argument stays on the line of the call, more
+ * arguments go one per line.
+ */
+export function callText(callee: string, args: string[], step: string): string {
+  if (args.length === 0) return `${callee}()`
+  if (args.length === 1 && !/^\s*\/[/*]/.test(args[0])) {
+    return `${callee}(${args[0]})`
+  }
+  const lines = args.map((arg) => `${step}${reindent(arg, '', step)}`)
+  return `${callee}(\n${lines.join(',\n')}\n)`
 }
 
-export function buildBeforeEachArrow(
-  handlers: t.Expression[]
-): t.ArrowFunctionExpression {
-  // ({ msw }) => { msw.use(...handlers) }
-  const obj = parseTemplate(
-    '({\n  beforeEach: ({ msw }) => {\n    msw.use()\n  }\n})'
+/** Source of a node with its continuation lines dedented. */
+export function nodeText(editor: SourceEditor, node: ESTreeNode): string {
+  return reindent(
+    placeableTextOf(node),
+    lineIndent(editor.code, node.start),
+    ''
   )
-  const prop = obj.properties[0] as t.ObjectProperty
-  const arrow = prop.value as t.ArrowFunctionExpression
-  const body = arrow.body as t.BlockStatement
-  const call = (body.body[0] as t.ExpressionStatement)
-    .expression as t.CallExpression
-  call.arguments.push(...(handlers as (t.Expression | t.SpreadElement)[]))
-  return arrow
+}
+
+/** `;` when the file ends its statements with one, so new ones match. */
+export function semicolonFor(editor: SourceEditor): string {
+  let withSemicolon = 0
+  let without = 0
+  for (const stmt of editor.program.body) {
+    if (
+      stmt.type !== 'ImportDeclaration' &&
+      stmt.type !== 'ExpressionStatement' &&
+      stmt.type !== 'VariableDeclaration' &&
+      stmt.type !== 'ExportDefaultDeclaration'
+    )
+      continue
+    if (editor.code[stmt.end - 1] === ';') withSemicolon++
+    else without++
+  }
+  return without > withSemicolon ? '' : ';'
 }
 
 // -------- helpers
 
+/** A `key: value` property: not a spread, method, getter or setter. */
+function isPlainProperty(prop: E.ObjectPropertyKind): prop is E.ObjectProperty {
+  return prop.type === 'Property' && prop.kind === 'init' && !prop.method
+}
+
 export function findObjectProperty(
-  obj: t.ObjectExpression,
+  obj: E.ObjectExpression,
   name: string
-): t.ObjectProperty | undefined {
+): E.ObjectProperty | undefined {
   for (const prop of obj.properties) {
-    if (!t.isObjectProperty(prop)) continue
-    const key = prop.key
-    if (t.isIdentifier(key) && key.name === name) return prop
-    if (t.isStringLiteral(key) && key.value === name) return prop
+    if (isPlainProperty(prop) && staticKey(prop) === name) return prop
   }
   return undefined
 }
 
-// Like findObjectProperty but also matches `name() {}` method shorthand.
-export function hasAnyProperty(obj: t.ObjectExpression, name: string): boolean {
-  for (const prop of obj.properties) {
-    if (t.isObjectProperty(prop) || t.isObjectMethod(prop)) {
-      const key = prop.key
-      if (t.isIdentifier(key) && key.name === name) return true
-      if (t.isStringLiteral(key) && key.value === name) return true
-    }
-  }
-  return false
-}
-
-function getStoryObject(
-  node: t.Node | undefined
-): t.ObjectExpression | undefined {
-  if (t.isVariableDeclarator(node)) {
-    let init = node.init
-    if (t.isTSSatisfiesExpression(init) || t.isTSAsExpression(init))
-      init = init.expression
-    if (init && t.isObjectExpression(init)) return init
-    if (init) return unwrapFactoryCall(init)
-  } else if (t.isExportDefaultDeclaration(node)) {
-    let init: t.Node | null | undefined = node.declaration
-    if (init && (t.isTSSatisfiesExpression(init) || t.isTSAsExpression(init)))
-      init = init.expression
-    if (init && t.isObjectExpression(init)) return init
-  }
-  return undefined
-}
-
-// CSF factories wrap the annotations object in a call:
-// `preview.meta({...})` and `meta.story({...})`. An argument-less
-// `meta.story()` has nothing to migrate.
-function unwrapFactoryCall(node: t.Node): t.ObjectExpression | undefined {
-  if (
-    t.isCallExpression(node) &&
-    t.isMemberExpression(node.callee) &&
-    t.isIdentifier(node.callee.property) &&
-    (node.callee.property.name === 'meta' ||
-      node.callee.property.name === 'story') &&
-    node.arguments[0] != null &&
-    t.isObjectExpression(node.arguments[0])
-  ) {
-    return node.arguments[0]
-  }
-  return undefined
-}
-
-// Resolve a "story object" through one level of indirection.
-//
-// CSF3 meta is commonly:
-//
-//     const meta = { ... }
-//     export default meta
-//
-// The meta node for that shape is the `export default meta` declaration,
-// whose `.declaration` is an `Identifier`. We follow the identifier back to
-// its variable declarator in the file's top-level body and return the
-// underlying ObjectExpression.
-function resolveStoryObject(
-  ast: t.File,
-  node: t.Node
-): t.ObjectExpression | undefined {
-  const direct = getStoryObject(node)
-  if (direct) return direct
-  if (t.isExportDefaultDeclaration(node)) {
-    let decl: t.Node | null | undefined = node.declaration
-    if (decl && (t.isTSSatisfiesExpression(decl) || t.isTSAsExpression(decl))) {
-      decl = decl.expression
-    }
-    if (decl && t.isIdentifier(decl)) {
-      const ref = findVariableDeclarator(ast, decl.name)
-      if (ref) return getStoryObject(ref)
-    }
-  }
-  return undefined
-}
-
-/** The declarator of `export const <name> = ...`: how story exports are
- *  declared when they can be object literals. */
-function findStoryDeclarator(
-  ast: t.File,
-  name: string
-): t.VariableDeclarator | undefined {
-  for (const stmt of ast.program.body) {
-    if (!t.isExportNamedDeclaration(stmt)) continue
-    if (!t.isVariableDeclaration(stmt.declaration)) continue
-    for (const d of stmt.declaration.declarations) {
-      if (t.isIdentifier(d.id) && d.id.name === name) return d
-    }
-  }
-  return undefined
-}
-
-function findVariableDeclarator(
-  ast: t.File,
-  name: string
-): t.VariableDeclarator | undefined {
-  for (const stmt of ast.program.body) {
-    const decl = t.isExportNamedDeclaration(stmt) ? stmt.declaration : stmt
-    if (!decl || !t.isVariableDeclaration(decl)) continue
-    for (const d of decl.declarations) {
-      if (t.isIdentifier(d.id) && d.id.name === name) return d
-    }
-  }
-  return undefined
-}
-
-// CSF2 annotations, in both historical forms:
+// -------- CSF2
 //
 //   Foo.parameters = { msw: { handlers: [...] } }
-//   Foo.story = { parameters: { msw: { handlers: [...] } } }   (v1 style)
 //
 // We can't inject `beforeEach` into a story object (the export is a
 // function, not an object literal), so we emit a parallel sibling
 // annotation: `Foo.beforeEach = ({ msw }) => { msw.use(...) }`.
+//
+// Storybook 11 no longer reads the v1 `Foo.story = { parameters }` form;
+// `storybook migrate csf-2-to-3` lifts it out first.
 function migrateCsf2Annotation(
-  ast: t.File,
-  stmt: t.ExpressionStatement,
-  storyName: string,
-  stmtIndex: number,
-  form: 'parameters' | 'story'
+  parsed: CsfFile,
+  object: CsfObject,
+  target: Extract<CsfObjectTarget, { kind: 'story-annotation' }>
 ): MigrationOutcome {
-  const assign = stmt.expression as t.AssignmentExpression
-  const container = assign.right as t.ObjectExpression
+  if (target.annotation !== 'parameters' || !object.get(MSW_PATH)) return 'noop'
+  const editor = parsed._editor
+  const stmt = findAnnotationStatement(parsed, target.localName)
+  const parametersObj = (stmt?.expression as E.AssignmentExpression)?.right as
+    E.ObjectExpression | undefined
+  const mswProp = parametersObj && findObjectProperty(parametersObj, 'msw')
+  const handlers = mswProp && extractHandlers(editor, mswProp.value)
+  if (!stmt || !parametersObj || !handlers) return 'unrecognized-shape'
 
-  let parametersObj: t.ObjectExpression
-  let storyParametersProp: t.ObjectProperty | undefined
-  if (form === 'parameters') {
-    parametersObj = container
-  } else {
-    storyParametersProp = findObjectProperty(container, 'parameters')
-    if (!storyParametersProp || !t.isObjectExpression(storyParametersProp.value)) {
-      return 'noop'
-    }
-    parametersObj = storyParametersProp.value
-  }
-
-  const mswProp = findObjectProperty(parametersObj, 'msw')
-  if (!mswProp) return 'noop'
-
-  if (hasBeforeEachAnnotation(ast, storyName)) {
+  // csf-tools collects every top-level `Foo.<key> = ...` assignment into
+  // `_storyAnnotations` — the place to check for an existing `beforeEach`.
+  if (parsed._storyAnnotations[target.localName]?.beforeEach != null) {
     return 'existing-before-each'
   }
 
-  const handlers = extractHandlers(mswProp.value)
-  if (!handlers) return 'unrecognized-shape'
+  const assignment =
+    handlers.length > 0
+      ? `${target.localName}.beforeEach = ${beforeEachArrow(handlers, editor.indent)}${
+          editor.code[stmt.end - 1] === ';' ? ';' : semicolonFor(editor)
+        }`
+      : null
 
-  // Strip `msw` from the parameters object, then unwind empty containers:
-  // an emptied `parameters` comes off the story object; an emptied
-  // statement is dropped. An empty handler list has nothing to carry over,
-  // so no `beforeEach` sibling is emitted for it.
-  parametersObj.properties = parametersObj.properties.filter(
-    (p) => p !== mswProp
-  )
-  if (
-    storyParametersProp &&
-    parametersObj.properties.length === 0
-  ) {
-    container.properties = container.properties.filter(
-      (p) => p !== storyParametersProp
-    )
-  }
-  const statementEmptied = container.properties.length === 0
-
-  if (handlers.length === 0) {
-    if (statementEmptied) {
-      ast.program.body.splice(stmtIndex, 1)
-    }
+  if (parametersObj.properties.length === 1) {
+    // `msw` was all there was: the annotation gives way to `beforeEach`.
+    if (assignment) editor.edits.overwrite(stmt.start, stmt.end, assignment)
+    else removeStatement(editor, stmt)
+    editor.commit()
     return 'changed'
   }
 
-  const beforeEachAssign = t.expressionStatement(
-    t.assignmentExpression(
-      '=',
-      t.memberExpression(t.identifier(storyName), t.identifier('beforeEach')),
-      buildBeforeEachArrow(handlers)
+  if (!object.remove(MSW_PATH).ok) return 'unrecognized-shape'
+  if (assignment) {
+    // A blank line sets the multi-line annotation apart from the statement.
+    const after = findAnnotationStatement(parsed, target.localName)
+    if (!after) return 'changed'
+    editor.edits.appendLeft(
+      statementSpan(editor, after).end,
+      `\n\n${assignment}`
     )
-  )
-
-  if (statementEmptied) {
-    ast.program.body.splice(stmtIndex, 1, beforeEachAssign)
-  } else {
-    ast.program.body.splice(stmtIndex + 1, 0, beforeEachAssign)
+    editor.commit()
   }
   return 'changed'
 }
 
-/**
- * Whether a story already has a `beforeEach`: in its object literal, as a
- * `Foo.beforeEach = ...` annotation, or in a v1 `Foo.story = {...}` object.
- * These are the places Storybook 10's CSF parser collected annotations from.
- */
-function hasBeforeEachAnnotation(ast: t.File, storyName: string): boolean {
-  const story = getStoryObject(findStoryDeclarator(ast, storyName))
-  if (story && hasAnyProperty(story, 'beforeEach')) return true
-  for (const stmt of ast.program.body) {
-    if (!t.isExpressionStatement(stmt)) continue
-    const expr = stmt.expression
-    if (!t.isAssignmentExpression(expr) || !t.isMemberExpression(expr.left))
-      continue
-    if (!t.isIdentifier(expr.left.object, { name: storyName })) continue
-    if (!t.isIdentifier(expr.left.property)) continue
-    const key = expr.left.property.name
-    if (key === 'beforeEach') return true
-    if (
-      key === 'story' &&
-      t.isObjectExpression(expr.right) &&
-      hasAnyProperty(expr.right, 'beforeEach')
-    )
-      return true
-  }
-  return false
-}
-
-function isCsf2Annotation(
-  stmt: t.Statement,
-  storyExports: Record<string, unknown>
-): boolean {
-  if (!t.isExpressionStatement(stmt)) return false
-  const expr = stmt.expression
-  if (!t.isAssignmentExpression(expr)) return false
-  if (!t.isMemberExpression(expr.left)) return false
-  if (!t.isIdentifier(expr.left.object)) return false
-  return Boolean(storyExports[expr.left.object.name])
+/** The top-level `<localName>.parameters = {...}` statement. */
+function findAnnotationStatement(
+  parsed: CsfFile,
+  localName: string
+): E.ExpressionStatement | undefined {
+  return parsed._program.body.find(
+    (stmt): stmt is E.ExpressionStatement =>
+      stmt.type === 'ExpressionStatement' &&
+      stmt.expression.type === 'AssignmentExpression' &&
+      stmt.expression.left.type === 'MemberExpression' &&
+      !stmt.expression.left.computed &&
+      stmt.expression.left.object.type === 'Identifier' &&
+      stmt.expression.left.object.name === localName &&
+      stmt.expression.left.property.type === 'Identifier' &&
+      stmt.expression.left.property.name === 'parameters' &&
+      stmt.expression.right.type === 'ObjectExpression'
+  )
 }

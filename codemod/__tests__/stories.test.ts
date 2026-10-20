@@ -48,9 +48,9 @@ describe('transformStory', () => {
       "import { http, HttpResponse } from 'msw'
       export default { title: 'X' }
       export const Foo = {
-        beforeEach({ msw }) {
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/u', () => HttpResponse.json({ name: 'A' })))
-        }
+        },
       }"
     `)
   })
@@ -70,10 +70,9 @@ describe('transformStory', () => {
       "import { http, HttpResponse } from 'msw'
       const meta = {
         title: 'X',
-
-        beforeEach({ msw }) {
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/u', () => HttpResponse.json({})))
-        }
+        },
       }
       export default meta"
     `)
@@ -95,9 +94,9 @@ describe('transformStory', () => {
       "import { http, HttpResponse } from 'msw'
       export default { title: 'X' }
       export const Foo = {
-        beforeEach({ msw }) {
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/u', () => HttpResponse.json({})))
-        }
+        },
       }"
     `)
   })
@@ -121,12 +120,12 @@ describe('transformStory', () => {
       "import { http, HttpResponse } from 'msw'
       export default { title: 'X' }
       export const Foo = {
-        beforeEach({ msw }) {
+        beforeEach: ({ msw }) => {
           msw.use(
             http.get('/u', () => HttpResponse.json({})),
             http.get('/p', () => HttpResponse.json({}))
           )
-        }
+        },
       }"
     `)
   })
@@ -146,13 +145,12 @@ describe('transformStory', () => {
       "import { http, HttpResponse } from 'msw'
       export default { title: 'X' }
       export const Foo = {
-        beforeEach({ msw }) {
+        parameters: {
+          layout: 'centered',
+        },
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/u', () => HttpResponse.json({})))
         },
-
-        parameters: {
-          layout: 'centered'
-        }
       }"
     `)
   })
@@ -172,7 +170,7 @@ describe('transformStory', () => {
         "code": "export default { title: 'X' }
       export const Foo = {
         parameters: {
-          layout: 'centered'
+          layout: 'centered',
         },
       }",
         "skippedStories": [],
@@ -244,9 +242,9 @@ describe('transformStory', () => {
       export default meta
       type Story = StoryObj<typeof meta>
       export const Foo: Story = {
-        beforeEach({ msw }) {
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/u', () => HttpResponse.json({})))
-        }
+        },
       }"
     `)
   })
@@ -280,70 +278,21 @@ describe('transformStory', () => {
 
       const meta = preview.meta({
         title: 'Pages/HomePage',
-
-        beforeEach({ msw }) {
+        parameters: {
+          layout: 'fullscreen',
+        },
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/x', () => HttpResponse.json({})))
         },
-
-        parameters: {
-          layout: 'fullscreen'
-        }
       })
 
       export const Default = meta.story()
 
       export const WithParams = meta.story({
-        beforeEach({ msw }) {
+        beforeEach: ({ msw }) => {
           msw.use(http.get('/y', () => HttpResponse.json({})))
-        }
+        },
       })"
-    `)
-  })
-
-  it('migrates the v1-style Foo.story = { parameters: { msw: ... } } annotation', () => {
-    const src = dedent`
-      import { http, HttpResponse } from 'msw'
-      export default { title: 'X' }
-      export const Foo = () => null
-      Foo.story = {
-        name: 'Custom name',
-        parameters: {
-          msw: { handlers: [http.get('/u', () => HttpResponse.json({}))] },
-        },
-      }
-    `
-    expect(transformStory(src).code).toMatchInlineSnapshot(`
-      "import { http, HttpResponse } from 'msw'
-      export default { title: 'X' }
-      export const Foo = () => null
-      Foo.story = {
-        name: 'Custom name'
-      }
-
-      Foo.beforeEach = ({ msw }) => {
-        msw.use(http.get('/u', () => HttpResponse.json({})))
-      };"
-    `)
-  })
-
-  it('drops a v1-style Foo.story annotation entirely when it empties', () => {
-    const src = dedent`
-      import { http, HttpResponse } from 'msw'
-      export default { title: 'X' }
-      export const Foo = () => null
-      Foo.story = {
-        parameters: {
-          msw: [http.get('/u', () => HttpResponse.json({}))],
-        },
-      }
-    `
-    expect(transformStory(src).code).toMatchInlineSnapshot(`
-      "import { http, HttpResponse } from 'msw'
-      export default { title: 'X' }
-      export const Foo = () => null
-      Foo.beforeEach = ({ msw }) => {
-        msw.use(http.get('/u', () => HttpResponse.json({})))
-      };"
     `)
   })
 
@@ -370,29 +319,20 @@ describe('transformStory', () => {
     `)
   })
 
-  it('skips a v1-style Foo.story annotation that already has a beforeEach', () => {
+  it('leaves the v1-style Foo.story form, which Storybook 11 no longer reads', () => {
+    // `storybook migrate csf-2-to-3` lifts it into the story first.
     const src = dedent`
       import { http, HttpResponse } from 'msw'
       export default { title: 'X' }
       export const Foo = () => null
       Foo.story = {
-        beforeEach: () => {},
+        name: 'Custom name',
         parameters: {
-          msw: [http.get('/u', () => HttpResponse.json({}))],
+          msw: { handlers: [http.get('/u', () => HttpResponse.json({}))] },
         },
       }
     `
-    expect(transformStory(src)).toMatchInlineSnapshot(`
-      {
-        "code": null,
-        "skippedStories": [
-          {
-            "reason": "existing-before-each",
-            "story": "Foo",
-          },
-        ],
-      }
-    `)
+    expect(transformStory(src)).toEqual({ code: null, skippedStories: [] })
   })
 
   it('migrates CSF2-style Foo.parameters = { msw: ... } annotation', () => {
@@ -410,7 +350,7 @@ describe('transformStory', () => {
       export const Foo = () => null
       Foo.beforeEach = ({ msw }) => {
         msw.use(http.get('/u', () => HttpResponse.json({})))
-      };"
+      }"
     `)
   })
 })

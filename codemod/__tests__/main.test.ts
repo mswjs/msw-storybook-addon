@@ -73,10 +73,7 @@ describe('transformMain', () => {
       "import type { StorybookConfig } from '@storybook/react-vite'
       export default {
         framework: getAbsolutePath('@storybook/react-vite'),
-        addons: [
-          getAbsolutePath('@storybook/addon-docs'),
-          getAbsolutePath('msw-storybook-addon')
-        ],
+        addons: [getAbsolutePath('@storybook/addon-docs'), getAbsolutePath('msw-storybook-addon')],
       } satisfies StorybookConfig"
     `)
   })
@@ -124,8 +121,8 @@ describe('transformMain', () => {
       "export default {
         framework: '@storybook/react-vite',
         stories: ['../src/**/*.stories.tsx'],
-        addons: ['msw-storybook-addon']
-      };"
+        addons: ['msw-storybook-addon'],
+      }"
     `)
   })
 

@@ -36,13 +36,34 @@
  * Idempotent: running twice produces the same result and no spurious diff.
  */
 
-import * as t from '@babel/types'
-import { findConfigExports, isCsfFactoryPreview, parse, print } from './ast'
 import {
-  buildBeforeEachProperty,
+  argumentList,
+  arrayList,
+  type ConfigFile,
+  type ESTree as E,
+  type ESTreeNode,
+  insertAfterImports,
+  isCsfFactoryPreview,
+  itemText,
+  lineIndent,
+  loadConfig,
+  parseExpression,
+  prependToList,
+  printConfig,
+  printString,
+  reindent,
+  removeFromList,
+  removeStatement,
+  setImportSpecifiers,
+  walk
+} from 'storybook/internal/csf-tools'
+import {
+  beforeEachArrow,
+  callText,
   extractHandlers,
   findObjectProperty,
-  hasAnyProperty
+  mswValueOf,
+  semicolonFor
 } from './stories'
 
 const ADDON_PACKAGE = 'msw-storybook-addon'
@@ -82,33 +103,38 @@ interface AddonImports {
   previewNamespace?: string
 }
 
+/** Source of the `initialize(...)` arguments to fold into a setup function. */
 interface InitializeFold {
-  /** The top-level `initialize(...)` statement to remove. */
-  stmt: t.ExpressionStatement
   /** `worker.start()` options — first argument, carried verbatim. */
-  options?: t.Expression
+  options?: string
   /** Initial handlers — second argument, spread into `setupWorker(...)`. */
-  handlers?: t.Expression
+  handlers?: string[]
 }
+
+// Fields of the preview config are edited through `ConfigFile`; array
+// elements, call arguments and the `initialize(...)` statement, which it
+// has no paths for, through its editor. Every edit is committed, which
+// parses the file again, so each step looks its nodes up afresh — the
+// preview object through `parsed._exportsObject` — and carries what it
+// needs from an earlier parse over as source text.
 
 export function transformPreview(
   source: string,
   options: PreviewTransformOptions = {}
 ): PreviewTransformResult {
   const warnings: string[] = []
-  let parsed: t.File
+  let parsed: ConfigFile
   try {
-    parsed = parse(source)
+    parsed = loadConfig(source).parse()
   } catch {
     return { code: null, warnings }
   }
 
-  const body = parsed.program.body
-  const imports = collectAddonImports(body)
-  // Call-wrapped and variable-declared default exports are unwrapped, so
-  // this covers `export default {}`, `export default definePreview({})`
+  const imports = collectAddonImports(parsed._program.body)
+  // The parser unwraps call-wrapped and variable-declared default exports,
+  // so this covers `export default {}`, `export default definePreview({})`
   // and `const preview = definePreview({}); export default preview`.
-  const previewObj = findConfigExports(parsed).exportsObject ?? null
+  const previewObj = parsed._exportsObject ?? null
   const isFactories = isCsfFactoryPreview(parsed)
 
   // ---- analyze `initialize` usage (before mutating anything) ----
@@ -146,7 +172,7 @@ export function transformPreview(
     // A setup function carried by an existing `mswLoader(setup)` moves onto
     // `addonMsw(setup)`. Collected before stripping the loader.
     const loaderSetup = imports.mswLoader
-      ? collectLoaderSetup(previewObj, imports.mswLoader)
+      ? collectLoaderSetup(parsed, imports.mswLoader)
       : null
     if (loaderSetup === 'conflict') {
       warnings.push(
@@ -161,47 +187,53 @@ export function transformPreview(
       return { code: null, warnings, csfNext: true }
     }
 
-    const strippedLoader = imports.mswLoader
-      ? stripMswRef(previewObj, 'loaders', imports.mswLoader)
-      : false
-    const strippedDecorator = imports.mswDecorator
-      ? stripMswRef(previewObj, 'decorators', imports.mswDecorator)
-      : false
+    const hasLoader =
+      imports.mswLoader != null &&
+      hasMswRef(parsed, 'loaders', imports.mswLoader)
+    const hasDecorator =
+      imports.mswDecorator != null &&
+      hasMswRef(parsed, 'decorators', imports.mswDecorator)
     const hasNamespaceEntry =
       imports.previewNamespace != null &&
-      findAddonsEntryIndex(previewObj, imports.previewNamespace) !== -1
+      findAddonsEntry(parsed, imports.previewNamespace) != null
     const hasWiring =
-      strippedLoader || strippedDecorator || hasNamespaceEntry || fold != null
+      hasLoader || hasDecorator || hasNamespaceEntry || fold != null
 
     if (!hasWiring) {
       if (options.migrateParameters) {
-        if (migratePreviewParameters(previewObj, warnings)) changed = true
+        if (migratePreviewParameters(parsed, warnings)) changed = true
       }
       return finish(parsed, source, changed, warnings, true)
     }
 
     // Ensure the addon is registered, folding the setup function in.
     const setupFn = needsSetup
-      ? buildSetupFunction(fold as InitializeFold)
-      : (loaderSetup as t.Expression | null)
-    const addonResult = ensureFactoriesAddon(
-      parsed,
-      previewObj,
-      imports,
-      setupFn,
-      warnings
-    )
+      ? buildSetupFunction(parsed, fold as InitializeFold)
+      : loaderSetup
+    const addonResult = ensureFactoriesAddon(parsed, imports, setupFn, warnings)
     if (addonResult === 'conflict') {
       return { code: null, warnings, csfNext: true }
     }
     changed = true
 
+    // Stripped after `addons` is in place, so a config whose only field
+    // was `loaders` keeps its layout.
+    if (hasLoader) stripMswRef(parsed, 'loaders', imports.mswLoader as string)
+    if (hasDecorator) {
+      stripMswRef(parsed, 'decorators', imports.mswDecorator as string)
+    }
+
     if (fold != null) {
-      removeStatement(body, fold.stmt)
+      removeInitializeCall(parsed, imports.initialize as string)
     }
     removeSpecifiers(parsed, ['initialize', 'mswLoader', 'mswDecorator'])
-    if (hasNamespaceEntry) removePreviewNamespaceImport(parsed)
-    if (needsSetup) ensureSetupWorkerImport(parsed)
+    if (hasNamespaceEntry) {
+      parsed.removeImport(
+        { namespace: imports.previewNamespace as string },
+        PREVIEW_SUBPATH
+      )
+    }
+    if (needsSetup) parsed.setImport(['setupWorker'], MSW_BROWSER)
   } else {
     // ---- CSF 3.0 --------------------------------------------------------
     // Only wire the loader when the file actually used the loader path
@@ -211,22 +243,17 @@ export function transformPreview(
       imports.mswLoader != null || imports.mswDecorator != null || fold != null
     if (!usesLoaderPath) {
       if (options.migrateParameters) {
-        if (migratePreviewParameters(previewObj, warnings)) changed = true
+        if (migratePreviewParameters(parsed, warnings)) changed = true
       }
       return finish(parsed, source, changed, warnings, false)
     }
 
     const loaderName = imports.mswLoader ?? 'mswLoader'
     const setupFn = needsSetup
-      ? buildSetupFunction(fold as InitializeFold)
+      ? buildSetupFunction(parsed, fold as InitializeFold)
       : null
 
-    const loaderResult = ensureLoaderCall(
-      previewObj,
-      loaderName,
-      setupFn,
-      imports
-    )
+    const loaderResult = ensureLoaderCall(parsed, loaderName, setupFn)
     if (loaderResult === 'conflict') {
       warnings.push(
         '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. You will need to merge them yourself.'
@@ -236,50 +263,85 @@ export function transformPreview(
     if (loaderResult === 'changed') changed = true
 
     if (imports.mswDecorator) {
-      if (stripMswRef(previewObj, 'decorators', imports.mswDecorator))
+      if (stripMswRef(parsed, 'decorators', imports.mswDecorator))
         changed = true
     }
 
     if (fold != null) {
-      removeStatement(body, fold.stmt)
+      removeInitializeCall(parsed, imports.initialize as string)
       changed = true
     }
 
     if (removeSpecifiers(parsed, ['initialize', 'mswDecorator'])) changed = true
     if (retargetLoaderImport(parsed)) changed = true
-    if (ensureLoaderImport(parsed, loaderName)) changed = true
-    if (needsSetup) ensureSetupWorkerImport(parsed)
+    if (!hasNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) {
+      parsed.setImport(['mswLoader'], CSF3_SUBPATH)
+      changed = true
+    }
+    if (needsSetup) parsed.setImport(['setupWorker'], MSW_BROWSER)
   }
 
   if (options.migrateParameters) {
-    if (migratePreviewParameters(previewObj, warnings)) changed = true
+    if (migratePreviewParameters(parsed, warnings)) changed = true
   }
 
   return finish(parsed, source, changed, warnings, isFactories)
 }
 
 function finish(
-  parsed: t.File,
+  parsed: ConfigFile,
   source: string,
   changed: boolean,
   warnings: string[],
   csfNext: boolean
 ): PreviewTransformResult {
   if (!changed) return { code: null, warnings, csfNext }
-  const code = print(parsed)
+  const code = printConfig(parsed).code
   return { code: code === source ? null : code, warnings, csfNext }
+}
+
+/** The preview config object of the current parse. */
+function previewObject(parsed: ConfigFile): E.ObjectExpression {
+  return parsed._exportsObject as E.ObjectExpression
+}
+
+/** Overwrite a node with code built from column zero, and commit. */
+function replaceNode(parsed: ConfigFile, node: ESTreeNode, text: string): void {
+  const editor = parsed._editor
+  editor.edits.overwrite(
+    node.start,
+    node.end,
+    reindent(text, '', lineIndent(editor.code, node.start))
+  )
+  editor.commit()
+}
+
+/** Pass an argument, built from column zero, to a call without arguments. */
+function addFirstArgument(
+  parsed: ConfigFile,
+  call: E.CallExpression,
+  text: string
+): void {
+  const editor = parsed._editor
+  editor.edits.appendLeft(
+    call.end - 1,
+    reindent(text, '', lineIndent(editor.code, call.start))
+  )
+  editor.commit()
 }
 
 // -------- imports
 
-function collectAddonImports(body: t.Statement[]): AddonImports {
+type Body = E.Program['body']
+
+function collectAddonImports(body: Body): AddonImports {
   const out: AddonImports = {}
   for (const stmt of body) {
-    if (!t.isImportDeclaration(stmt)) continue
+    if (stmt.type !== 'ImportDeclaration') continue
     const src = stmt.source.value
     if (src === PREVIEW_SUBPATH) {
       for (const spec of stmt.specifiers) {
-        if (t.isImportNamespaceSpecifier(spec)) {
+        if (spec.type === 'ImportNamespaceSpecifier') {
           out.previewNamespace = spec.local.name
         }
       }
@@ -287,9 +349,9 @@ function collectAddonImports(body: t.Statement[]): AddonImports {
     }
     if (src !== ADDON_PACKAGE && src !== CSF3_SUBPATH) continue
     for (const spec of stmt.specifiers) {
-      if (t.isImportDefaultSpecifier(spec)) {
+      if (spec.type === 'ImportDefaultSpecifier') {
         out.addonDefault = spec.local.name
-      } else if (t.isImportSpecifier(spec)) {
+      } else if (spec.type === 'ImportSpecifier') {
         const name = importedName(spec)
         if (name === 'initialize') out.initialize = spec.local.name
         if (name === 'mswLoader') out.mswLoader = spec.local.name
@@ -300,172 +362,129 @@ function collectAddonImports(body: t.Statement[]): AddonImports {
   return out
 }
 
-function importedName(spec: t.ImportSpecifier): string | null {
+function importedName(spec: E.ImportSpecifier): string {
   const imported = spec.imported
-  return (
-    (t.isIdentifier(imported) && imported.name) ||
-    (t.isStringLiteral(imported) && imported.value) ||
-    null
-  )
+  return imported.type === 'Literal' ? imported.value : imported.name
+}
+
+/** The `import { name as local }` specifier of `source`, if any. */
+function findNamedImport(
+  parsed: ConfigFile,
+  source: string,
+  name: string
+): E.ImportSpecifier | undefined {
+  for (const stmt of parsed._program.body) {
+    if (stmt.type !== 'ImportDeclaration' || stmt.source.value !== source)
+      continue
+    for (const spec of stmt.specifiers) {
+      if (spec.type === 'ImportSpecifier' && importedName(spec) === name)
+        return spec
+    }
+  }
+  return undefined
+}
+
+function hasNamedImport(
+  parsed: ConfigFile,
+  source: string,
+  name: string
+): boolean {
+  return findNamedImport(parsed, source, name) != null
 }
 
 /** Remove the given specifiers from addon imports; drop emptied declarations. */
-function removeSpecifiers(parsed: t.File, names: string[]): boolean {
+function removeSpecifiers(parsed: ConfigFile, names: string[]): boolean {
   let changed = false
-  const body = parsed.program.body
-  for (const stmt of body) {
-    if (!t.isImportDeclaration(stmt)) continue
-    const src = stmt.source.value
-    if (src !== ADDON_PACKAGE && src !== CSF3_SUBPATH) continue
-    const before = stmt.specifiers.length
-    stmt.specifiers = stmt.specifiers.filter((spec) => {
-      if (!t.isImportSpecifier(spec)) return true
-      const name = importedName(spec)
-      return name == null || !names.includes(name)
-    })
-    if (stmt.specifiers.length !== before) changed = true
+  for (const source of [ADDON_PACKAGE, CSF3_SUBPATH]) {
+    const present = names.filter((name) => hasNamedImport(parsed, source, name))
+    if (present.length === 0) continue
+    parsed.removeImport(present, source)
+    changed = true
   }
-  parsed.program.body = body.filter((stmt) => {
-    if (!t.isImportDeclaration(stmt)) return true
-    const src = stmt.source.value
-    if (src !== ADDON_PACKAGE && src !== CSF3_SUBPATH) return true
-    // Preserve genuine side-effect imports (they never had specifiers we
-    // could have removed); drop declarations we emptied ourselves.
-    return stmt.specifiers.length > 0
-  })
   return changed
 }
 
 /** Move a root-package `mswLoader` specifier onto the /csf3 subpath. */
-function retargetLoaderImport(parsed: t.File): boolean {
-  const body = parsed.program.body
-  let loaderSpec: t.ImportSpecifier | null = null
-  let changed = false
-
-  for (const stmt of body) {
-    if (!t.isImportDeclaration(stmt)) continue
-    if (stmt.source.value !== ADDON_PACKAGE) continue
-    const spec = stmt.specifiers.find(
-      (s): s is t.ImportSpecifier =>
-        t.isImportSpecifier(s) && importedName(s) === 'mswLoader'
-    )
-    if (!spec) continue
-
-    const onlySpecifier = stmt.specifiers.length === 1
-    if (onlySpecifier) {
-      stmt.source = t.stringLiteral(CSF3_SUBPATH)
-    } else {
-      stmt.specifiers = stmt.specifiers.filter((s) => s !== spec)
-      loaderSpec = spec
-    }
-    changed = true
-  }
-
-  if (loaderSpec) {
-    mergeIntoCsf3Import(parsed, loaderSpec)
-  }
-  return changed
-}
-
-function mergeIntoCsf3Import(parsed: t.File, spec: t.ImportSpecifier): void {
-  for (const stmt of parsed.program.body) {
-    if (!t.isImportDeclaration(stmt)) continue
-    if (stmt.source.value !== CSF3_SUBPATH) continue
-    const has = stmt.specifiers.some(
-      (s) => t.isImportSpecifier(s) && importedName(s) === importedName(spec)
-    )
-    if (!has) stmt.specifiers.push(spec)
-    return
-  }
-  parsed.program.body.unshift(
-    t.importDeclaration([spec], t.stringLiteral(CSF3_SUBPATH))
+function retargetLoaderImport(parsed: ConfigFile): boolean {
+  const spec = findNamedImport(parsed, ADDON_PACKAGE, 'mswLoader')
+  if (!spec) return false
+  const localName = spec.local.name
+  const editor = parsed._editor
+  const decl = parsed._program.body.find(
+    (stmt): stmt is E.ImportDeclaration =>
+      stmt.type === 'ImportDeclaration' && stmt.specifiers.includes(spec)
   )
-}
-
-/** Ensure `import { mswLoader } from 'msw-storybook-addon/csf3'` exists. */
-function ensureLoaderImport(parsed: t.File, localName: string): boolean {
-  for (const stmt of parsed.program.body) {
-    if (!t.isImportDeclaration(stmt)) continue
-    if (stmt.source.value !== CSF3_SUBPATH) continue
-    const has = stmt.specifiers.some(
-      (s) => t.isImportSpecifier(s) && importedName(s) === 'mswLoader'
+  if (decl?.specifiers.length === 1) {
+    // The import only brings `mswLoader`: point it at the subpath in place,
+    // with the quote it is written with.
+    editor.edits.overwrite(
+      decl.source.start,
+      decl.source.end,
+      printString(CSF3_SUBPATH, editor.code[decl.source.start])
     )
-    if (has) return false
-    stmt.specifiers.push(
-      t.importSpecifier(t.identifier(localName), t.identifier('mswLoader'))
-    )
+    editor.commit()
     return true
   }
-  parsed.program.body.unshift(
-    t.importDeclaration(
-      [t.importSpecifier(t.identifier(localName), t.identifier('mswLoader'))],
-      t.stringLiteral(CSF3_SUBPATH)
-    )
-  )
-  return true
-}
-
-/** Ensure `import { setupWorker } from 'msw/browser'` exists. */
-function ensureSetupWorkerImport(parsed: t.File): void {
-  for (const stmt of parsed.program.body) {
-    if (!t.isImportDeclaration(stmt)) continue
-    if (stmt.source.value !== MSW_BROWSER) continue
-    const has = stmt.specifiers.some(
-      (s) => t.isImportSpecifier(s) && importedName(s) === 'setupWorker'
-    )
-    if (!has) {
-      stmt.specifiers.push(
-        t.importSpecifier(
-          t.identifier('setupWorker'),
-          t.identifier('setupWorker')
-        )
-      )
-    }
-    return
+  parsed.removeImport(['mswLoader'], ADDON_PACKAGE)
+  if (hasNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) return true
+  if (localName === 'mswLoader') {
+    parsed.setImport(['mswLoader'], CSF3_SUBPATH)
+    return true
   }
-  parsed.program.body.unshift(
-    t.importDeclaration(
-      [
-        t.importSpecifier(
-          t.identifier('setupWorker'),
-          t.identifier('setupWorker')
-        )
-      ],
-      t.stringLiteral(MSW_BROWSER)
-    )
+  // `setImport` takes names, not aliases: `mswLoader as x` is written here.
+  const text = `mswLoader as ${localName}`
+  const csf3 = parsed._program.body.find(
+    (stmt): stmt is E.ImportDeclaration =>
+      stmt.type === 'ImportDeclaration' &&
+      stmt.source.value === CSF3_SUBPATH &&
+      !stmt.specifiers.some((s) => s.type === 'ImportNamespaceSpecifier')
   )
+  if (csf3) {
+    setImportSpecifiers(editor, csf3, csf3.specifiers, { named: [text] })
+  } else {
+    insertAfterImports(
+      editor,
+      `import { ${text} } from ${printString(CSF3_SUBPATH, editor.quote)};`
+    )
+  }
+  editor.commit()
+  return true
 }
 
 // -------- `initialize` analysis
 
+function findInitializeCalls(
+  body: Body,
+  localName: string
+): E.ExpressionStatement[] {
+  return body.filter(
+    (stmt): stmt is E.ExpressionStatement =>
+      stmt.type === 'ExpressionStatement' &&
+      stmt.expression.type === 'CallExpression' &&
+      stmt.expression.callee.type === 'Identifier' &&
+      stmt.expression.callee.name === localName
+  )
+}
+
 function analyzeInitialize(
-  parsed: t.File,
+  parsed: ConfigFile,
   localName: string,
   warnings: string[]
 ): InitializeFold | null | 'skip' {
-  const body = parsed.program.body
-  const calls: { stmt: t.ExpressionStatement; call: t.CallExpression }[] = []
-  const knownNodes = new Set<t.Node>()
-
+  const editor = parsed._editor
+  const body = parsed._program.body
+  const calls = findInitializeCalls(body, localName)
+  const knownNodes = new Set<ESTreeNode>()
   for (const stmt of body) {
-    if (t.isImportDeclaration(stmt)) {
-      knownNodes.add(stmt)
-      continue
-    }
-    if (
-      t.isExpressionStatement(stmt) &&
-      t.isCallExpression(stmt.expression) &&
-      t.isIdentifier(stmt.expression.callee) &&
-      stmt.expression.callee.name === localName
-    ) {
-      calls.push({ stmt, call: stmt.expression })
-      knownNodes.add(stmt.expression.callee)
-    }
+    if (stmt.type === 'ImportDeclaration') knownNodes.add(stmt)
+  }
+  for (const stmt of calls) {
+    knownNodes.add((stmt.expression as E.CallExpression).callee)
   }
 
   // Any other reference to `initialize` (captured return value, conditional
   // call, passing the function around) → we can't rewrite faithfully.
-  if (countIdentifierReferences(parsed.program, localName, knownNodes) > 0) {
+  if (countIdentifierReferences(parsed._program, localName, knownNodes) > 0) {
     warnings.push(
       `\`${localName}\` is used in a way the codemod cannot rewrite (e.g. its return value is captured, or it is called conditionally). You will need to migrate this file yourself — see the "initialize is removed" section of the migration guide.`
     )
@@ -484,10 +503,10 @@ function analyzeInitialize(
     return 'skip'
   }
 
-  const { stmt, call } = calls[0]
+  const call = calls[0].expression as E.CallExpression
   const args = call.arguments
 
-  if (args.some((a) => !t.isExpression(a))) {
+  if (args.some((a) => a.type === 'SpreadElement')) {
     warnings.push(
       `\`${localName}(...)\` receives arguments the codemod cannot carry over (e.g. spreads); you will need to migrate this file yourself.`
     )
@@ -500,11 +519,31 @@ function analyzeInitialize(
     return 'skip'
   }
 
-  return {
-    stmt,
-    options: (args[0] as t.Expression | undefined) ?? undefined,
-    handlers: (args[1] as t.Expression | undefined) ?? undefined
+  const list = argumentList(editor, call)
+  const fold: InitializeFold = {}
+  if (args[0]) fold.options = itemText(editor, list, list.items[0])
+  if (args[1]) {
+    // An array literal is spread into `setupWorker(...)` element by element
+    // (holes dropped); anything else is spread as a whole.
+    fold.handlers =
+      args[1].type === 'ArrayExpression'
+        ? holeFreeElements(parsed, args[1])
+        : [`...${itemText(editor, list, list.items[1])}`]
   }
+  return fold
+}
+
+function holeFreeElements(
+  parsed: ConfigFile,
+  arr: E.ArrayExpression
+): string[] {
+  const editor = parsed._editor
+  const list = arrayList(editor, arr)
+  const out: string[] = []
+  arr.elements.forEach((el, i) => {
+    if (el != null) out.push(itemText(editor, list, list.items[i]))
+  })
+  return out
 }
 
 /** Count `Identifier` references to `name`, ignoring the given nodes and
@@ -512,56 +551,41 @@ function analyzeInitialize(
  *  non-computed object keys). Conservative: an unexplained occurrence makes
  *  the caller skip the file. */
 function countIdentifierReferences(
-  root: t.Node,
+  root: ESTreeNode,
   name: string,
-  ignore: Set<t.Node>
+  ignore: Set<ESTreeNode>
 ): number {
   let count = 0
-  const seen = new Set<t.Node>()
-
-  function walk(node: t.Node | null | undefined): void {
-    if (node == null || typeof node !== 'object' || seen.has(node)) return
-    seen.add(node)
-    if (ignore.has(node)) return
-
-    if (t.isIdentifier(node) && node.name === name) {
-      count++
-      return
-    }
-
-    for (const key of Object.keys(node)) {
-      if (
-        key === 'loc' ||
-        key === 'leadingComments' ||
-        key === 'trailingComments' ||
-        key === 'innerComments'
-      ) {
-        continue
-      }
-      // Skip non-reference identifier positions.
-      if (t.isMemberExpression(node) && key === 'property' && !node.computed)
-        continue
-      if (
-        (t.isObjectProperty(node) || t.isObjectMethod(node)) &&
-        key === 'key' &&
-        !node.computed
-      )
-        continue
-
-      const value = (node as unknown as Record<string, unknown>)[key]
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          if (item && typeof item === 'object' && 'type' in item)
-            walk(item as t.Node)
-        }
-      } else if (value && typeof value === 'object' && 'type' in value) {
-        walk(value as t.Node)
-      }
-    }
-  }
-
-  walk(root)
+  walk(root, (node, parent) => {
+    if (ignore.has(node)) return false
+    if (node.type !== 'Identifier' || node.name !== name) return
+    // Skip non-reference identifier positions. A shorthand property's key
+    // is its value as well, so it does count.
+    if (
+      parent?.type === 'MemberExpression' &&
+      parent.property === node &&
+      !parent.computed
+    )
+      return false
+    if (
+      parent?.type === 'Property' &&
+      parent.key === node &&
+      !parent.computed &&
+      !parent.shorthand
+    )
+      return false
+    count++
+    return false
+  })
   return count
+}
+
+/** Remove the top-level `initialize(...)` call `analyzeInitialize` found. */
+function removeInitializeCall(parsed: ConfigFile, localName: string): void {
+  const [stmt] = findInitializeCalls(parsed._program.body, localName)
+  if (!stmt) return
+  removeStatement(parsed._editor, stmt)
+  parsed._editor.commit()
 }
 
 // -------- setup function builder
@@ -572,42 +596,20 @@ function countIdentifierReferences(
 //     return worker
 //   }
 
-function buildSetupFunction(fold: InitializeFold): t.ArrowFunctionExpression {
-  const setupWorkerArgs: (t.Expression | t.SpreadElement)[] = []
-  if (fold.handlers) {
-    if (t.isArrayExpression(fold.handlers)) {
-      for (const el of fold.handlers.elements) {
-        if (el != null)
-          setupWorkerArgs.push(el as t.Expression | t.SpreadElement)
-      }
-    } else {
-      setupWorkerArgs.push(t.spreadElement(fold.handlers))
-    }
-  }
-
-  const startArgs: t.Expression[] = fold.options ? [fold.options] : []
-
-  const bodyStatements: t.Statement[] = [
-    t.variableDeclaration('const', [
-      t.variableDeclarator(
-        t.identifier('worker'),
-        t.callExpression(t.identifier('setupWorker'), setupWorkerArgs)
-      )
-    ]),
-    t.expressionStatement(
-      t.awaitExpression(
-        t.callExpression(
-          t.memberExpression(t.identifier('worker'), t.identifier('start')),
-          startArgs
-        )
-      )
-    ),
-    t.returnStatement(t.identifier('worker'))
+function buildSetupFunction(parsed: ConfigFile, fold: InitializeFold): string {
+  const editor = parsed._editor
+  const step = editor.indent
+  const semi = semicolonFor(editor)
+  const startArgs = fold.options != null ? [fold.options] : []
+  const statements = [
+    `const worker = ${callText('setupWorker', fold.handlers ?? [], step)}${semi}`,
+    `await ${callText('worker.start', startArgs, step)}${semi}`,
+    `return worker${semi}`
   ]
-
-  const fn = t.arrowFunctionExpression([], t.blockStatement(bodyStatements))
-  fn.async = true
-  return fn
+  const body = statements
+    .map((stmt) => `${step}${reindent(stmt, '', step)}`)
+    .join('\n')
+  return `async () => {\n${body}\n}`
 }
 
 // -------- CSF 3.0: ensure `loaders: [mswLoader(...)]`
@@ -615,55 +617,49 @@ function buildSetupFunction(fold: InitializeFold): t.ArrowFunctionExpression {
 type LoaderOutcome = 'changed' | 'unchanged' | 'conflict'
 
 function ensureLoaderCall(
-  previewObj: t.ObjectExpression,
+  parsed: ConfigFile,
   loaderName: string,
-  setupFn: t.ArrowFunctionExpression | null,
-  imports: AddonImports
+  setupFn: string | null
 ): LoaderOutcome {
-  const makeCall = () =>
-    t.callExpression(t.identifier(loaderName), setupFn ? [setupFn] : [])
+  const call = callText(
+    loaderName,
+    setupFn ? [setupFn] : [],
+    parsed._editor.indent
+  )
+  const loaders = parsed.getFieldNode(['loaders'])
 
-  const loadersProp = findObjectProperty(previewObj, 'loaders')
-
-  if (!loadersProp) {
-    // No loaders at all. Only wire the loader in when the file used the
-    // addon (decorator or initialize) — which callers guarantee.
-    previewObj.properties.unshift(
-      t.objectProperty(t.identifier('loaders'), t.arrayExpression([makeCall()]))
-    )
-    return 'changed'
-  }
-
-  const value = loadersProp.value
-
-  // `loaders: mswLoader` shorthand → `loaders: [mswLoader(...)]`
+  // No loaders at all: only wired in when the file used the addon
+  // (decorator or initialize) — which callers guarantee. `loaders:
+  // mswLoader` shorthand → `loaders: [mswLoader(...)]`.
   if (
-    t.isIdentifier(value) &&
-    value.name === (imports.mswLoader ?? loaderName)
+    !loaders ||
+    (loaders.type === 'Identifier' && loaders.name === loaderName)
   ) {
-    loadersProp.value = t.arrayExpression([makeCall()])
+    // Removed and added again rather than set in place: `set` writes a new
+    // field indented like the object, an existing one as given.
+    parsed.remove(['loaders'])
+    parsed.set(['loaders'], parseExpression(`[${call}]`))
     return 'changed'
   }
 
-  if (!t.isArrayExpression(value)) return 'unchanged'
+  if (loaders.type !== 'ArrayExpression') return 'unchanged'
 
-  for (let i = 0; i < value.elements.length; i++) {
-    const el = value.elements[i]
+  for (const el of loaders.elements) {
     if (el == null) continue
     // Bare reference: `loaders: [mswLoader]`
-    if (t.isIdentifier(el) && el.name === (imports.mswLoader ?? loaderName)) {
-      value.elements[i] = makeCall()
+    if (el.type === 'Identifier' && el.name === loaderName) {
+      replaceNode(parsed, el, call)
       return 'changed'
     }
     // Already a call: `loaders: [mswLoader()]`
     if (
-      t.isCallExpression(el) &&
-      t.isIdentifier(el.callee) &&
-      el.callee.name === (imports.mswLoader ?? loaderName)
+      el.type === 'CallExpression' &&
+      el.callee.type === 'Identifier' &&
+      el.callee.name === loaderName
     ) {
       if (setupFn) {
         if (el.arguments.length > 0) return 'conflict'
-        el.arguments.push(setupFn)
+        addFirstArgument(parsed, el, setupFn)
         return 'changed'
       }
       return 'unchanged'
@@ -671,43 +667,59 @@ function ensureLoaderCall(
   }
 
   // Loaders array exists but has no msw entry — add one.
-  value.elements.push(makeCall())
+  parsed.appendNodeToArray(['loaders'], parseExpression(call))
   return 'changed'
 }
 
 // -------- drop `mswLoader`/`mswDecorator` references
 
-function stripMswRef(
-  obj: t.ObjectExpression,
+function isRef(el: ESTreeNode | null, refName: string): boolean {
+  if (el == null) return false
+  if (el.type === 'Identifier' && el.name === refName) return true
+  return (
+    el.type === 'CallExpression' &&
+    el.callee.type === 'Identifier' &&
+    el.callee.name === refName
+  )
+}
+
+/** Whether `propName` is `refName` or an array holding it. */
+function hasMswRef(
+  parsed: ConfigFile,
   propName: string,
   refName: string
 ): boolean {
-  const prop = findObjectProperty(obj, propName)
-  if (!prop) return false
-  const value = prop.value
-
-  if (t.isIdentifier(value) && value.name === refName) {
-    obj.properties = obj.properties.filter((p) => p !== prop)
-    return true
+  const value = findObjectProperty(previewObject(parsed), propName)?.value
+  if (!value) return false
+  if (value.type === 'ArrayExpression') {
+    return value.elements.some((el) => isRef(el, refName))
   }
-  if (t.isArrayExpression(value)) {
-    const before = value.elements.length
-    value.elements = value.elements.filter((el) => {
-      if (el == null) return true
-      if (t.isIdentifier(el) && el.name === refName) return false
-      if (
-        t.isCallExpression(el) &&
-        t.isIdentifier(el.callee) &&
-        el.callee.name === refName
-      )
-        return false
-      return true
-    })
-    if (value.elements.length === 0 && before > 0) {
-      obj.properties = obj.properties.filter((p) => p !== prop)
-      return true
+  return value.type === 'Identifier' && value.name === refName
+}
+
+function stripMswRef(
+  parsed: ConfigFile,
+  propName: string,
+  refName: string
+): boolean {
+  const value = findObjectProperty(previewObject(parsed), propName)?.value
+  if (!value) return false
+
+  if (value.type === 'Identifier' && value.name === refName) {
+    return parsed.remove([propName]).changed
+  }
+  if (value.type === 'ArrayExpression') {
+    const removed = value.elements.filter(
+      (el): el is E.Expression | E.SpreadElement => isRef(el, refName)
+    )
+    if (removed.length === 0) return false
+    if (removed.length === value.elements.length) {
+      // Nothing left: the property goes as well.
+      return parsed.remove([propName]).changed
     }
-    return value.elements.length !== before
+    removeFromList(parsed._editor, arrayList(parsed._editor, value), removed)
+    parsed._editor.commit()
+    return true
   }
   return false
 }
@@ -716,51 +728,54 @@ function stripMswRef(
 
 type AddonOutcome = 'changed' | 'unchanged' | 'conflict'
 
+function addonsArrayOf(parsed: ConfigFile): E.ArrayExpression | null {
+  const value = findObjectProperty(previewObject(parsed), 'addons')?.value
+  return value?.type === 'ArrayExpression' ? value : null
+}
+
 function ensureFactoriesAddon(
-  parsed: t.File,
-  configObj: t.ObjectExpression,
+  parsed: ConfigFile,
   imports: AddonImports,
-  setupFn: t.Expression | null,
+  setupFn: string | null,
   warnings: string[]
 ): AddonOutcome {
+  const editor = parsed._editor
   let localName = imports.addonDefault
 
-  const addonsProp = findObjectProperty(configObj, 'addons')
-  const addonsArray =
-    addonsProp && t.isArrayExpression(addonsProp.value)
-      ? addonsProp.value
-      : null
-
   const removeNamespaceEntry = (): boolean => {
+    const addonsArray = addonsArrayOf(parsed)
     if (!imports.previewNamespace || !addonsArray) return false
-    const before = addonsArray.elements.length
-    addonsArray.elements = addonsArray.elements.filter(
-      (el) =>
-        !(el != null && t.isIdentifier(el) && el.name === imports.previewNamespace)
+    const removed = addonsArray.elements.filter(
+      (el): el is E.IdentifierReference =>
+        el?.type === 'Identifier' && el.name === imports.previewNamespace
     )
-    return addonsArray.elements.length !== before
+    if (removed.length === 0) return false
+    removeFromList(editor, arrayList(editor, addonsArray), removed)
+    editor.commit()
+    return true
   }
 
   // Look for an existing registration first (conflict detection must run
   // before any mutation).
-  if (localName && addonsArray) {
-    for (const el of addonsArray.elements) {
+  const existing = addonsArrayOf(parsed)
+  if (localName && existing) {
+    for (const el of existing.elements) {
       if (el == null) continue
-      const isBare = t.isIdentifier(el) && el.name === localName
+      const isBare = el.type === 'Identifier' && el.name === localName
       const isCall =
-        t.isCallExpression(el) &&
-        t.isIdentifier(el.callee) &&
+        el.type === 'CallExpression' &&
+        el.callee.type === 'Identifier' &&
         el.callee.name === localName
       if (!isBare && !isCall) continue
       if (setupFn) {
-        if (isCall && (el as t.CallExpression).arguments.length > 0) {
+        if (isCall && (el as E.CallExpression).arguments.length > 0) {
           warnings.push(
             'A setup function could not be folded: the existing `addonMsw(...)` already receives one. You will need to merge them yourself.'
           )
           return 'conflict'
         }
         if (isCall) {
-          ;(el as t.CallExpression).arguments.push(setupFn)
+          addFirstArgument(parsed, el as E.CallExpression, setupFn)
           removeNamespaceEntry()
           return 'changed'
         }
@@ -774,46 +789,26 @@ function ensureFactoriesAddon(
   // Not registered yet — ensure the default import and inject the call.
   if (!localName) {
     localName = 'addonMsw'
-    let attached = false
-    for (const stmt of parsed.program.body) {
-      if (!t.isImportDeclaration(stmt)) continue
-      if (stmt.source.value !== ADDON_PACKAGE) continue
-      stmt.specifiers.unshift(t.importDefaultSpecifier(t.identifier(localName)))
-      attached = true
-      break
-    }
-    if (!attached) {
-      parsed.program.body.unshift(
-        t.importDeclaration(
-          [t.importDefaultSpecifier(t.identifier(localName))],
-          t.stringLiteral(ADDON_PACKAGE)
-        )
-      )
-    }
+    parsed.setImport(localName, ADDON_PACKAGE)
   }
 
-  const call = t.callExpression(
-    t.identifier(localName),
-    setupFn ? [setupFn] : []
-  )
+  const call = callText(localName, setupFn ? [setupFn] : [], editor.indent)
+  const addonsField = findObjectProperty(previewObject(parsed), 'addons')
+  const addonsArray = addonsArrayOf(parsed)
 
   // The namespace entry injected by `storybook automigrate csf-factories`
   // (`addons: [mswStorybookAddon]`) is replaced in place.
-  if (imports.previewNamespace && addonsArray) {
-    const nsIndex = addonsArray.elements.findIndex(
-      (el) =>
-        el != null && t.isIdentifier(el) && el.name === imports.previewNamespace
-    )
-    if (nsIndex !== -1) {
-      addonsArray.elements[nsIndex] = call
-      return 'changed'
-    }
+  const entry =
+    imports.previewNamespace != null
+      ? findAddonsEntry(parsed, imports.previewNamespace)
+      : undefined
+  if (entry) {
+    replaceNode(parsed, entry, call)
+    return 'changed'
   }
 
-  if (!addonsProp) {
-    configObj.properties.unshift(
-      t.objectProperty(t.identifier('addons'), t.arrayExpression([call]))
-    )
+  if (!addonsField) {
+    parsed.set(['addons'], parseExpression(`[${call}]`))
     return 'changed'
   }
   if (!addonsArray) {
@@ -822,78 +817,66 @@ function ensureFactoriesAddon(
     )
     return 'conflict'
   }
-  addonsArray.elements.unshift(call)
+  prependToList(editor, arrayList(editor, addonsArray), [call])
+  editor.commit()
   return 'changed'
 }
 
-/** Setup function carried by `mswLoader(setup)` entries in `loaders`. */
+/** Source of the setup function carried by `mswLoader(setup)` entries in
+ *  `loaders`. */
 function collectLoaderSetup(
-  previewObj: t.ObjectExpression,
+  parsed: ConfigFile,
   loaderName: string
-): t.Expression | null | 'conflict' {
-  const prop = findObjectProperty(previewObj, 'loaders')
-  if (!prop) return null
+): string | null | 'conflict' {
+  const value = findObjectProperty(previewObject(parsed), 'loaders')?.value
+  if (!value) return null
 
-  const calls: t.CallExpression[] = []
-  const consider = (el: t.Node | null | undefined) => {
+  const calls: E.CallExpression[] = []
+  const consider = (el: ESTreeNode | null) => {
     if (
       el != null &&
-      t.isCallExpression(el) &&
-      t.isIdentifier(el.callee) &&
+      el.type === 'CallExpression' &&
+      el.callee.type === 'Identifier' &&
       el.callee.name === loaderName &&
       el.arguments.length > 0
     ) {
       calls.push(el)
     }
   }
-  if (t.isArrayExpression(prop.value)) {
-    for (const el of prop.value.elements) consider(el)
+  if (value.type === 'ArrayExpression') {
+    for (const el of value.elements) consider(el)
   } else {
-    consider(prop.value)
+    consider(value)
   }
 
   if (calls.length === 0) return null
   if (calls.length > 1 || calls[0].arguments.length > 1) return 'conflict'
-  const arg = calls[0].arguments[0]
-  return t.isExpression(arg) ? arg : 'conflict'
+  if (calls[0].arguments[0].type === 'SpreadElement') return 'conflict'
+  const list = argumentList(parsed._editor, calls[0])
+  return itemText(parsed._editor, list, list.items[0])
 }
 
-/** Index of a bare-identifier entry in `addons: [...]`, or -1. */
-function findAddonsEntryIndex(
-  previewObj: t.ObjectExpression,
+/** A bare-identifier entry in `addons: [...]`, if there is one. */
+function findAddonsEntry(
+  parsed: ConfigFile,
   name: string
-): number {
-  const prop = findObjectProperty(previewObj, 'addons')
-  if (!prop || !t.isArrayExpression(prop.value)) return -1
-  return prop.value.elements.findIndex(
-    (el) => el != null && t.isIdentifier(el) && el.name === name
+): ESTreeNode | undefined {
+  return (
+    addonsArrayOf(parsed)?.elements.find(
+      (el) => el?.type === 'Identifier' && el.name === name
+    ) ?? undefined
   )
-}
-
-/** Drop `import * as x from 'msw-storybook-addon/preview'` once its
- *  `addons` entry has been replaced. */
-function removePreviewNamespaceImport(parsed: t.File): void {
-  parsed.program.body = parsed.program.body.filter((stmt) => {
-    if (!t.isImportDeclaration(stmt)) return true
-    if (stmt.source.value !== PREVIEW_SUBPATH) return true
-    return !stmt.specifiers.some((s) => t.isImportNamespaceSpecifier(s))
-  })
 }
 
 // -------- opt-in: preview-level `parameters.msw` → `beforeEach`
 
 function migratePreviewParameters(
-  previewObj: t.ObjectExpression,
+  parsed: ConfigFile,
   warnings: string[]
 ): boolean {
-  const parametersProp = findObjectProperty(previewObj, 'parameters')
-  if (!parametersProp || !t.isObjectExpression(parametersProp.value))
-    return false
-  const parameters = parametersProp.value
-  const mswProp = findObjectProperty(parameters, 'msw')
-  if (!mswProp) return false
-
-  const handlers = extractHandlers(mswProp.value)
+  if (!parsed.get(['parameters', 'msw'])) return false
+  const mswValue = mswValueOf(previewObject(parsed))
+  const handlers = mswValue && extractHandlers(parsed._editor, mswValue)
   if (!handlers) {
     warnings.push(
       'Preview-level `parameters.msw` has a shape the codemod does not recognize; you will need to migrate it to `beforeEach({ msw })` yourself.'
@@ -901,32 +884,20 @@ function migratePreviewParameters(
     return false
   }
 
-  if (handlers.length > 0 && hasAnyProperty(previewObj, 'beforeEach')) {
+  if (handlers.length > 0 && parsed.get(['beforeEach'])) {
     warnings.push(
       'The preview already defines `beforeEach`; you will need to move the `parameters.msw` handlers into it yourself.'
     )
     return false
   }
 
-  if (handlers.length > 0) {
-    const beforeEachProp = buildBeforeEachProperty(handlers)
-    const insertIdx = previewObj.properties.indexOf(parametersProp)
-    previewObj.properties.splice(insertIdx, 0, beforeEachProp)
-  }
   // An empty handler list (`msw: []`) is simply dropped.
-
-  parameters.properties = parameters.properties.filter((p) => p !== mswProp)
-  if (parameters.properties.length === 0) {
-    previewObj.properties = previewObj.properties.filter(
-      (p) => p !== parametersProp
+  if (!parsed.remove(['parameters', 'msw']).ok) return false
+  if (handlers.length > 0) {
+    parsed.set(
+      ['beforeEach'],
+      parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
     )
   }
   return true
-}
-
-// -------- helpers
-
-function removeStatement(body: t.Statement[], stmt: t.Statement): void {
-  const idx = body.indexOf(stmt)
-  if (idx !== -1) body.splice(idx, 1)
 }

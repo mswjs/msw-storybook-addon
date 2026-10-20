@@ -55,8 +55,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "@babel/parser": "^7.29.8",
-    "@babel/types": "^7.29.8",
     "@ossjs/release": "^0.11.2",
     "@playwright/test": "^1.61.1",
     "@storybook/addon-vitest": "11.0.0-alpha.0",
@@ -70,7 +68,6 @@
     "publint": "^0.3.22",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recast": "^0.23.21",
     "storybook": "11.0.0-alpha.0",
     "ts-dedent": "^2.3.0",
     "tsdown": "^0.22.13",
