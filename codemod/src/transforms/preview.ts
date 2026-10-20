@@ -51,8 +51,7 @@ import {
   printConfig,
   reindent,
   removeFromList,
-  removeStatement,
-  walk
+  removeStatement
 } from 'storybook/internal/csf-tools'
 import {
   beforeEachArrow,
@@ -436,14 +435,14 @@ function analyzeInitialize(
   const editor = parsed._editor
   const calls = findInitializeCalls(parsed._program.body, localName)
 
-  const known = new Set<ESTreeNode>(calls.map((stmt) => stmt.expression.callee))
-  for (const stmt of parsed._program.body) {
-    if (stmt.type === 'ImportDeclaration') known.add(stmt)
-  }
-
   // Any other reference to `initialize` (captured return value, conditional
   // call, passing the function around) → we can't rewrite faithfully.
-  if (countIdentifierReferences(parsed._program, localName, known) > 0) {
+  const callees = new Set<ESTreeNode>(
+    calls.map((stmt) => stmt.expression.callee)
+  )
+  const references =
+    editor.scopes.program.bindings.get(localName)?.references ?? []
+  if (references.some((ref) => !callees.has(ref))) {
     warnings.push(
       `\`${localName}\` is used in a way the codemod cannot rewrite (e.g. its return value is captured, or it is called conditionally). You will need to migrate this file yourself — see the "initialize is removed" section of the migration guide.`
     )
@@ -506,40 +505,6 @@ function holeFreeElements(
   return list.items
     .filter((_, i) => arr.elements[i] != null)
     .map((item) => itemText(editor, list, item))
-}
-
-/** Count `Identifier` references to `name`, ignoring the given nodes and
- *  non-reference positions we can cheaply detect (member properties and
- *  non-computed object keys). Conservative: an unexplained occurrence makes
- *  the caller skip the file. */
-function countIdentifierReferences(
-  root: ESTreeNode,
-  name: string,
-  ignore: Set<ESTreeNode>
-): number {
-  let count = 0
-  walk(root, (node, parent) => {
-    if (ignore.has(node)) return false
-    if (node.type !== 'Identifier' || node.name !== name) return
-    // Skip non-reference identifier positions. A shorthand property's key
-    // is its value as well, so it does count.
-    if (
-      parent?.type === 'MemberExpression' &&
-      parent.property === node &&
-      !parent.computed
-    )
-      return false
-    if (
-      parent?.type === 'Property' &&
-      parent.key === node &&
-      !parent.computed &&
-      !parent.shorthand
-    )
-      return false
-    count++
-    return false
-  })
-  return count
 }
 
 /** Remove the top-level `initialize(...)` call `analyzeInitialize` found. */

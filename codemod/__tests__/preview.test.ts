@@ -301,6 +301,22 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings[0]).toContain('cannot rewrite')
   })
 
+  it('migrates initialize when a nested scope declares its own initialize', () => {
+    const src = dedent`
+      import { initialize, mswLoader } from 'msw-storybook-addon'
+      initialize()
+      const run = (initialize) => initialize()
+      export default { loaders: [mswLoader] }
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import { mswLoader } from 'msw-storybook-addon/csf3'
+      const run = (initialize) => initialize()
+      export default { loaders: [mswLoader()] }"
+    `)
+  })
+
   it('skips and warns on multiple initialize calls', () => {
     const src = dedent`
       import { initialize, mswLoader } from 'msw-storybook-addon'
