@@ -5,6 +5,7 @@
     "rootDir": ".",
     "outDir": "./dist",
     "jsx": "preserve",
+    "target": "ES2022",
     "lib": ["ES2024"],
     "types": ["node"]
   }

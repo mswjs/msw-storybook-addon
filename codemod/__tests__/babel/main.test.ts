@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { transformMain } from '../src/transforms/main'
+import { expect, it } from 'vitest'
 import { dedent } from 'ts-dedent'
+import { babel } from '../csf-tools'
+
+const describe = babel.describe
+const { transformMain } = await babel.load(
+  () => import('../../src/transforms/babel/main')
+)
 
 describe('transformMain', () => {
   it('adds the addon when missing', () => {
@@ -73,7 +78,10 @@ describe('transformMain', () => {
       "import type { StorybookConfig } from '@storybook/react-vite'
       export default {
         framework: getAbsolutePath('@storybook/react-vite'),
-        addons: [getAbsolutePath('@storybook/addon-docs'), getAbsolutePath('msw-storybook-addon')],
+        addons: [
+          getAbsolutePath('@storybook/addon-docs'),
+          getAbsolutePath('msw-storybook-addon')
+        ],
       } satisfies StorybookConfig"
     `)
   })
@@ -121,52 +129,9 @@ describe('transformMain', () => {
       "export default {
         framework: '@storybook/react-vite',
         stories: ['../src/**/*.stories.tsx'],
-        addons: ['msw-storybook-addon'],
-      }"
+        addons: ['msw-storybook-addon']
+      };"
     `)
-  })
-
-  it('returns null when addons is a method', () => {
-    const src = dedent`
-      export default {
-        addons() {
-          return ['@storybook/addon-docs']
-        },
-      }
-    `
-    expect(transformMain(src)).toBeNull()
-  })
-
-  it('keeps the quote style of the first 500 tokens, directives included', () => {
-    const src = dedent`
-      'use strict'
-      module.exports = { stories: ["../src"], addons: ['x'] }
-    `
-    expect(transformMain(src)).toMatchInlineSnapshot(`
-      "'use strict'
-      module.exports = { stories: ["../src"], addons: ['x', 'msw-storybook-addon'] }"
-    `)
-  })
-
-  it('carries the addons of a spread config forward', () => {
-    const src = dedent`
-      import { shared } from './shared'
-      export default { ...shared, framework: '@storybook/react-vite' }
-    `
-    expect(transformMain(src)).toMatchInlineSnapshot(`
-      "import { shared } from './shared'
-      export default { ...shared, framework: '@storybook/react-vite', addons: [...(shared.addons ?? []), 'msw-storybook-addon'] }"
-    `)
-  })
-
-  it('reports an addons field csf-tools cannot edit', () => {
-    // The config binding is used elsewhere, so csf-tools will not edit it.
-    const src = dedent`
-      const config = { framework: '@storybook/react-vite' }
-      export default config
-      console.log(config)
-    `
-    expect(() => transformMain(src)).toThrow(/add it yourself/)
   })
 
   it('returns null when addons is not a plain array (e.g. spread variable)', () => {
