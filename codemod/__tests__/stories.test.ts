@@ -423,4 +423,37 @@ describe('transformStory', () => {
       "
     `)
   })
+
+  it('leaves a CSF2 story whose parameters only spread others', () => {
+    const src = dedent`
+      export default { title: 'X' }
+      export const Default = () => null
+      export const Wide = () => null
+      Wide.parameters = { ...Default.parameters, layout: 'fullscreen' }
+    `
+    expect(transformStory(src)).toEqual({ code: null, skippedStories: [] })
+  })
+
+  it('migrates a CSF2 assignment to a story object', () => {
+    const src = dedent`
+      import { http } from 'msw'
+      export default { title: 'X' }
+      export const A = { args: { label: 'a' } }
+      A.parameters = { msw: [http.get('/u', () => {})] }
+    `
+    expect(transformStory(src)).toMatchInlineSnapshot(`
+      {
+        "code": "import { http } from 'msw'
+      export default { title: 'X' }
+      export const A = {
+        args: { label: 'a' },
+        beforeEach: ({ msw }) => {
+          msw.use(http.get('/u', () => {}))
+        }
+      }
+      ",
+        "skippedStories": [],
+      }
+    `)
+  })
 })

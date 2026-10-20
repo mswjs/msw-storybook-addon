@@ -85,13 +85,18 @@ function migrateObject(
   parsed: CsfFile,
   object: CsfObject
 ): SkipReason | undefined {
-  const msw = object.inspect(MSW_PATH)
-  // An object literal counts as carrying `parameters.msw` when it writes
-  // it out itself; one it could only get from a spread is not ours to touch.
-  const written = object.node
-    ? mswValueOf(object.node) != null
-    : msw.kind !== 'missing'
+  // `parameters.msw` must be written out in the object or a CSF2
+  // assignment; one the object could only get from a spread is not ours
+  // to touch.
+  const parameters = object.inspect(['parameters'])
+  const written =
+    parameters.kind === 'value'
+      ? parameters.node.type === 'ObjectExpression' &&
+        findObjectProperty(parameters.node, 'msw') != null
+      : mswValueOf(object.node) != null
   if (!written) return undefined
+
+  const msw = object.inspect(MSW_PATH)
   if (msw.kind !== 'value') return 'unrecognized-shape'
 
   const handlers = handlersOf(msw.node)
