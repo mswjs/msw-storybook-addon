@@ -148,6 +148,14 @@ describe('transformMain', () => {
     `)
   })
 
+  it('reports an addons field csf-tools cannot edit', () => {
+    const src = dedent`
+      import shared from './shared'
+      export default { ...shared, framework: '@storybook/react-vite' }
+    `
+    expect(() => transformMain(src)).toThrow(/add it yourself/)
+  })
+
   it('returns null when addons is not a plain array (e.g. spread variable)', () => {
     const src = dedent`
       import { sharedAddons } from './shared'

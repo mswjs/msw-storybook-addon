@@ -20,6 +20,8 @@
 import {
   arrayList,
   type CsfFile,
+  type CsfMutationDiagnostic,
+  type CsfMutationResult,
   type CsfObject,
   type CsfObjectTarget,
   type ESTree as E,
@@ -70,10 +72,22 @@ export function transformStory(source: string): StoryTransformResult {
 
   let changed = false
   for (const object of parsed.objects()) {
-    const result =
-      object.target.kind === 'story-annotation'
-        ? migrateCsf2Annotation(parsed, object, object.target)
-        : migrateMswOnObject(parsed, object)
+    let result: MigrationOutcome
+    try {
+      result =
+        object.target.kind === 'story-annotation'
+          ? migrateCsf2Annotation(parsed, object, object.target)
+          : migrateMswOnObject(parsed, object)
+    } catch (error) {
+      if (!(error instanceof RefusedEdit)) throw error
+      // An edit was refused halfway through a story: the file is left as
+      // it was rather than written with the handlers half moved.
+      skipped.push({
+        story: storyName(object.target),
+        reason: 'unrecognized-shape'
+      })
+      return { code: null, skippedStories: skipped }
+    }
     if (result === 'changed') changed = true
     else if (result !== 'noop')
       skipped.push({ story: storyName(object.target), reason: result })
@@ -98,31 +112,70 @@ function migrateMswOnObject(
   parsed: CsfFile,
   object: CsfObject
 ): MigrationOutcome {
-  if (!object.get(MSW_PATH)) return 'noop'
   const mswValue = mswValueOf(objectNodeOf(parsed, object.target))
-  const handlers = mswValue && extractHandlers(parsed._editor, mswValue)
+  if (!mswValue) return 'noop'
+  // csf-tools must be able to prove the field too: a spread or a duplicate
+  // key around it makes the edit unsafe.
+  if (!read(parsed, () => object.get(MSW_PATH)).value) {
+    return 'unrecognized-shape'
+  }
+  const handlers = extractHandlers(parsed._editor, mswValue)
   if (!handlers) {
     // Unrecognised shape — leave the file alone for THIS story.
     return 'unrecognized-shape'
   }
 
-  // Refuse to silently overwrite an existing beforeEach. The user merges
-  // the handlers into it themselves; we'd rather skip than blow away their
-  // code. `get` reads both `beforeEach: () => {}` and `beforeEach() {}`.
-  if (handlers.length > 0 && object.get(['beforeEach']))
-    return 'existing-before-each'
+  if (handlers.length > 0) {
+    // Refuse to silently overwrite an existing beforeEach. The user merges
+    // the handlers into it themselves; we'd rather skip than blow away
+    // their code. `get` reads both `beforeEach: () => {}` and
+    // `beforeEach() {}`; a spread could hold one as well.
+    const beforeEach = read(parsed, () => object.get(['beforeEach']))
+    if (!beforeEach.proven) return 'unrecognized-shape'
+    if (beforeEach.value) return 'existing-before-each'
+  }
 
   // Strip `msw` from `parameters`; `parameters` goes as well once empty.
   // An empty handler list (`msw: []`) has nothing to carry over — the
   // parameter is simply dropped.
   if (!object.remove(MSW_PATH).ok) return 'unrecognized-shape'
   if (handlers.length > 0) {
-    object.set(
-      ['beforeEach'],
-      parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
+    edited(
+      object.set(
+        ['beforeEach'],
+        parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
+      )
     )
   }
   return 'changed'
+}
+
+/** A csf-tools edit that was refused after earlier edits went through. */
+export class RefusedEdit extends Error {
+  constructor(readonly diagnostic: CsfMutationDiagnostic) {
+    super(diagnostic.message)
+  }
+}
+
+/** Throw `RefusedEdit` for a mutation csf-tools did not apply. */
+export function edited(result: CsfMutationResult): void {
+  if (!result.ok) throw new RefusedEdit(result.diagnostic)
+}
+
+/**
+ * A read through a csf-tools editor. `proven` is false when the read added
+ * a diagnostic: a spread, a duplicate key or a getter leaves the field's
+ * presence and value unproven, and `value` is then undefined too.
+ */
+export function read(
+  file: { readonly mutationDiagnostics: readonly unknown[] },
+  get: () => ESTreeNode | undefined
+): { value?: ESTreeNode; proven: boolean } {
+  const before = file.mutationDiagnostics.length
+  const value = get()
+  return file.mutationDiagnostics.length > before
+    ? { proven: false }
+    : { value, proven: true }
 }
 
 /** The object literal a meta or story editor edits. */
@@ -134,8 +187,11 @@ export function objectNodeOf(
     return parsed._metaNodeIsSynthetic ? undefined : parsed._metaNode
   }
   if (target.kind !== 'story') return undefined
-  const decl = parsed._storyExports[target.exportName] as ESTreeNode | undefined
-  let node = decl?.type === 'VariableDeclarator' ? decl.init : decl
+  // The story's binding, which also covers `export { A as B }`.
+  const decl = parsed._editor.scopes.program.bindings.get(target.localName)
+    ?.node as ESTreeNode | undefined
+  let node: ESTreeNode | null | undefined =
+    decl?.type === 'VariableDeclarator' ? decl.init : undefined
   node = node && unwrapExpression(node)
   // CSF factories: `meta.story({...})`.
   if (node?.type === 'CallExpression' && node.arguments[0]) {
@@ -310,20 +366,26 @@ function migrateCsf2Annotation(
   object: CsfObject,
   target: Extract<CsfObjectTarget, { kind: 'story-annotation' }>
 ): MigrationOutcome {
-  if (target.annotation !== 'parameters' || !object.get(MSW_PATH)) return 'noop'
+  if (target.annotation !== 'parameters') return 'noop'
   const editor = parsed._editor
   const stmt = findAnnotationStatement(parsed, target.localName)
-  const parametersObj = (stmt?.expression as E.AssignmentExpression)?.right as
-    E.ObjectExpression | undefined
-  const mswProp = parametersObj && findObjectProperty(parametersObj, 'msw')
-  const handlers = mswProp && extractHandlers(editor, mswProp.value)
-  if (!stmt || !parametersObj || !handlers) return 'unrecognized-shape'
+  const parametersObj = stmt && annotationValue(stmt)
+  const mswProp =
+    parametersObj?.type === 'ObjectExpression'
+      ? findObjectProperty(parametersObj, 'msw')
+      : undefined
+  if (!stmt || !mswProp) return 'noop'
+  const parameters = parametersObj as E.ObjectExpression
+  if (!read(parsed, () => object.get(MSW_PATH)).value) {
+    return 'unrecognized-shape'
+  }
 
-  // csf-tools collects every top-level `Foo.<key> = ...` assignment into
-  // `_storyAnnotations` — the place to check for an existing `beforeEach`.
-  if (parsed._storyAnnotations[target.localName]?.beforeEach != null) {
+  if (hasBeforeEachAnnotation(parsed, target.localName)) {
     return 'existing-before-each'
   }
+
+  const handlers = extractHandlers(editor, mswProp.value)
+  if (!handlers) return 'unrecognized-shape'
 
   const assignment =
     handlers.length > 0
@@ -332,7 +394,7 @@ function migrateCsf2Annotation(
         }`
       : null
 
-  if (parametersObj.properties.length === 1) {
+  if (parameters.properties.length === 1) {
     // `msw` was all there was: the annotation gives way to `beforeEach`.
     if (assignment) editor.edits.overwrite(stmt.start, stmt.end, assignment)
     else removeStatement(editor, stmt)
@@ -354,6 +416,30 @@ function migrateCsf2Annotation(
   return 'changed'
 }
 
+/** The property a top-level `<localName>.<property> = ...` assigns. */
+function annotationKey(
+  stmt: E.Directive | E.Statement,
+  localName: string
+): string | undefined {
+  if (
+    stmt.type !== 'ExpressionStatement' ||
+    stmt.expression.type !== 'AssignmentExpression' ||
+    stmt.expression.left.type !== 'MemberExpression'
+  )
+    return undefined
+  const { object, property, computed } = stmt.expression.left
+  if (object.type !== 'Identifier' || object.name !== localName)
+    return undefined
+  if (!computed && property.type === 'Identifier') return property.name
+  return property.type === 'Literal' && typeof property.value === 'string'
+    ? property.value
+    : undefined
+}
+
+function annotationValue(stmt: E.ExpressionStatement): ESTreeNode {
+  return unwrapExpression((stmt.expression as E.AssignmentExpression).right)
+}
+
 /** The top-level `<localName>.parameters = {...}` statement. */
 function findAnnotationStatement(
   parsed: CsfFile,
@@ -361,14 +447,14 @@ function findAnnotationStatement(
 ): E.ExpressionStatement | undefined {
   return parsed._program.body.find(
     (stmt): stmt is E.ExpressionStatement =>
-      stmt.type === 'ExpressionStatement' &&
-      stmt.expression.type === 'AssignmentExpression' &&
-      stmt.expression.left.type === 'MemberExpression' &&
-      !stmt.expression.left.computed &&
-      stmt.expression.left.object.type === 'Identifier' &&
-      stmt.expression.left.object.name === localName &&
-      stmt.expression.left.property.type === 'Identifier' &&
-      stmt.expression.left.property.name === 'parameters' &&
-      stmt.expression.right.type === 'ObjectExpression'
+      annotationKey(stmt, localName) === 'parameters'
+  )
+}
+
+/** Whether a `<localName>.beforeEach = ...` annotation exists anywhere at
+ *  the top level of the file. */
+function hasBeforeEachAnnotation(parsed: CsfFile, localName: string): boolean {
+  return parsed._program.body.some(
+    (stmt) => annotationKey(stmt, localName) === 'beforeEach'
   )
 }

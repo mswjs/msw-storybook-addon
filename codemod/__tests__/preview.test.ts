@@ -90,7 +90,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { setupWorker } from 'msw/browser';
+      import { setupWorker } from 'msw/browser'
 
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker()
@@ -117,7 +117,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { setupWorker } from 'msw/browser';
+      import { setupWorker } from 'msw/browser'
       const ignoredPattern = /\\.(png|svg)$/i
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker()
@@ -149,7 +149,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { http, HttpResponse } from 'msw'
       import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { setupWorker } from 'msw/browser';
+      import { setupWorker } from 'msw/browser'
 
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker(http.get('/user', () => HttpResponse.json({ name: 'John' })))
@@ -173,7 +173,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
       import { sharedHandlers } from './handlers'
-      import { setupWorker } from 'msw/browser';
+      import { setupWorker } from 'msw/browser'
 
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker(...sharedHandlers)
@@ -193,7 +193,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { setupWorker } from 'msw/browser';
+      import { setupWorker } from 'msw/browser'
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker()
         await worker.start({ onUnhandledRequest: 'bypass' })
@@ -213,7 +213,7 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { withTheme } from './theme'
-      import { mswLoader } from 'msw-storybook-addon/csf3';
+      import { mswLoader } from 'msw-storybook-addon/csf3'
       export default { decorators: [withTheme], loaders: [mswLoader()] }"
     `)
   })
@@ -227,8 +227,8 @@ describe('transformPreview — CSF 3.0', () => {
     const result = transformPreview(src)
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
-      "import { mswLoader } from 'msw-storybook-addon/csf3';
-      import { setupWorker } from 'msw/browser';
+      "import { mswLoader } from 'msw-storybook-addon/csf3'
+      import { setupWorker } from 'msw/browser'
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker()
         await worker.start({ onUnhandledRequest: 'bypass' })
@@ -246,7 +246,7 @@ describe('transformPreview — CSF 3.0', () => {
     const result = transformPreview(src)
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
-      "import { mswLoader } from 'msw-storybook-addon/csf3';
+      "import { mswLoader } from 'msw-storybook-addon/csf3'
       export default { parameters: {}, loaders: [mswLoader()] }"
     `)
   })
@@ -336,6 +336,64 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.code).toBeNull()
     expect(result.warnings).toHaveLength(1)
     expect(result.warnings[0]).toContain('setup function')
+  })
+})
+
+describe('transformPreview — edits csf-tools refuses', () => {
+  it('leaves a preview alone when a spread sits next to the field', () => {
+    const src = dedent`
+      import { initialize, mswDecorator } from 'msw-storybook-addon'
+      import base from './base'
+      initialize()
+      export default { ...base, decorators: [mswDecorator] }
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings[0]).toContain('Could not edit')
+  })
+
+  it('leaves a definePreview with a spread alone', () => {
+    const src = dedent`
+      import { definePreview } from '@storybook/react-vite'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+      import base from './base'
+      export default definePreview({ ...base, loaders: [mswLoader] })
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings[0]).toContain('Could not edit')
+  })
+
+  it('warns instead of dropping parameters.msw next to a spread', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      import shared from './shared'
+      export default {
+        ...shared,
+        parameters: { msw: [http.get('/user', () => HttpResponse.json({}))] },
+      }
+    `
+    const result = transformPreview(src, { migrateParameters: true })
+    expect(result.code).toBeNull()
+    expect(result.warnings).toHaveLength(1)
+  })
+
+  it('cleans up every addon import declaration and skips type imports', () => {
+    const src = dedent`
+      import type { MswParameters } from 'msw-storybook-addon'
+      import { mswLoader } from 'msw-storybook-addon'
+      import { initialize } from 'msw-storybook-addon'
+      initialize()
+      export default { loaders: [mswLoader] }
+    `
+    const result = transformPreview(src)
+    expect(result.warnings).toEqual([])
+    expect(result.code).toMatchInlineSnapshot(`
+      "import type { MswParameters } from 'msw-storybook-addon'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+      export default { loaders: [mswLoader()] }"
+    `)
   })
 })
 
@@ -572,7 +630,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { definePreview } from '@storybook/react-vite'
       import { setupWorker } from 'msw/browser'
-      import addonMsw from 'msw-storybook-addon';
+      import addonMsw from 'msw-storybook-addon'
 
       export default definePreview({
         addons: [addonMsw(async () => {
@@ -601,7 +659,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { definePreview } from '@storybook/react-vite'
-      import addonMsw from 'msw-storybook-addon';
+      import addonMsw from 'msw-storybook-addon'
 
       export default definePreview({
         addons: [addonMsw()],
@@ -622,7 +680,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { definePreview } from '@storybook/react-vite'
-      import addonMsw from 'msw-storybook-addon';
+      import addonMsw from 'msw-storybook-addon'
 
       export default definePreview({
         addons: [addonMsw()],
@@ -651,7 +709,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { definePreview } from '@storybook/react-vite'
       import { setupWorker } from 'msw/browser'
-      import addonMsw from 'msw-storybook-addon';
+      import addonMsw from 'msw-storybook-addon'
 
       export default definePreview({
         addons: [addonMsw(async () => {
@@ -725,7 +783,7 @@ describe('transformPreview — CSF Next (definePreview)', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { definePreview } from '@storybook/react-vite'
       import addonMsw from 'msw-storybook-addon'
-      import { setupWorker } from 'msw/browser';
+      import { setupWorker } from 'msw/browser'
 
       export default definePreview({
         parameters: {},

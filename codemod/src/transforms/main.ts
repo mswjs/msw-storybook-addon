@@ -61,9 +61,15 @@ export function transformMain(source: string): string | null {
     // Creates `addons` when it is missing.
     parsed.appendValueToArray(['addons'], ADDON_PACKAGE)
   }
-  // An `addons` field csf-tools cannot edit (a getter, say) is reported as
-  // a diagnostic instead of being written.
-  if (parsed.mutationDiagnostics.length > 0) return null
+  // An `addons` field csf-tools cannot edit (next to a spread, say) is
+  // reported as a diagnostic instead of being written. The CLI lists the
+  // error, so the user registers the addon by hand.
+  const [diagnostic] = parsed.mutationDiagnostics
+  if (diagnostic) {
+    throw new Error(
+      `Could not add '${ADDON_PACKAGE}' to \`addons\` (${diagnostic.message}); add it yourself.`
+    )
+  }
   return printConfig(parsed).code
 }
 

@@ -335,6 +335,75 @@ describe('transformStory', () => {
     expect(transformStory(src)).toEqual({ code: null, skippedStories: [] })
   })
 
+  it('skips a story whose spread could hold a beforeEach', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      export const Foo = {
+        ...Base,
+        parameters: { msw: { handlers: [http.get('/u', () => HttpResponse.json({}))] } },
+      }
+    `
+    expect(transformStory(src)).toEqual({
+      code: null,
+      skippedStories: [{ story: 'Foo', reason: 'unrecognized-shape' }]
+    })
+  })
+
+  it('skips a story whose parameters.msw a later spread could shadow', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      export const Foo = {
+        parameters: { msw: [http.get('/u', () => HttpResponse.json({}))] },
+        ...Base,
+      }
+    `
+    expect(transformStory(src)).toEqual({
+      code: null,
+      skippedStories: [{ story: 'Foo', reason: 'unrecognized-shape' }]
+    })
+  })
+
+  it('migrates a story exported as `export { A as B }`', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      const A = {
+        parameters: { msw: [http.get('/u', () => HttpResponse.json({}))] },
+      }
+      export { A as B }
+    `
+    expect(transformStory(src)).toMatchInlineSnapshot(`
+      {
+        "code": "import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      const A = {
+        beforeEach: ({ msw }) => {
+          msw.use(http.get('/u', () => HttpResponse.json({})))
+        },
+      }
+      export { A as B }",
+        "skippedStories": [],
+      }
+    `)
+  })
+
+  it('skips a CSF2 story whose beforeEach comes before its export', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      const A = () => null
+      A.beforeEach = () => {}
+      A.parameters = { msw: [http.get('/u', () => HttpResponse.json({}))] }
+      export { A }
+    `
+    expect(transformStory(src)).toEqual({
+      code: null,
+      skippedStories: [{ story: 'A', reason: 'existing-before-each' }]
+    })
+  })
+
   it('migrates CSF2-style Foo.parameters = { msw: ... } annotation', () => {
     const src = dedent`
       import { http, HttpResponse } from 'msw'
