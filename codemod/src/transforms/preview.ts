@@ -259,7 +259,7 @@ function migrateCsf3(
   stripMswRef(parsed, 'decorators', mswDecorator)
   removeInitializeCall(parsed, initialize)
   removeSpecifiers(parsed, ['initialize', 'mswDecorator'])
-  importLoaderFromCsf3(parsed)
+  importLoaderFromCsf3(parsed, mswLoader ?? 'mswLoader')
   if (setup) parsed.setImport(['setupWorker'], MSW_BROWSER)
   return true
 }
@@ -362,31 +362,6 @@ function importedName(spec: E.ImportSpecifier): string {
   return imported.type === 'Literal' ? imported.value : imported.name
 }
 
-/** The value `import { name as local }` specifier of `source`, if any. */
-function findNamedImport(
-  parsed: ConfigFile,
-  source: string,
-  name: string
-): E.ImportSpecifier | undefined {
-  for (const stmt of parsed._program.body) {
-    if (
-      stmt.type !== 'ImportDeclaration' ||
-      stmt.importKind === 'type' ||
-      stmt.source.value !== source
-    )
-      continue
-    for (const spec of stmt.specifiers) {
-      if (
-        spec.type === 'ImportSpecifier' &&
-        isValueSpecifier(spec) &&
-        importedName(spec) === name
-      )
-        return spec
-    }
-  }
-  return undefined
-}
-
 function isValueSpecifier(spec: E.ImportDeclarationSpecifier): boolean {
   return spec.type !== 'ImportSpecifier' || spec.importKind !== 'type'
 }
@@ -394,24 +369,17 @@ function isValueSpecifier(spec: E.ImportDeclarationSpecifier): boolean {
 /** Remove the given value imports from the addon; drop emptied declarations. */
 function removeSpecifiers(parsed: ConfigFile, names: string[]): void {
   for (const source of [ADDON_PACKAGE, CSF3_SUBPATH]) {
-    const present = names.filter((name) =>
-      findNamedImport(parsed, source, name)
-    )
-    if (present.length > 0) parsed.removeImport(present, source)
+    parsed.removeImport(names, source)
   }
 }
 
-/** Import `mswLoader` from the /csf3 subpath, moving a root-package import there. */
-function importLoaderFromCsf3(parsed: ConfigFile): void {
-  const root = findNamedImport(parsed, ADDON_PACKAGE, 'mswLoader')
-  const local = root?.local.name ?? 'mswLoader'
-  if (root) parsed.removeImport(['mswLoader'], ADDON_PACKAGE)
-  if (!findNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) {
-    parsed.setImport(
-      [local === 'mswLoader' ? local : `mswLoader as ${local}`],
-      CSF3_SUBPATH
-    )
-  }
+/** Import `mswLoader` as `local` from the /csf3 subpath, instead of the root. */
+function importLoaderFromCsf3(parsed: ConfigFile, local: string): void {
+  parsed.removeImport(['mswLoader'], ADDON_PACKAGE)
+  parsed.setImport(
+    [local === 'mswLoader' ? local : `mswLoader as ${local}`],
+    CSF3_SUBPATH
+  )
 }
 
 // -------- `initialize` analysis
