@@ -1,10 +1,10 @@
-import { describe } from 'vitest'
+import { describe, inject } from 'vitest'
+import type { Transforms } from './global-setup'
 
 /**
  * The codemod has one implementation per csf-tools generation: Babel for
- * Storybook 9 and 10, ESTree for Storybook 11. Like the CLI, the tests pick
- * by whether the installed csf-tools has `parseModule`. Each suite runs on
- * the Storybook it is written for, and is skipped with the reason otherwise.
+ * Storybook 9 and 10, ESTree for Storybook 11. Each suite runs on the
+ * Storybook it is written for, and is skipped with the reason otherwise.
  */
 interface CsfToolsSuite {
   describe: (name: string, fn: () => void) => void
@@ -12,7 +12,8 @@ interface CsfToolsSuite {
   load: <T>(load: () => Promise<T>) => Promise<T>
 }
 
-function suite(available: boolean, needs: string): CsfToolsSuite {
+function suite(transforms: Transforms, needs: string): CsfToolsSuite {
+  const available = inject('transforms') === transforms
   return {
     describe: (name, fn) =>
       available
@@ -22,11 +23,5 @@ function suite(available: boolean, needs: string): CsfToolsSuite {
   }
 }
 
-const hasEstree =
-  'parseModule' in (await import('storybook/internal/csf-tools'))
-
-export const babel = suite(
-  !hasEstree,
-  'the Babel csf-tools of Storybook 9 or 10'
-)
-export const estree = suite(hasEstree, 'the ESTree csf-tools of Storybook 11')
+export const babel = suite('babel', 'the Babel csf-tools of Storybook 9 or 10')
+export const estree = suite('estree', 'the ESTree csf-tools of Storybook 11')
