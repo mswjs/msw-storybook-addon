@@ -36,13 +36,8 @@
  * Idempotent: running twice produces the same result and no spurious diff.
  */
 
-import { types as t } from 'storybook/internal/babel'
-import {
-  type ConfigFile,
-  isCsfFactoryPreview,
-  loadConfig,
-  printConfig
-} from 'storybook/internal/csf-tools'
+import * as t from '@babel/types'
+import { findConfigExports, isCsfFactoryPreview, parse, print } from './ast'
 import {
   buildBeforeEachProperty,
   extractHandlers,
@@ -101,19 +96,19 @@ export function transformPreview(
   options: PreviewTransformOptions = {}
 ): PreviewTransformResult {
   const warnings: string[] = []
-  let parsed: ConfigFile
+  let parsed: t.File
   try {
-    parsed = loadConfig(source).parse()
+    parsed = parse(source)
   } catch {
     return { code: null, warnings }
   }
 
-  const body = parsed._ast.program.body
+  const body = parsed.program.body
   const imports = collectAddonImports(body)
-  // The parser unwraps call-wrapped and variable-declared default exports,
-  // so this covers `export default {}`, `export default definePreview({})`
+  // Call-wrapped and variable-declared default exports are unwrapped, so
+  // this covers `export default {}`, `export default definePreview({})`
   // and `const preview = definePreview({}); export default preview`.
-  const previewObj = parsed._exportsObject ?? null
+  const previewObj = findConfigExports(parsed).exportsObject ?? null
   const isFactories = isCsfFactoryPreview(parsed)
 
   // ---- analyze `initialize` usage (before mutating anything) ----
@@ -264,14 +259,14 @@ export function transformPreview(
 }
 
 function finish(
-  parsed: ConfigFile,
+  parsed: t.File,
   source: string,
   changed: boolean,
   warnings: string[],
   csfNext: boolean
 ): PreviewTransformResult {
   if (!changed) return { code: null, warnings, csfNext }
-  const code = printConfig(parsed).code
+  const code = print(parsed)
   return { code: code === source ? null : code, warnings, csfNext }
 }
 
@@ -315,9 +310,9 @@ function importedName(spec: t.ImportSpecifier): string | null {
 }
 
 /** Remove the given specifiers from addon imports; drop emptied declarations. */
-function removeSpecifiers(parsed: ConfigFile, names: string[]): boolean {
+function removeSpecifiers(parsed: t.File, names: string[]): boolean {
   let changed = false
-  const body = parsed._ast.program.body
+  const body = parsed.program.body
   for (const stmt of body) {
     if (!t.isImportDeclaration(stmt)) continue
     const src = stmt.source.value
@@ -330,7 +325,7 @@ function removeSpecifiers(parsed: ConfigFile, names: string[]): boolean {
     })
     if (stmt.specifiers.length !== before) changed = true
   }
-  parsed._ast.program.body = body.filter((stmt) => {
+  parsed.program.body = body.filter((stmt) => {
     if (!t.isImportDeclaration(stmt)) return true
     const src = stmt.source.value
     if (src !== ADDON_PACKAGE && src !== CSF3_SUBPATH) return true
@@ -342,8 +337,8 @@ function removeSpecifiers(parsed: ConfigFile, names: string[]): boolean {
 }
 
 /** Move a root-package `mswLoader` specifier onto the /csf3 subpath. */
-function retargetLoaderImport(parsed: ConfigFile): boolean {
-  const body = parsed._ast.program.body
+function retargetLoaderImport(parsed: t.File): boolean {
+  const body = parsed.program.body
   let loaderSpec: t.ImportSpecifier | null = null
   let changed = false
 
@@ -372,11 +367,8 @@ function retargetLoaderImport(parsed: ConfigFile): boolean {
   return changed
 }
 
-function mergeIntoCsf3Import(
-  parsed: ConfigFile,
-  spec: t.ImportSpecifier
-): void {
-  for (const stmt of parsed._ast.program.body) {
+function mergeIntoCsf3Import(parsed: t.File, spec: t.ImportSpecifier): void {
+  for (const stmt of parsed.program.body) {
     if (!t.isImportDeclaration(stmt)) continue
     if (stmt.source.value !== CSF3_SUBPATH) continue
     const has = stmt.specifiers.some(
@@ -385,14 +377,14 @@ function mergeIntoCsf3Import(
     if (!has) stmt.specifiers.push(spec)
     return
   }
-  parsed._ast.program.body.unshift(
+  parsed.program.body.unshift(
     t.importDeclaration([spec], t.stringLiteral(CSF3_SUBPATH))
   )
 }
 
 /** Ensure `import { mswLoader } from 'msw-storybook-addon/csf3'` exists. */
-function ensureLoaderImport(parsed: ConfigFile, localName: string): boolean {
-  for (const stmt of parsed._ast.program.body) {
+function ensureLoaderImport(parsed: t.File, localName: string): boolean {
+  for (const stmt of parsed.program.body) {
     if (!t.isImportDeclaration(stmt)) continue
     if (stmt.source.value !== CSF3_SUBPATH) continue
     const has = stmt.specifiers.some(
@@ -404,7 +396,7 @@ function ensureLoaderImport(parsed: ConfigFile, localName: string): boolean {
     )
     return true
   }
-  parsed._ast.program.body.unshift(
+  parsed.program.body.unshift(
     t.importDeclaration(
       [t.importSpecifier(t.identifier(localName), t.identifier('mswLoader'))],
       t.stringLiteral(CSF3_SUBPATH)
@@ -414,8 +406,8 @@ function ensureLoaderImport(parsed: ConfigFile, localName: string): boolean {
 }
 
 /** Ensure `import { setupWorker } from 'msw/browser'` exists. */
-function ensureSetupWorkerImport(parsed: ConfigFile): void {
-  for (const stmt of parsed._ast.program.body) {
+function ensureSetupWorkerImport(parsed: t.File): void {
+  for (const stmt of parsed.program.body) {
     if (!t.isImportDeclaration(stmt)) continue
     if (stmt.source.value !== MSW_BROWSER) continue
     const has = stmt.specifiers.some(
@@ -431,7 +423,7 @@ function ensureSetupWorkerImport(parsed: ConfigFile): void {
     }
     return
   }
-  parsed._ast.program.body.unshift(
+  parsed.program.body.unshift(
     t.importDeclaration(
       [
         t.importSpecifier(
@@ -447,11 +439,11 @@ function ensureSetupWorkerImport(parsed: ConfigFile): void {
 // -------- `initialize` analysis
 
 function analyzeInitialize(
-  parsed: ConfigFile,
+  parsed: t.File,
   localName: string,
   warnings: string[]
 ): InitializeFold | null | 'skip' {
-  const body = parsed._ast.program.body
+  const body = parsed.program.body
   const calls: { stmt: t.ExpressionStatement; call: t.CallExpression }[] = []
   const knownNodes = new Set<t.Node>()
 
@@ -473,9 +465,7 @@ function analyzeInitialize(
 
   // Any other reference to `initialize` (captured return value, conditional
   // call, passing the function around) → we can't rewrite faithfully.
-  if (
-    countIdentifierReferences(parsed._ast.program, localName, knownNodes) > 0
-  ) {
+  if (countIdentifierReferences(parsed.program, localName, knownNodes) > 0) {
     warnings.push(
       `\`${localName}\` is used in a way the codemod cannot rewrite (e.g. its return value is captured, or it is called conditionally). You will need to migrate this file yourself — see the "initialize is removed" section of the migration guide.`
     )
@@ -727,7 +717,7 @@ function stripMswRef(
 type AddonOutcome = 'changed' | 'unchanged' | 'conflict'
 
 function ensureFactoriesAddon(
-  parsed: ConfigFile,
+  parsed: t.File,
   configObj: t.ObjectExpression,
   imports: AddonImports,
   setupFn: t.Expression | null,
@@ -785,7 +775,7 @@ function ensureFactoriesAddon(
   if (!localName) {
     localName = 'addonMsw'
     let attached = false
-    for (const stmt of parsed._ast.program.body) {
+    for (const stmt of parsed.program.body) {
       if (!t.isImportDeclaration(stmt)) continue
       if (stmt.source.value !== ADDON_PACKAGE) continue
       stmt.specifiers.unshift(t.importDefaultSpecifier(t.identifier(localName)))
@@ -793,7 +783,7 @@ function ensureFactoriesAddon(
       break
     }
     if (!attached) {
-      parsed._ast.program.body.unshift(
+      parsed.program.body.unshift(
         t.importDeclaration(
           [t.importDefaultSpecifier(t.identifier(localName))],
           t.stringLiteral(ADDON_PACKAGE)
@@ -882,8 +872,8 @@ function findAddonsEntryIndex(
 
 /** Drop `import * as x from 'msw-storybook-addon/preview'` once its
  *  `addons` entry has been replaced. */
-function removePreviewNamespaceImport(parsed: ConfigFile): void {
-  parsed._ast.program.body = parsed._ast.program.body.filter((stmt) => {
+function removePreviewNamespaceImport(parsed: t.File): void {
+  parsed.program.body = parsed.program.body.filter((stmt) => {
     if (!t.isImportDeclaration(stmt)) return true
     if (stmt.source.value !== PREVIEW_SUBPATH) return true
     return !stmt.specifiers.some((s) => t.isImportNamespaceSpecifier(s))

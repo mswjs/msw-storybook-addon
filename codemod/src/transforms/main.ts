@@ -11,32 +11,43 @@
  * the object form `{ name, options }` — the file isn't touched.
  */
 
-import { types as t } from 'storybook/internal/babel'
-import {
-  type ConfigFile,
-  loadConfig,
-  printConfig
-} from 'storybook/internal/csf-tools'
+import * as t from '@babel/types'
+import { findConfigExports, parse, print, propKey, stringLiteral } from './ast'
 
 const ADDON_PACKAGE = 'msw-storybook-addon'
 
 export function transformMain(source: string): string | null {
-  let parsed: ConfigFile
+  let ast: t.File
   try {
-    parsed = loadConfig(source).parse()
+    ast = parse(source)
   } catch {
     return null
   }
 
-  // The parser resolves plain objects, `defineMain({...})`-wrapped configs
-  // and variable-declared default exports alike.
-  if (!parsed._exportsObject) return null
+  // Resolves plain objects, `defineMain({...})`-wrapped configs and
+  // variable-declared default exports alike.
+  const { exportsObject, exports } = findConfigExports(ast)
+  if (!exportsObject) return null
 
-  const addonsNode = parsed.getFieldNode(['addons'])
+  const addonsNode = exports.addons
+
+  // An `addons` field the parser cannot follow (a method or a getter) is
+  // left alone rather than shadowed by a second `addons` key.
+  if (
+    !addonsNode &&
+    exportsObject.properties.some((p) => propKey(p) === 'addons')
+  ) {
+    return null
+  }
 
   if (!addonsNode) {
-    parsed.setFieldValue(['addons'], [ADDON_PACKAGE])
-    return printConfig(parsed).code
+    exportsObject.properties.push(
+      t.objectProperty(
+        t.identifier('addons'),
+        t.arrayExpression([stringLiteral(ast, source, ADDON_PACKAGE)])
+      )
+    )
+    return print(ast)
   }
 
   if (!t.isArrayExpression(addonsNode)) {
@@ -54,17 +65,11 @@ export function transformMain(source: string): string | null {
   // A plain string would not resolve there, so the new entry is wrapped
   // with the same function.
   const wrapper = detectWrapperName(addonsNode)
-  if (wrapper) {
-    parsed.appendNodeToArray(
-      ['addons'],
-      t.callExpression(t.identifier(wrapper), [
-        parsed.valueToNode(ADDON_PACKAGE) as t.Expression
-      ])
-    )
-  } else {
-    parsed.appendValueToArray(['addons'], ADDON_PACKAGE)
-  }
-  return printConfig(parsed).code
+  const name = stringLiteral(ast, source, ADDON_PACKAGE)
+  addonsNode.elements.push(
+    wrapper ? t.callExpression(t.identifier(wrapper), [name]) : name
+  )
+  return print(ast)
 }
 
 /** Unwrap an `addons` array entry to the addon package name it refers to.

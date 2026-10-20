@@ -370,6 +370,31 @@ describe('transformStory', () => {
     `)
   })
 
+  it('skips a v1-style Foo.story annotation that already has a beforeEach', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      export const Foo = () => null
+      Foo.story = {
+        beforeEach: () => {},
+        parameters: {
+          msw: [http.get('/u', () => HttpResponse.json({}))],
+        },
+      }
+    `
+    expect(transformStory(src)).toMatchInlineSnapshot(`
+      {
+        "code": null,
+        "skippedStories": [
+          {
+            "reason": "existing-before-each",
+            "story": "Foo",
+          },
+        ],
+      }
+    `)
+  })
+
   it('migrates CSF2-style Foo.parameters = { msw: ... } annotation', () => {
     const src = dedent`
       import { http, HttpResponse } from 'msw'

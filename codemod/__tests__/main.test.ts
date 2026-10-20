@@ -129,6 +129,28 @@ describe('transformMain', () => {
     `)
   })
 
+  it('returns null when addons is a method', () => {
+    const src = dedent`
+      export default {
+        addons() {
+          return ['@storybook/addon-docs']
+        },
+      }
+    `
+    expect(transformMain(src)).toBeNull()
+  })
+
+  it('keeps the quote style of the first 500 tokens, directives included', () => {
+    const src = dedent`
+      'use strict'
+      module.exports = { stories: ["../src"], addons: ['x'] }
+    `
+    expect(transformMain(src)).toMatchInlineSnapshot(`
+      "'use strict'
+      module.exports = { stories: ["../src"], addons: ['x', 'msw-storybook-addon'] }"
+    `)
+  })
+
   it('returns null when addons is not a plain array (e.g. spread variable)', () => {
     const src = dedent`
       import { sharedAddons } from './shared'
