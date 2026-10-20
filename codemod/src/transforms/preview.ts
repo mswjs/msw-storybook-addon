@@ -59,8 +59,7 @@ import {
   callText,
   findObjectProperty,
   handlersOf,
-  mswValueOf,
-  semicolonFor
+  mswValueOf
 } from './stories'
 
 const ADDON_PACKAGE = 'msw-storybook-addon'
@@ -100,20 +99,11 @@ interface AddonImports {
   previewNamespace?: string
 }
 
-/** Source of the `initialize(...)` arguments to fold into a setup function. */
-interface InitializeFold {
-  /** `worker.start()` options — first argument, carried verbatim. */
-  options?: string
-  /** Initial handlers — second argument, spread into `setupWorker(...)`. */
-  handlers?: string[]
+/** A top-level `initialize(...)` call, to be removed. */
+interface InitializeCall {
+  /** The setup function its arguments fold into; null for `initialize()`. */
+  setup: string | null
 }
-
-// Fields of the preview config are edited through `ConfigFile`; array
-// elements, call arguments and the `initialize(...)` statement, which it
-// has no paths for, through its editor. Every edit is committed, which
-// parses the file again, so each step looks its nodes up afresh — the
-// preview object through `parsed._exportsObject` — and carries what it
-// needs from an earlier parse over as source text.
 
 export function transformPreview(
   source: string,
@@ -126,206 +116,188 @@ export function transformPreview(
   } catch {
     return { code: null, warnings }
   }
+  const csfNext = isCsfFactoryPreview(parsed)
+
   // Every edit is made in one transaction: when csf-tools refuses one (a
   // spread next to the field, a config binding used twice, ...), all of
   // them are rolled back and nothing is written.
-  let result: PreviewTransformResult = { code: null, warnings }
+  let skipped = false
   const kept = parsed.transaction(() => {
-    result = migratePreview(parsed, source, options, warnings)
-    return result.code != null
+    skipped = !migratePreview(parsed, csfNext, options, warnings)
+    return !skipped
   })
-  if (!kept && result.code != null) {
-    const diagnostic = parsed.mutationDiagnostics.at(-1)
-    const field = diagnostic?.path.length
-      ? `\`${diagnostic.path.join('.')}\``
-      : 'the preview config'
-    warnings.push(
-      `Could not edit ${field}${diagnostic ? ` (${diagnostic.message})` : ''}; you will need to migrate this file yourself.`
-    )
-    return { code: null, warnings, csfNext: result.csfNext }
+  if (!kept) {
+    if (!skipped) warnings.push(refusedEditWarning(parsed))
+    return { code: null, warnings, csfNext }
   }
-  return result
-}
-
-function migratePreview(
-  parsed: ConfigFile,
-  source: string,
-  options: PreviewTransformOptions,
-  warnings: string[]
-): PreviewTransformResult {
-  const imports = collectAddonImports(parsed._program.body)
-  // The parser unwraps call-wrapped and variable-declared default exports,
-  // so this covers `export default {}`, `export default definePreview({})`
-  // and `const preview = definePreview({}); export default preview`.
-  const previewObj = parsed._exportsObject ?? null
-  const isFactories = isCsfFactoryPreview(parsed)
-
-  // ---- analyze `initialize` usage (before mutating anything) ----
-  let fold: InitializeFold | null = null
-  if (imports.initialize) {
-    const analyzed = analyzeInitialize(parsed, imports.initialize, warnings)
-    if (analyzed === 'skip') {
-      return { code: null, warnings, csfNext: isFactories }
-    }
-    fold = analyzed
-  }
-
-  const usesMsw =
-    imports.initialize != null ||
-    imports.mswLoader != null ||
-    imports.mswDecorator != null ||
-    imports.addonDefault != null
-
-  if (!previewObj) {
-    if (usesMsw) {
-      warnings.push(
-        'Could not find the preview config object (the default export); you will need to migrate this file yourself.'
-      )
-    }
-    return { code: null, warnings, csfNext: isFactories }
-  }
-
-  const needsSetup =
-    fold != null && (fold.options != null || fold.handlers != null)
-
-  let changed = false
-
-  if (isFactories) {
-    // ---- CSF Next -------------------------------------------------------
-    // A setup function carried by an existing `mswLoader(setup)` moves onto
-    // `addonMsw(setup)`. Collected before stripping the loader.
-    const loaderSetup = imports.mswLoader
-      ? collectLoaderSetup(parsed, imports.mswLoader)
-      : null
-    if (loaderSetup === 'conflict') {
-      warnings.push(
-        'Multiple `mswLoader(...)` setup functions found; you will need to migrate this file yourself.'
-      )
-      return { code: null, warnings, csfNext: true }
-    }
-    if (needsSetup && loaderSetup != null) {
-      warnings.push(
-        'Both `initialize(...)` options and a `mswLoader(...)` setup function exist; you will need to merge them into one setup function yourself.'
-      )
-      return { code: null, warnings, csfNext: true }
-    }
-
-    const hasLoader =
-      imports.mswLoader != null &&
-      hasMswRef(parsed, 'loaders', imports.mswLoader)
-    const hasDecorator =
-      imports.mswDecorator != null &&
-      hasMswRef(parsed, 'decorators', imports.mswDecorator)
-    const hasNamespaceEntry =
-      imports.previewNamespace != null &&
-      findAddonsEntry(parsed, imports.previewNamespace) != null
-    const hasWiring =
-      hasLoader || hasDecorator || hasNamespaceEntry || fold != null
-
-    if (!hasWiring) {
-      if (options.migrateParameters) {
-        if (migratePreviewParameters(parsed, warnings)) changed = true
-      }
-      return finish(parsed, source, changed, warnings, true)
-    }
-
-    // Ensure the addon is registered, folding the setup function in.
-    const setupFn = needsSetup
-      ? buildSetupFunction(parsed, fold as InitializeFold)
-      : loaderSetup
-    const addonResult = ensureFactoriesAddon(parsed, imports, setupFn, warnings)
-    if (addonResult === 'conflict') {
-      return { code: null, warnings, csfNext: true }
-    }
-    changed = true
-
-    // Stripped after `addons` is in place, so a config whose only field
-    // was `loaders` keeps its layout.
-    if (hasLoader) stripMswRef(parsed, 'loaders', imports.mswLoader as string)
-    if (hasDecorator) {
-      stripMswRef(parsed, 'decorators', imports.mswDecorator as string)
-    }
-
-    if (fold != null) {
-      removeInitializeCall(parsed, imports.initialize as string)
-    }
-    removeSpecifiers(parsed, ['initialize', 'mswLoader', 'mswDecorator'])
-    if (hasNamespaceEntry) {
-      parsed.removeImport(
-        { namespace: imports.previewNamespace as string },
-        PREVIEW_SUBPATH
-      )
-    }
-    if (needsSetup) parsed.setImport(['setupWorker'], MSW_BROWSER)
-  } else {
-    // ---- CSF 3.0 --------------------------------------------------------
-    // Only wire the loader when the file actually used the loader path
-    // (loader, decorator, or initialize) — a stray default import alone is
-    // not enough to justify injecting wiring.
-    const usesLoaderPath =
-      imports.mswLoader != null || imports.mswDecorator != null || fold != null
-    if (!usesLoaderPath) {
-      if (options.migrateParameters) {
-        if (migratePreviewParameters(parsed, warnings)) changed = true
-      }
-      return finish(parsed, source, changed, warnings, false)
-    }
-
-    const loaderName = imports.mswLoader ?? 'mswLoader'
-    const setupFn = needsSetup
-      ? buildSetupFunction(parsed, fold as InitializeFold)
-      : null
-
-    const loaderResult = ensureLoaderCall(parsed, loaderName, setupFn)
-    if (loaderResult === 'conflict') {
-      warnings.push(
-        '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. You will need to merge them yourself.'
-      )
-      return { code: null, warnings, csfNext: false }
-    }
-    if (loaderResult === 'changed') changed = true
-
-    if (imports.mswDecorator) {
-      if (stripMswRef(parsed, 'decorators', imports.mswDecorator))
-        changed = true
-    }
-
-    if (fold != null) {
-      removeInitializeCall(parsed, imports.initialize as string)
-      changed = true
-    }
-
-    if (removeSpecifiers(parsed, ['initialize', 'mswDecorator'])) changed = true
-    if (retargetLoaderImport(parsed)) changed = true
-    if (!findNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) {
-      parsed.setImport(['mswLoader'], CSF3_SUBPATH)
-      changed = true
-    }
-    if (needsSetup) parsed.setImport(['setupWorker'], MSW_BROWSER)
-  }
-
-  if (options.migrateParameters) {
-    if (migratePreviewParameters(parsed, warnings)) changed = true
-  }
-
-  return finish(parsed, source, changed, warnings, isFactories)
-}
-
-function finish(
-  parsed: ConfigFile,
-  source: string,
-  changed: boolean,
-  warnings: string[],
-  csfNext: boolean
-): PreviewTransformResult {
-  if (!changed) return { code: null, warnings, csfNext }
   const code = printConfig(parsed).code
   return { code: code === source ? null : code, warnings, csfNext }
 }
 
-/** The preview config object of the current parse. */
-function previewObject(parsed: ConfigFile): E.ObjectExpression {
-  return parsed._exportsObject as E.ObjectExpression
+function refusedEditWarning(parsed: ConfigFile): string {
+  const { path, message } = parsed.mutationDiagnostics.at(-1)!
+  const field = path.length ? `\`${path.join('.')}\`` : 'the preview config'
+  return `Could not edit ${field} (${message}); you will need to migrate this file yourself.`
+}
+
+/**
+ * Fields of the preview config are edited through `ConfigFile`; array
+ * elements, call arguments and the `initialize(...)` statement, which it
+ * has no paths for, through its editor. Every edit is committed, which
+ * parses the file again, so each step looks its nodes up afresh and
+ * carries what it needs from an earlier parse over as source text.
+ *
+ * Returns false when the file is to be left as it is.
+ */
+function migratePreview(
+  parsed: ConfigFile,
+  csfNext: boolean,
+  options: PreviewTransformOptions,
+  warnings: string[]
+): boolean {
+  const imports = collectAddonImports(parsed._program.body)
+
+  // `initialize` is analyzed before anything is edited.
+  let initializeCall: InitializeCall | null = null
+  if (imports.initialize) {
+    const analyzed = analyzeInitialize(parsed, imports.initialize, warnings)
+    if (analyzed === 'skip') return false
+    initializeCall = analyzed
+  }
+
+  // The parser unwraps call-wrapped and variable-declared default exports,
+  // so this covers `export default {}`, `export default definePreview({})`
+  // and `const preview = definePreview({}); export default preview`.
+  if (!parsed._exportsObject) {
+    if (
+      imports.initialize ||
+      imports.mswLoader ||
+      imports.mswDecorator ||
+      imports.addonDefault
+    ) {
+      warnings.push(
+        'Could not find the preview config object (the default export); you will need to migrate this file yourself.'
+      )
+    }
+    return false
+  }
+
+  const migrated = csfNext
+    ? migrateCsfNext(parsed, imports, initializeCall, warnings)
+    : migrateCsf3(parsed, imports, initializeCall, warnings)
+  if (!migrated) return false
+
+  if (options.migrateParameters) migratePreviewParameters(parsed, warnings)
+  return true
+}
+
+function migrateCsfNext(
+  parsed: ConfigFile,
+  imports: AddonImports,
+  initializeCall: InitializeCall | null,
+  warnings: string[]
+): boolean {
+  const { initialize, mswLoader, mswDecorator, previewNamespace } = imports
+
+  // A setup function carried by an existing `mswLoader(setup)` moves onto
+  // `addonMsw(setup)`. Collected before stripping the loader.
+  const loaderSetup = collectLoaderSetup(parsed, mswLoader)
+  if (loaderSetup === 'conflict') {
+    warnings.push(
+      'Multiple `mswLoader(...)` setup functions found; you will need to migrate this file yourself.'
+    )
+    return false
+  }
+  if (initializeCall?.setup && loaderSetup != null) {
+    warnings.push(
+      'Both `initialize(...)` options and a `mswLoader(...)` setup function exist; you will need to merge them into one setup function yourself.'
+    )
+    return false
+  }
+
+  const hasNamespaceEntry = findAddonsEntry(parsed, previewNamespace) != null
+  const hasWiring =
+    hasMswRef(parsed, 'loaders', mswLoader) ||
+    hasMswRef(parsed, 'decorators', mswDecorator) ||
+    hasNamespaceEntry ||
+    initializeCall != null
+  if (!hasWiring) return true
+
+  const setup = initializeCall?.setup ?? loaderSetup
+  if (!ensureFactoriesAddon(parsed, imports, setup, warnings)) return false
+
+  // Stripped after `addons` is in place, so a config whose only field
+  // was `loaders` keeps its layout.
+  stripMswRef(parsed, 'loaders', mswLoader)
+  stripMswRef(parsed, 'decorators', mswDecorator)
+  removeInitializeCall(parsed, initialize)
+  removeSpecifiers(parsed, ['initialize', 'mswLoader', 'mswDecorator'])
+  if (previewNamespace && hasNamespaceEntry) {
+    parsed.removeImport({ namespace: previewNamespace }, PREVIEW_SUBPATH)
+  }
+  if (initializeCall?.setup) parsed.setImport(['setupWorker'], MSW_BROWSER)
+  return true
+}
+
+function migrateCsf3(
+  parsed: ConfigFile,
+  imports: AddonImports,
+  initializeCall: InitializeCall | null,
+  warnings: string[]
+): boolean {
+  const { initialize, mswLoader, mswDecorator } = imports
+
+  // Only wire the loader when the file actually used the loader path
+  // (loader, decorator, or initialize) — a stray default import alone is
+  // not enough to justify injecting wiring.
+  if (!mswLoader && !mswDecorator && !initializeCall) return true
+
+  const setup = initializeCall?.setup ?? null
+  if (!ensureLoaderCall(parsed, mswLoader ?? 'mswLoader', setup)) {
+    warnings.push(
+      '`initialize(...)` options could not be folded: the existing `mswLoader(...)` already receives a setup function. You will need to merge them yourself.'
+    )
+    return false
+  }
+
+  stripMswRef(parsed, 'decorators', mswDecorator)
+  removeInitializeCall(parsed, initialize)
+  removeSpecifiers(parsed, ['initialize', 'mswDecorator'])
+  importLoaderFromCsf3(parsed)
+  if (setup) parsed.setImport(['setupWorker'], MSW_BROWSER)
+  return true
+}
+
+/** The value of a field of the preview config object, as written. */
+function fieldValue(
+  parsed: ConfigFile,
+  name: string
+): E.Expression | undefined {
+  return findObjectProperty(parsed._exportsObject, name)?.value
+}
+
+/** Whether `node` is the identifier `name`. */
+function isIdentifier(
+  node: ESTreeNode | null | undefined,
+  name: string | undefined
+): node is E.IdentifierReference {
+  return node?.type === 'Identifier' && node.name === name
+}
+
+/** Whether `node` is a call of the function `name`. */
+function isCallOf(
+  node: ESTreeNode | null | undefined,
+  name: string | undefined
+): node is E.CallExpression {
+  return node?.type === 'CallExpression' && isIdentifier(node.callee, name)
+}
+
+/** `name` or `name(...)`. */
+function isRef(
+  node: ESTreeNode | null | undefined,
+  name: string | undefined
+): node is E.IdentifierReference | E.CallExpression {
+  return isIdentifier(node, name) || isCallOf(node, name)
 }
 
 /** Overwrite a node with code built from column zero, and commit. */
@@ -420,47 +392,39 @@ function isValueSpecifier(spec: E.ImportDeclarationSpecifier): boolean {
   return spec.type !== 'ImportSpecifier' || spec.importKind !== 'type'
 }
 
-/** Remove the given specifiers from addon imports; drop emptied declarations. */
-function removeSpecifiers(parsed: ConfigFile, names: string[]): boolean {
-  let changed = false
+/** Remove the given value imports from the addon; drop emptied declarations. */
+function removeSpecifiers(parsed: ConfigFile, names: string[]): void {
   for (const source of [ADDON_PACKAGE, CSF3_SUBPATH]) {
     const present = names.filter((name) =>
       findNamedImport(parsed, source, name)
     )
-    if (present.length === 0) continue
-    parsed.removeImport(present, source)
-    changed = true
+    if (present.length > 0) parsed.removeImport(present, source)
   }
-  return changed
 }
 
-/** Move a root-package `mswLoader` specifier onto the /csf3 subpath. */
-function retargetLoaderImport(parsed: ConfigFile): boolean {
-  const spec = findNamedImport(parsed, ADDON_PACKAGE, 'mswLoader')
-  if (!spec) return false
-  const localName = spec.local.name
-  parsed.removeImport(['mswLoader'], ADDON_PACKAGE)
+/** Import `mswLoader` from the /csf3 subpath, moving a root-package import there. */
+function importLoaderFromCsf3(parsed: ConfigFile): void {
+  const root = findNamedImport(parsed, ADDON_PACKAGE, 'mswLoader')
+  const local = root?.local.name ?? 'mswLoader'
+  if (root) parsed.removeImport(['mswLoader'], ADDON_PACKAGE)
   if (!findNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) {
     parsed.setImport(
-      [localName === 'mswLoader' ? localName : `mswLoader as ${localName}`],
+      [local === 'mswLoader' ? local : `mswLoader as ${local}`],
       CSF3_SUBPATH
     )
   }
-  return true
 }
 
 // -------- `initialize` analysis
 
 function findInitializeCalls(
   body: Body,
-  localName: string
-): E.ExpressionStatement[] {
+  localName: string | undefined
+): (E.ExpressionStatement & { expression: E.CallExpression })[] {
   return body.filter(
-    (stmt): stmt is E.ExpressionStatement =>
+    (stmt): stmt is E.ExpressionStatement & { expression: E.CallExpression } =>
       stmt.type === 'ExpressionStatement' &&
-      stmt.expression.type === 'CallExpression' &&
-      stmt.expression.callee.type === 'Identifier' &&
-      stmt.expression.callee.name === localName
+      isCallOf(stmt.expression, localName)
   )
 }
 
@@ -468,21 +432,18 @@ function analyzeInitialize(
   parsed: ConfigFile,
   localName: string,
   warnings: string[]
-): InitializeFold | null | 'skip' {
+): InitializeCall | null | 'skip' {
   const editor = parsed._editor
-  const body = parsed._program.body
-  const calls = findInitializeCalls(body, localName)
-  const knownNodes = new Set<ESTreeNode>()
-  for (const stmt of body) {
-    if (stmt.type === 'ImportDeclaration') knownNodes.add(stmt)
-  }
-  for (const stmt of calls) {
-    knownNodes.add((stmt.expression as E.CallExpression).callee)
+  const calls = findInitializeCalls(parsed._program.body, localName)
+
+  const known = new Set<ESTreeNode>(calls.map((stmt) => stmt.expression.callee))
+  for (const stmt of parsed._program.body) {
+    if (stmt.type === 'ImportDeclaration') known.add(stmt)
   }
 
   // Any other reference to `initialize` (captured return value, conditional
   // call, passing the function around) → we can't rewrite faithfully.
-  if (countIdentifierReferences(parsed._program, localName, knownNodes) > 0) {
+  if (countIdentifierReferences(parsed._program, localName, known) > 0) {
     warnings.push(
       `\`${localName}\` is used in a way the codemod cannot rewrite (e.g. its return value is captured, or it is called conditionally). You will need to migrate this file yourself — see the "initialize is removed" section of the migration guide.`
     )
@@ -501,34 +462,39 @@ function analyzeInitialize(
     return 'skip'
   }
 
-  const call = calls[0].expression as E.CallExpression
-  const args = call.arguments
+  const call = calls[0].expression
+  const [options, handlers] = call.arguments
 
-  if (args.some((a) => a.type === 'SpreadElement')) {
+  if (call.arguments.some((a) => a.type === 'SpreadElement')) {
     warnings.push(
       `\`${localName}(...)\` receives arguments the codemod cannot carry over (e.g. spreads); you will need to migrate this file yourself.`
     )
     return 'skip'
   }
-  if (args.length > 2) {
+  if (call.arguments.length > 2) {
     warnings.push(
       `\`${localName}(...)\` receives more than two arguments; you will need to migrate this file yourself.`
     )
     return 'skip'
   }
+  if (!options) return { setup: null }
 
   const list = argumentList(editor, call)
-  const fold: InitializeFold = {}
-  if (args[0]) fold.options = itemText(editor, list, list.items[0])
-  if (args[1]) {
-    // An array literal is spread into `setupWorker(...)` element by element
-    // (holes dropped); anything else is spread as a whole.
-    fold.handlers =
-      args[1].type === 'ArrayExpression'
-        ? holeFreeElements(parsed, args[1])
-        : [`...${itemText(editor, list, list.items[1])}`]
+  // An array literal of initial handlers is spread into `setupWorker(...)`
+  // element by element (holes dropped); anything else is spread as a whole.
+  const initialHandlers =
+    handlers?.type === 'ArrayExpression'
+      ? holeFreeElements(parsed, handlers)
+      : handlers
+        ? [`...${itemText(editor, list, list.items[1])}`]
+        : []
+  return {
+    setup: setupFunction(
+      parsed,
+      itemText(editor, list, list.items[0]),
+      initialHandlers
+    )
   }
-  return fold
 }
 
 function holeFreeElements(
@@ -537,11 +503,9 @@ function holeFreeElements(
 ): string[] {
   const editor = parsed._editor
   const list = arrayList(editor, arr)
-  const out: string[] = []
-  arr.elements.forEach((el, i) => {
-    if (el != null) out.push(itemText(editor, list, list.items[i]))
-  })
-  return out
+  return list.items
+    .filter((_, i) => arr.elements[i] != null)
+    .map((item) => itemText(editor, list, item))
 }
 
 /** Count `Identifier` references to `name`, ignoring the given nodes and
@@ -579,29 +543,35 @@ function countIdentifierReferences(
 }
 
 /** Remove the top-level `initialize(...)` call `analyzeInitialize` found. */
-function removeInitializeCall(parsed: ConfigFile, localName: string): void {
+function removeInitializeCall(
+  parsed: ConfigFile,
+  localName: string | undefined
+): void {
   const [stmt] = findInitializeCalls(parsed._program.body, localName)
   if (!stmt) return
   removeStatement(parsed._editor, stmt)
   parsed._editor.commit()
 }
 
-// -------- setup function builder
-//
-//   async () => {
-//     const worker = setupWorker(...initialHandlers)
-//     await worker.start(options)
-//     return worker
-//   }
-
-function buildSetupFunction(parsed: ConfigFile, fold: InitializeFold): string {
-  const editor = parsed._editor
-  const step = editor.indent
-  const semi = semicolonFor(editor)
-  const startArgs = fold.options != null ? [fold.options] : []
+/**
+ * The setup function `initialize(options, initialHandlers)` folds into:
+ *
+ *   async () => {
+ *     const worker = setupWorker(...initialHandlers)
+ *     await worker.start(options)
+ *     return worker
+ *   }
+ */
+function setupFunction(
+  parsed: ConfigFile,
+  options: string,
+  handlers: string[]
+): string {
+  const { indent: step, semicolons } = parsed._editor
+  const semi = semicolons ? ';' : ''
   const statements = [
-    `const worker = ${callText('setupWorker', fold.handlers ?? [], step)}${semi}`,
-    `await ${callText('worker.start', startArgs, step)}${semi}`,
+    `const worker = ${callText('setupWorker', handlers, step)}${semi}`,
+    `await ${callText('worker.start', [options], step)}${semi}`,
     `return worker${semi}`
   ]
   const body = statements
@@ -612,258 +582,177 @@ function buildSetupFunction(parsed: ConfigFile, fold: InitializeFold): string {
 
 // -------- CSF 3.0: ensure `loaders: [mswLoader(...)]`
 
-type LoaderOutcome = 'changed' | 'unchanged' | 'conflict'
-
+/**
+ * Returns false when the existing `mswLoader(...)` already receives a
+ * setup function, so `setup` cannot be passed to it.
+ */
 function ensureLoaderCall(
   parsed: ConfigFile,
   loaderName: string,
-  setupFn: string | null
-): LoaderOutcome {
-  const call = callText(
-    loaderName,
-    setupFn ? [setupFn] : [],
-    parsed._editor.indent
-  )
+  setup: string | null
+): boolean {
+  const call = callText(loaderName, setup ? [setup] : [], parsed._editor.indent)
   // The field as written: an identifier is not followed into a shared list.
-  const loaders = findObjectProperty(previewObject(parsed), 'loaders')?.value
+  const loaders = fieldValue(parsed, 'loaders')
 
-  // No loaders at all: only wired in when the file used the addon
-  // (decorator or initialize) — which callers guarantee. `loaders:
-  // mswLoader` shorthand → `loaders: [mswLoader(...)]`.
-  if (
-    !loaders ||
-    (loaders.type === 'Identifier' && loaders.name === loaderName)
-  ) {
+  // No loaders yet, or the `loaders: mswLoader` shorthand.
+  if (!loaders || isIdentifier(loaders, loaderName)) {
     parsed.set(['loaders'], parseExpression(`[${call}]`))
-    return 'changed'
+    return true
   }
+  if (loaders.type !== 'ArrayExpression') return true
 
-  if (loaders.type !== 'ArrayExpression') return 'unchanged'
-
-  for (const el of loaders.elements) {
-    if (el == null) continue
-    // Bare reference: `loaders: [mswLoader]`
-    if (el.type === 'Identifier' && el.name === loaderName) {
-      replaceNode(parsed, el, call)
-      return 'changed'
-    }
-    // Already a call: `loaders: [mswLoader()]`
-    if (
-      el.type === 'CallExpression' &&
-      el.callee.type === 'Identifier' &&
-      el.callee.name === loaderName
-    ) {
-      if (setupFn) {
-        if (el.arguments.length > 0) return 'conflict'
-        addFirstArgument(parsed, el, setupFn)
-        return 'changed'
-      }
-      return 'unchanged'
-    }
+  const entry = loaders.elements.find((el) => isRef(el, loaderName))
+  if (!entry) {
+    parsed.appendNodeToArray(['loaders'], parseExpression(call))
+  } else if (entry.type === 'Identifier') {
+    // `loaders: [mswLoader]`
+    replaceNode(parsed, entry, call)
+  } else if (setup) {
+    // `loaders: [mswLoader()]`
+    if (entry.arguments.length > 0) return false
+    addFirstArgument(parsed, entry, setup)
   }
-
-  // Loaders array exists but has no msw entry — add one.
-  parsed.appendNodeToArray(['loaders'], parseExpression(call))
-  return 'changed'
+  return true
 }
 
 // -------- drop `mswLoader`/`mswDecorator` references
 
-function isRef(el: ESTreeNode | null, refName: string): boolean {
-  if (el == null) return false
-  if (el.type === 'Identifier' && el.name === refName) return true
-  return (
-    el.type === 'CallExpression' &&
-    el.callee.type === 'Identifier' &&
-    el.callee.name === refName
-  )
-}
-
-/** Whether `propName` is `refName` or an array holding it. */
+/** Whether the field `name` is `ref` or an array holding it. */
 function hasMswRef(
   parsed: ConfigFile,
-  propName: string,
-  refName: string
+  name: string,
+  ref: string | undefined
 ): boolean {
-  const value = findObjectProperty(previewObject(parsed), propName)?.value
-  if (!value) return false
-  if (value.type === 'ArrayExpression') {
-    return value.elements.some((el) => isRef(el, refName))
-  }
-  return value.type === 'Identifier' && value.name === refName
+  const value = fieldValue(parsed, name)
+  return value?.type === 'ArrayExpression'
+    ? value.elements.some((el) => isRef(el, ref))
+    : isIdentifier(value, ref)
 }
 
+/** Remove `ref` from the field `name`, and the field once nothing is left. */
 function stripMswRef(
   parsed: ConfigFile,
-  propName: string,
-  refName: string
-): boolean {
-  const value = findObjectProperty(previewObject(parsed), propName)?.value
-  if (!value) return false
-
-  if (value.type === 'Identifier' && value.name === refName) {
-    parsed.remove([propName])
-    return true
+  name: string,
+  ref: string | undefined
+): void {
+  const value = fieldValue(parsed, name)
+  if (isIdentifier(value, ref)) {
+    parsed.remove([name])
+    return
   }
-  if (value.type === 'ArrayExpression') {
-    const removed = value.elements.filter(
-      (el): el is E.Expression | E.SpreadElement => isRef(el, refName)
-    )
-    if (removed.length === 0) return false
-    if (removed.length === value.elements.length) {
-      // Nothing left: the property goes as well.
-      parsed.remove([propName])
-      return true
-    }
-    removeFromList(parsed._editor, arrayList(parsed._editor, value), removed)
-    parsed._editor.commit()
-    return true
+  if (value?.type !== 'ArrayExpression') return
+  const removed = value.elements.filter((el) => isRef(el, ref))
+  if (removed.length === 0) return
+  if (removed.length === value.elements.length) {
+    parsed.remove([name])
+    return
   }
-  return false
+  removeFromList(parsed._editor, arrayList(parsed._editor, value), removed)
+  parsed._editor.commit()
 }
 
 // -------- CSF Next: ensure `addonMsw(...)` in `addons: [...]`
 
-type AddonOutcome = 'changed' | 'unchanged' | 'conflict'
-
-function addonsArrayOf(parsed: ConfigFile): E.ArrayExpression | null {
-  const value = findObjectProperty(previewObject(parsed), 'addons')?.value
-  return value?.type === 'ArrayExpression' ? value : null
+function addonsArrayOf(parsed: ConfigFile): E.ArrayExpression | undefined {
+  const value = fieldValue(parsed, 'addons')
+  return value?.type === 'ArrayExpression' ? value : undefined
 }
 
+/** A bare-identifier entry in `addons: [...]`, if there is one. */
+function findAddonsEntry(
+  parsed: ConfigFile,
+  name: string | undefined
+): E.IdentifierReference | undefined {
+  return addonsArrayOf(parsed)?.elements.find((el) => isIdentifier(el, name))
+}
+
+/**
+ * Register `addonMsw(setup)` in `addons`, replacing the namespace entry
+ * `storybook automigrate csf-factories` injects. Returns false, after
+ * adding a warning, when that cannot be done.
+ */
 function ensureFactoriesAddon(
   parsed: ConfigFile,
   imports: AddonImports,
-  setupFn: string | null,
+  setup: string | null,
   warnings: string[]
-): AddonOutcome {
+): boolean {
   const editor = parsed._editor
-  let localName = imports.addonDefault
+  const { addonDefault, previewNamespace } = imports
 
-  const removeNamespaceEntry = (): boolean => {
-    const addonsArray = addonsArrayOf(parsed)
-    if (!imports.previewNamespace || !addonsArray) return false
-    const removed = addonsArray.elements.filter(
-      (el): el is E.IdentifierReference =>
-        el?.type === 'Identifier' && el.name === imports.previewNamespace
+  const registered = addonsArrayOf(parsed)?.elements.find((el) =>
+    isRef(el, addonDefault)
+  )
+  if (registered) {
+    if (setup && registered.type === 'CallExpression') {
+      if (registered.arguments.length > 0) {
+        warnings.push(
+          'A setup function could not be folded: the existing `addonMsw(...)` already receives one. You will need to merge them yourself.'
+        )
+        return false
+      }
+      addFirstArgument(parsed, registered, setup)
+    }
+    // A leftover injected namespace entry still goes.
+    const addons = addonsArrayOf(parsed)
+    const leftover = addons?.elements.filter((el) =>
+      isIdentifier(el, previewNamespace)
     )
-    if (removed.length === 0) return false
-    removeFromList(editor, arrayList(editor, addonsArray), removed)
-    editor.commit()
+    if (addons && leftover?.length) {
+      removeFromList(editor, arrayList(editor, addons), leftover)
+      editor.commit()
+    }
     return true
   }
 
-  // Look for an existing registration first (conflict detection must run
-  // before any mutation).
-  const existing = addonsArrayOf(parsed)
-  if (localName && existing) {
-    for (const el of existing.elements) {
-      if (el == null) continue
-      const isBare = el.type === 'Identifier' && el.name === localName
-      const isCall =
-        el.type === 'CallExpression' &&
-        el.callee.type === 'Identifier' &&
-        el.callee.name === localName
-      if (!isBare && !isCall) continue
-      if (setupFn) {
-        if (isCall && (el as E.CallExpression).arguments.length > 0) {
-          warnings.push(
-            'A setup function could not be folded: the existing `addonMsw(...)` already receives one. You will need to merge them yourself.'
-          )
-          return 'conflict'
-        }
-        if (isCall) {
-          addFirstArgument(parsed, el as E.CallExpression, setupFn)
-          removeNamespaceEntry()
-          return 'changed'
-        }
-      }
-      // Registered and nothing to fold — done, but a leftover injected
-      // namespace entry still gets cleaned up.
-      return removeNamespaceEntry() ? 'changed' : 'unchanged'
-    }
-  }
+  const localName = addonDefault ?? 'addonMsw'
+  if (!addonDefault) parsed.setImport(localName, ADDON_PACKAGE)
+  const call = callText(localName, setup ? [setup] : [], editor.indent)
 
-  // Not registered yet — ensure the default import and inject the call.
-  if (!localName) {
-    localName = 'addonMsw'
-    parsed.setImport(localName, ADDON_PACKAGE)
-  }
-
-  const call = callText(localName, setupFn ? [setupFn] : [], editor.indent)
-  const addonsField = findObjectProperty(previewObject(parsed), 'addons')
-  const addonsArray = addonsArrayOf(parsed)
-
-  // The namespace entry injected by `storybook automigrate csf-factories`
-  // (`addons: [mswStorybookAddon]`) is replaced in place.
-  const entry =
-    imports.previewNamespace != null
-      ? findAddonsEntry(parsed, imports.previewNamespace)
-      : undefined
+  const entry = findAddonsEntry(parsed, previewNamespace)
   if (entry) {
     replaceNode(parsed, entry, call)
-    return 'changed'
+    return true
   }
-
-  if (!addonsField) {
+  const addons = fieldValue(parsed, 'addons')
+  if (!addons) {
     parsed.set(['addons'], parseExpression(`[${call}]`))
-    return 'changed'
+    return true
   }
-  if (!addonsArray) {
+  if (addons.type !== 'ArrayExpression') {
     warnings.push(
       '`addons` in definePreview is not an array literal; you will need to register `addonMsw()` yourself.'
     )
-    return 'conflict'
+    return false
   }
-  prependToList(editor, arrayList(editor, addonsArray), [call])
+  prependToList(editor, arrayList(editor, addons), [call])
   editor.commit()
-  return 'changed'
+  return true
 }
 
 /** Source of the setup function carried by `mswLoader(setup)` entries in
  *  `loaders`. */
 function collectLoaderSetup(
   parsed: ConfigFile,
-  loaderName: string
+  loaderName: string | undefined
 ): string | null | 'conflict' {
-  const value = findObjectProperty(previewObject(parsed), 'loaders')?.value
-  if (!value) return null
-
-  const calls: E.CallExpression[] = []
-  const consider = (el: ESTreeNode | null) => {
-    if (
-      el != null &&
-      el.type === 'CallExpression' &&
-      el.callee.type === 'Identifier' &&
-      el.callee.name === loaderName &&
-      el.arguments.length > 0
-    ) {
-      calls.push(el)
-    }
-  }
-  if (value.type === 'ArrayExpression') {
-    for (const el of value.elements) consider(el)
-  } else {
-    consider(value)
-  }
-
-  if (calls.length === 0) return null
-  if (calls.length > 1 || calls[0].arguments.length > 1) return 'conflict'
-  if (calls[0].arguments[0].type === 'SpreadElement') return 'conflict'
-  const list = argumentList(parsed._editor, calls[0])
-  return itemText(parsed._editor, list, list.items[0])
-}
-
-/** A bare-identifier entry in `addons: [...]`, if there is one. */
-function findAddonsEntry(
-  parsed: ConfigFile,
-  name: string
-): ESTreeNode | undefined {
-  return (
-    addonsArrayOf(parsed)?.elements.find(
-      (el) => el?.type === 'Identifier' && el.name === name
-    ) ?? undefined
+  const value = fieldValue(parsed, 'loaders')
+  const entries = value?.type === 'ArrayExpression' ? value.elements : [value]
+  const calls = entries.filter(
+    (el): el is E.CallExpression =>
+      isCallOf(el, loaderName) && el.arguments.length > 0
   )
+  if (calls.length === 0) return null
+  const [call] = calls
+  if (
+    calls.length > 1 ||
+    call.arguments.length > 1 ||
+    call.arguments[0].type === 'SpreadElement'
+  )
+    return 'conflict'
+  const list = argumentList(parsed._editor, call)
+  return itemText(parsed._editor, list, list.items[0])
 }
 
 // -------- opt-in: preview-level `parameters.msw` → `beforeEach`
@@ -871,15 +760,15 @@ function findAddonsEntry(
 function migratePreviewParameters(
   parsed: ConfigFile,
   warnings: string[]
-): boolean {
-  if (!mswValueOf(previewObject(parsed))) return false
+): void {
+  if (!mswValueOf(parsed._exportsObject)) return
   const msw = parsed.inspect(['parameters', 'msw'])
   const handlers = msw.kind === 'value' ? handlersOf(msw.node) : null
   if (!handlers) {
     warnings.push(
       'Preview-level `parameters.msw` has a shape the codemod does not recognize; you will need to migrate it to `beforeEach({ msw })` yourself.'
     )
-    return false
+    return
   }
 
   // A spread in the preview could hold a `beforeEach` as well.
@@ -890,7 +779,7 @@ function migratePreviewParameters(
     warnings.push(
       'The preview already defines `beforeEach`; you will need to move the `parameters.msw` handlers into it yourself.'
     )
-    return false
+    return
   }
 
   // An empty handler list (`msw: []`) is simply dropped.
@@ -901,5 +790,4 @@ function migratePreviewParameters(
       parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
     )
   }
-  return true
 }
