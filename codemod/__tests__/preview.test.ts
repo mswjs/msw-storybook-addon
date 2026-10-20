@@ -39,7 +39,6 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
-
       const preview = {
         loaders: [mswLoader()],
         parameters: { actions: { argTypesRegex: '^on[A-Z].*' } },
@@ -72,8 +71,8 @@ describe('transformPreview — CSF 3.0', () => {
     const result = transformPreview(src)
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
-      "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { otherLoader } from 'somewhere'
+      "import { otherLoader } from 'somewhere'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
       export default { loaders: [mswLoader(), otherLoader] }"
     `)
   })
@@ -91,7 +90,6 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
       import { setupWorker } from 'msw/browser'
-
       export default { loaders: [mswLoader(async () => {
         const worker = setupWorker()
         await worker.start({ onUnhandledRequest: 'bypass' })
@@ -171,8 +169,8 @@ describe('transformPreview — CSF 3.0', () => {
     const result = transformPreview(src)
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
-      "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { sharedHandlers } from './handlers'
+      "import { sharedHandlers } from './handlers'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
       import { setupWorker } from 'msw/browser'
 
       export default { loaders: [mswLoader(async () => {
@@ -229,11 +227,13 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "import { mswLoader } from 'msw-storybook-addon/csf3'
       import { setupWorker } from 'msw/browser'
-      export default { loaders: [mswLoader(async () => {
-        const worker = setupWorker()
-        await worker.start({ onUnhandledRequest: 'bypass' })
-        return worker
-      })] }"
+      export default {
+        loaders: [mswLoader(async () => {
+          const worker = setupWorker()
+          await worker.start({ onUnhandledRequest: 'bypass' })
+          return worker
+        })]
+      }"
     `)
   })
 
@@ -464,8 +464,8 @@ describe('transformPreview — parameters opt-in', () => {
     const result = transformPreview(src, { migrateParameters: true })
     expect(result.warnings).toEqual([])
     expect(result.code).toMatchInlineSnapshot(`
-      "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { http, HttpResponse } from 'msw'
+      "import { http, HttpResponse } from 'msw'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
 
       export default {
         loaders: [mswLoader()],
@@ -497,8 +497,8 @@ describe('transformPreview — parameters opt-in', () => {
     expect(result.warnings).toHaveLength(1)
     expect(result.warnings[0]).toContain('not recognize')
     expect(result.code).toMatchInlineSnapshot(`
-      "import { mswLoader } from 'msw-storybook-addon/csf3'
-      import { getHandlers } from './handlers'
+      "import { getHandlers } from './handlers'
+      import { mswLoader } from 'msw-storybook-addon/csf3'
 
       export default {
         loaders: [mswLoader()],

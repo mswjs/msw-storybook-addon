@@ -149,9 +149,11 @@ describe('transformMain', () => {
   })
 
   it('reports an addons field csf-tools cannot edit', () => {
+    // The config binding is used elsewhere, so csf-tools will not edit it.
     const src = dedent`
-      import shared from './shared'
-      export default { ...shared, framework: '@storybook/react-vite' }
+      const config = { framework: '@storybook/react-vite' }
+      export default config
+      console.log(config)
     `
     expect(() => transformMain(src)).toThrow(/add it yourself/)
   })

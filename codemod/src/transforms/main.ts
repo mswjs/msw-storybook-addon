@@ -54,20 +54,21 @@ export function transformMain(source: string): string | null {
   // A plain string would not resolve there, so the new entry is wrapped
   // with the same function.
   const wrapper = addonsNode && detectWrapperName(addonsNode)
-  if (wrapper) {
-    const name = printString(ADDON_PACKAGE, parsed._editor.quote)
-    parsed.appendNodeToArray(['addons'], parseExpression(`${wrapper}(${name})`))
-  } else {
-    // Creates `addons` when it is missing.
-    parsed.appendValueToArray(['addons'], ADDON_PACKAGE)
-  }
+  const result = wrapper
+    ? parsed.appendNodeToArray(
+        ['addons'],
+        parseExpression(
+          `${wrapper}(${printString(ADDON_PACKAGE, parsed._editor.quote)})`
+        )
+      )
+    : // Creates `addons` when it is missing.
+      parsed.appendValueToArray(['addons'], ADDON_PACKAGE)
   // An `addons` field csf-tools cannot edit (next to a spread, say) is
-  // reported as a diagnostic instead of being written. The CLI lists the
-  // error, so the user registers the addon by hand.
-  const [diagnostic] = parsed.mutationDiagnostics
-  if (diagnostic) {
+  // refused instead of written. The CLI lists the error, so the user
+  // registers the addon by hand.
+  if (!result.ok) {
     throw new Error(
-      `Could not add '${ADDON_PACKAGE}' to \`addons\` (${diagnostic.message}); add it yourself.`
+      `Could not add '${ADDON_PACKAGE}' to \`addons\` (${result.diagnostic.message}); add it yourself.`
     )
   }
   return printConfig(parsed).code

@@ -42,7 +42,6 @@ import {
   type ConfigFile,
   type ESTree as E,
   type ESTreeNode,
-  insertAfterImports,
   isCsfFactoryPreview,
   itemText,
   lineIndent,
@@ -50,22 +49,17 @@ import {
   parseExpression,
   prependToList,
   printConfig,
-  printString,
   reindent,
   removeFromList,
   removeStatement,
-  setImportSpecifiers,
   walk
 } from 'storybook/internal/csf-tools'
 import {
   beforeEachArrow,
   callText,
-  edited,
-  extractHandlers,
   findObjectProperty,
+  handlersOf,
   mswValueOf,
-  read,
-  RefusedEdit,
   semicolonFor
 } from './stories'
 
@@ -132,20 +126,25 @@ export function transformPreview(
   } catch {
     return { code: null, warnings }
   }
-  try {
-    return migratePreview(parsed, source, options, warnings)
-  } catch (error) {
-    if (!(error instanceof RefusedEdit)) throw error
-    // csf-tools refused an edit it cannot prove safe (a spread next to the
-    // field, a binding used twice, ...). Nothing is written.
-    const { path, message } = error.diagnostic
-    const field =
-      path.length > 0 ? `\`${path.join('.')}\`` : 'the preview config'
+  // Every edit is made in one transaction: when csf-tools refuses one (a
+  // spread next to the field, a config binding used twice, ...), all of
+  // them are rolled back and nothing is written.
+  let result: PreviewTransformResult = { code: null, warnings }
+  const kept = parsed.transaction(() => {
+    result = migratePreview(parsed, source, options, warnings)
+    return result.code != null
+  })
+  if (!kept && result.code != null) {
+    const diagnostic = parsed.mutationDiagnostics.at(-1)
+    const field = diagnostic?.path.length
+      ? `\`${diagnostic.path.join('.')}\``
+      : 'the preview config'
     warnings.push(
-      `Could not edit ${field} (${message}); you will need to migrate this file yourself.`
+      `Could not edit ${field}${diagnostic ? ` (${diagnostic.message})` : ''}; you will need to migrate this file yourself.`
     )
-    return { code: null, warnings, csfNext: isCsfFactoryPreview(parsed) }
+    return { code: null, warnings, csfNext: result.csfNext }
   }
+  return result
 }
 
 function migratePreview(
@@ -252,15 +251,12 @@ function migratePreview(
     }
     removeSpecifiers(parsed, ['initialize', 'mswLoader', 'mswDecorator'])
     if (hasNamespaceEntry) {
-      removeNamespaceImport(
-        parsed,
-        PREVIEW_SUBPATH,
-        imports.previewNamespace as string
+      parsed.removeImport(
+        { namespace: imports.previewNamespace as string },
+        PREVIEW_SUBPATH
       )
     }
-    if (needsSetup) {
-      addNamedImport(parsed, MSW_BROWSER, 'setupWorker', 'setupWorker')
-    }
+    if (needsSetup) parsed.setImport(['setupWorker'], MSW_BROWSER)
   } else {
     // ---- CSF 3.0 --------------------------------------------------------
     // Only wire the loader when the file actually used the loader path
@@ -301,12 +297,11 @@ function migratePreview(
 
     if (removeSpecifiers(parsed, ['initialize', 'mswDecorator'])) changed = true
     if (retargetLoaderImport(parsed)) changed = true
-    if (addNamedImport(parsed, CSF3_SUBPATH, 'mswLoader', 'mswLoader')) {
+    if (!findNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) {
+      parsed.setImport(['mswLoader'], CSF3_SUBPATH)
       changed = true
     }
-    if (needsSetup) {
-      addNamedImport(parsed, MSW_BROWSER, 'setupWorker', 'setupWorker')
-    }
+    if (needsSetup) parsed.setImport(['setupWorker'], MSW_BROWSER)
   }
 
   if (options.migrateParameters) {
@@ -396,25 +391,6 @@ function importedName(spec: E.ImportSpecifier): string {
   return imported.type === 'Literal' ? imported.value : imported.name
 }
 
-// Imports are edited through the editor's import helpers rather than
-// `ConfigFile#setImport`/`removeImport`, which only look at the first
-// declaration of a source and also take `import type` declarations.
-
-function isValueImport(
-  stmt: Body[number],
-  source: string
-): stmt is E.ImportDeclaration {
-  return (
-    stmt.type === 'ImportDeclaration' &&
-    stmt.importKind !== 'type' &&
-    stmt.source.value === source
-  )
-}
-
-function isValueSpecifier(spec: E.ImportDeclarationSpecifier): boolean {
-  return spec.type !== 'ImportSpecifier' || spec.importKind !== 'type'
-}
-
 /** The value `import { name as local }` specifier of `source`, if any. */
 function findNamedImport(
   parsed: ConfigFile,
@@ -422,7 +398,12 @@ function findNamedImport(
   name: string
 ): E.ImportSpecifier | undefined {
   for (const stmt of parsed._program.body) {
-    if (!isValueImport(stmt, source)) continue
+    if (
+      stmt.type !== 'ImportDeclaration' ||
+      stmt.importKind === 'type' ||
+      stmt.source.value !== source
+    )
+      continue
     for (const spec of stmt.specifiers) {
       if (
         spec.type === 'ImportSpecifier' &&
@@ -435,111 +416,22 @@ function findNamedImport(
   return undefined
 }
 
-function declarationOf(
-  parsed: ConfigFile,
-  spec: E.ImportDeclarationSpecifier
-): E.ImportDeclaration {
-  return parsed._program.body.find(
-    (stmt): stmt is E.ImportDeclaration =>
-      stmt.type === 'ImportDeclaration' && stmt.specifiers.includes(spec)
-  ) as E.ImportDeclaration
-}
-
-/** Drop specifiers from their declaration, and the declaration once empty. */
-function removeFromImport(
-  parsed: ConfigFile,
-  stmt: E.ImportDeclaration,
-  removed: readonly E.ImportDeclarationSpecifier[]
-): void {
-  const kept = stmt.specifiers.filter((spec) => !removed.includes(spec))
-  if (kept.length === 0) removeStatement(parsed._editor, stmt)
-  else setImportSpecifiers(parsed._editor, stmt, kept)
-  parsed._editor.commit()
+function isValueSpecifier(spec: E.ImportDeclarationSpecifier): boolean {
+  return spec.type !== 'ImportSpecifier' || spec.importKind !== 'type'
 }
 
 /** Remove the given specifiers from addon imports; drop emptied declarations. */
 function removeSpecifiers(parsed: ConfigFile, names: string[]): boolean {
   let changed = false
-  for (;;) {
-    const spec = [ADDON_PACKAGE, CSF3_SUBPATH]
-      .flatMap((source) =>
-        names.map((name) => findNamedImport(parsed, source, name))
-      )
-      .find((found) => found != null)
-    if (!spec) return changed
-    // Genuine side-effect imports never had specifiers to remove, so only
-    // declarations emptied here are dropped.
-    removeFromImport(parsed, declarationOf(parsed, spec), [spec])
+  for (const source of [ADDON_PACKAGE, CSF3_SUBPATH]) {
+    const present = names.filter((name) =>
+      findNamedImport(parsed, source, name)
+    )
+    if (present.length === 0) continue
+    parsed.removeImport(present, source)
     changed = true
   }
-}
-
-/**
- * Ensure a value import of `name` from `source`, written as `specText`. It
- * joins the first value import of `source`, or else goes after the last
- * import.
- */
-function addNamedImport(
-  parsed: ConfigFile,
-  source: string,
-  name: string,
-  specText: string
-): boolean {
-  if (findNamedImport(parsed, source, name)) return false
-  const editor = parsed._editor
-  const stmt = parsed._program.body.find(
-    (s): s is E.ImportDeclaration =>
-      isValueImport(s, source) &&
-      !s.specifiers.some((spec) => spec.type === 'ImportNamespaceSpecifier')
-  )
-  if (stmt) {
-    setImportSpecifiers(editor, stmt, stmt.specifiers, { named: [specText] })
-  } else {
-    insertAfterImports(
-      editor,
-      `import { ${specText} } from ${printString(source, editor.quote)}${semicolonFor(editor)}`
-    )
-  }
-  editor.commit()
-  return true
-}
-
-/** Ensure `import <localName> from '<source>'`. */
-function addDefaultImport(
-  parsed: ConfigFile,
-  source: string,
-  localName: string
-): void {
-  const editor = parsed._editor
-  const stmt = parsed._program.body.find(
-    (s): s is E.ImportDeclaration =>
-      isValueImport(s, source) &&
-      !s.specifiers.some((spec) => spec.type === 'ImportDefaultSpecifier')
-  )
-  if (stmt) {
-    setImportSpecifiers(editor, stmt, stmt.specifiers, { default: localName })
-  } else {
-    insertAfterImports(
-      editor,
-      `import ${localName} from ${printString(source, editor.quote)}${semicolonFor(editor)}`
-    )
-  }
-  editor.commit()
-}
-
-/** Drop `import * as <localName> from '<source>'`. */
-function removeNamespaceImport(
-  parsed: ConfigFile,
-  source: string,
-  localName: string
-): void {
-  for (const stmt of parsed._program.body) {
-    if (!isValueImport(stmt, source)) continue
-    const spec = stmt.specifiers.find(
-      (s) => s.type === 'ImportNamespaceSpecifier' && s.local.name === localName
-    )
-    if (spec) return removeFromImport(parsed, stmt, [spec])
-  }
+  return changed
 }
 
 /** Move a root-package `mswLoader` specifier onto the /csf3 subpath. */
@@ -547,26 +439,13 @@ function retargetLoaderImport(parsed: ConfigFile): boolean {
   const spec = findNamedImport(parsed, ADDON_PACKAGE, 'mswLoader')
   if (!spec) return false
   const localName = spec.local.name
-  const editor = parsed._editor
-  const decl = declarationOf(parsed, spec)
-  if (decl.specifiers.length === 1) {
-    // The import only brings `mswLoader`: point it at the subpath in place,
-    // with the quote it is written with.
-    editor.edits.overwrite(
-      decl.source.start,
-      decl.source.end,
-      printString(CSF3_SUBPATH, editor.code[decl.source.start])
+  parsed.removeImport(['mswLoader'], ADDON_PACKAGE)
+  if (!findNamedImport(parsed, CSF3_SUBPATH, 'mswLoader')) {
+    parsed.setImport(
+      [localName === 'mswLoader' ? localName : `mswLoader as ${localName}`],
+      CSF3_SUBPATH
     )
-    editor.commit()
-    return true
   }
-  removeFromImport(parsed, decl, [spec])
-  addNamedImport(
-    parsed,
-    CSF3_SUBPATH,
-    'mswLoader',
-    localName === 'mswLoader' ? localName : `mswLoader as ${localName}`
-  )
   return true
 }
 
@@ -755,10 +634,7 @@ function ensureLoaderCall(
     !loaders ||
     (loaders.type === 'Identifier' && loaders.name === loaderName)
   ) {
-    // Removed and added again rather than set in place: `set` writes a new
-    // field indented like the object, an existing one as given.
-    edited(parsed.remove(['loaders']))
-    edited(parsed.set(['loaders'], parseExpression(`[${call}]`)))
+    parsed.set(['loaders'], parseExpression(`[${call}]`))
     return 'changed'
   }
 
@@ -826,7 +702,7 @@ function stripMswRef(
   if (!value) return false
 
   if (value.type === 'Identifier' && value.name === refName) {
-    edited(parsed.remove([propName]))
+    parsed.remove([propName])
     return true
   }
   if (value.type === 'ArrayExpression') {
@@ -836,7 +712,7 @@ function stripMswRef(
     if (removed.length === 0) return false
     if (removed.length === value.elements.length) {
       // Nothing left: the property goes as well.
-      edited(parsed.remove([propName]))
+      parsed.remove([propName])
       return true
     }
     removeFromList(parsed._editor, arrayList(parsed._editor, value), removed)
@@ -911,7 +787,7 @@ function ensureFactoriesAddon(
   // Not registered yet — ensure the default import and inject the call.
   if (!localName) {
     localName = 'addonMsw'
-    addDefaultImport(parsed, ADDON_PACKAGE, localName)
+    parsed.setImport(localName, ADDON_PACKAGE)
   }
 
   const call = callText(localName, setupFn ? [setupFn] : [], editor.indent)
@@ -930,7 +806,7 @@ function ensureFactoriesAddon(
   }
 
   if (!addonsField) {
-    edited(parsed.set(['addons'], parseExpression(`[${call}]`)))
+    parsed.set(['addons'], parseExpression(`[${call}]`))
     return 'changed'
   }
   if (!addonsArray) {
@@ -996,13 +872,9 @@ function migratePreviewParameters(
   parsed: ConfigFile,
   warnings: string[]
 ): boolean {
-  const mswValue = mswValueOf(previewObject(parsed))
-  if (!mswValue) return false
-  // csf-tools must be able to prove the field too: a spread or a duplicate
-  // key around it makes the edit unsafe.
-  const handlers = read(parsed, () => parsed.get(['parameters', 'msw'])).value
-    ? extractHandlers(parsed._editor, mswValue)
-    : null
+  if (!mswValueOf(previewObject(parsed))) return false
+  const msw = parsed.inspect(['parameters', 'msw'])
+  const handlers = msw.kind === 'value' ? handlersOf(msw.node) : null
   if (!handlers) {
     warnings.push(
       'Preview-level `parameters.msw` has a shape the codemod does not recognize; you will need to migrate it to `beforeEach({ msw })` yourself.'
@@ -1010,25 +882,23 @@ function migratePreviewParameters(
     return false
   }
 
-  if (handlers.length > 0) {
-    // A spread in the preview could hold a `beforeEach` as well.
-    const beforeEach = read(parsed, () => parsed.get(['beforeEach']))
-    if (!beforeEach.proven || beforeEach.value) {
-      warnings.push(
-        'The preview already defines `beforeEach`; you will need to move the `parameters.msw` handlers into it yourself.'
-      )
-      return false
-    }
+  // A spread in the preview could hold a `beforeEach` as well.
+  if (
+    handlers.length > 0 &&
+    parsed.inspect(['beforeEach']).kind !== 'missing'
+  ) {
+    warnings.push(
+      'The preview already defines `beforeEach`; you will need to move the `parameters.msw` handlers into it yourself.'
+    )
+    return false
   }
 
   // An empty handler list (`msw: []`) is simply dropped.
-  edited(parsed.remove(['parameters', 'msw']))
+  parsed.remove(['parameters', 'msw'])
   if (handlers.length > 0) {
-    edited(
-      parsed.set(
-        ['beforeEach'],
-        parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
-      )
+    parsed.set(
+      ['beforeEach'],
+      parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
     )
   }
   return true

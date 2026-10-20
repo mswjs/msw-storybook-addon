@@ -419,7 +419,8 @@ describe('transformStory', () => {
       export const Foo = () => null
       Foo.beforeEach = ({ msw }) => {
         msw.use(http.get('/u', () => HttpResponse.json({})))
-      }"
+      };
+      "
     `)
   })
 })
