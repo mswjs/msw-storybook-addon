@@ -148,6 +148,17 @@ describe('transformMain', () => {
     `)
   })
 
+  it('carries the addons of a spread config forward', () => {
+    const src = dedent`
+      import { shared } from './shared'
+      export default { ...shared, framework: '@storybook/react-vite' }
+    `
+    expect(transformMain(src)).toMatchInlineSnapshot(`
+      "import { shared } from './shared'
+      export default { ...shared, framework: '@storybook/react-vite', addons: [...(shared.addons ?? []), 'msw-storybook-addon'] }"
+    `)
+  })
+
   it('reports an addons field csf-tools cannot edit', () => {
     // The config binding is used elsewhere, so csf-tools will not edit it.
     const src = dedent`
