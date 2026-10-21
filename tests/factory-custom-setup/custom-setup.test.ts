@@ -4,7 +4,7 @@ test('resolves requests against the worker created by the custom setup function'
   page
 }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Custom Setup' }).click()
+  await page.getByRole('row', { name: 'Custom Setup' }).click()
 
   const iframe = page.frameLocator('#storybook-preview-iframe')
   await expect(iframe.getByRole('paragraph')).toHaveText(
