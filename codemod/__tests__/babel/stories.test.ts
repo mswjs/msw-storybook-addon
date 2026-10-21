@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { transformStory } from '../src/transforms/stories'
+import { expect, it } from 'vitest'
 import { dedent } from 'ts-dedent'
+import { babel } from '../csf-tools'
+
+const describe = babel.describe
+const { transformStory } = await babel.load(
+  () => import('../../src/transforms/babel/stories')
+)
 
 // Each test pins the full `transformStory` result as an inline snapshot so
 // the exact rewrite (parameters.msw -> beforeEach({ msw }), other params

@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { transformPreview } from '../src/transforms/preview'
+import { expect, it } from 'vitest'
 import { dedent } from 'ts-dedent'
+import { babel } from '../csf-tools'
+
+const describe = babel.describe
+const { transformPreview } = await babel.load(
+  () => import('../../src/transforms/babel/preview')
+)
 
 describe('transformPreview — CSF 3.0', () => {
   it('returns null when there is no msw-storybook-addon usage', () => {

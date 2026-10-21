@@ -18,9 +18,20 @@ import { formatFileContent, globToRegexp } from 'storybook/internal/common'
 import { CLI_COLORS, logger } from 'storybook/internal/node-logger'
 import { dedent } from 'ts-dedent'
 
-import { transformStory } from './transforms/stories'
-import { transformPreview } from './transforms/preview'
-import { transformMain } from './transforms/main'
+type Transforms = typeof import('./transforms/babel/index')
+
+/**
+ * Storybook 11 replaced the Babel-based csf-tools of Storybook 9 and 10
+ * with ESTree ones, so the transforms come in one implementation for each,
+ * with the same results. Each is loaded only on the Storybook it is
+ * written for, as importing it on the other fails before any code runs.
+ */
+async function loadTransforms(): Promise<Transforms> {
+  const csfTools = await import('storybook/internal/csf-tools')
+  return 'parseModule' in csfTools
+    ? import('./transforms/estree/index')
+    : import('./transforms/babel/index')
+}
 
 const DEFAULT_GLOB = '**/*.{stories,story}.{js,jsx,ts,tsx,mjs,mjsx,mts,mtsx}'
 const MIGRATION_URL =
@@ -156,6 +167,9 @@ async function main(): Promise<void> {
   }
 
   const args = parseArgs(argv)
+
+  const { transformStory, transformPreview, transformMain } =
+    await loadTransforms()
   const cwd = process.cwd()
   const configDir = resolve(cwd, args.configDir)
 
@@ -299,8 +313,10 @@ async function main(): Promise<void> {
 
   flushPhase()
 
+  // The logger of Storybook 9 and 10.0 has no `muted` color.
+  const muted = CLI_COLORS.muted ?? ((text: string) => text)
   logger.log(
-    CLI_COLORS.muted(
+    muted(
       `${transformed.length} file(s) ${args.dryRun ? 'would be ' : ''}updated, ${unmodified} already up to date`
     )
   )
@@ -320,7 +336,7 @@ async function main(): Promise<void> {
     }
     if (unrecognizedShape.length > 0) {
       sections.push(
-        `Could not recognize the \`parameters.msw\` shape — migrate them manually:\n${unrecognizedShape
+        `Could not migrate \`parameters.msw\` safely — migrate them manually:\n${unrecognizedShape
           .map((w) => `  • ${w}`)
           .join('\n')}`
       )

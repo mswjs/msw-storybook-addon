@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { transformMain } from '../src/transforms/main'
+import { expect, it } from 'vitest'
 import { dedent } from 'ts-dedent'
+import { estree } from '../csf-tools'
+
+const describe = estree.describe
+const { transformMain } = await estree.load(
+  () => import('../../src/transforms/estree/main')
+)
 
 describe('transformMain', () => {
   it('adds the addon when missing', () => {
@@ -73,10 +78,7 @@ describe('transformMain', () => {
       "import type { StorybookConfig } from '@storybook/react-vite'
       export default {
         framework: getAbsolutePath('@storybook/react-vite'),
-        addons: [
-          getAbsolutePath('@storybook/addon-docs'),
-          getAbsolutePath('msw-storybook-addon')
-        ],
+        addons: [getAbsolutePath('@storybook/addon-docs'), getAbsolutePath('msw-storybook-addon')],
       } satisfies StorybookConfig"
     `)
   })
@@ -124,8 +126,101 @@ describe('transformMain', () => {
       "export default {
         framework: '@storybook/react-vite',
         stories: ['../src/**/*.stories.tsx'],
-        addons: ['msw-storybook-addon']
-      };"
+        addons: ['msw-storybook-addon'],
+      }"
+    `)
+  })
+
+  it('returns null when addons is a method', () => {
+    const src = dedent`
+      export default {
+        addons() {
+          return ['@storybook/addon-docs']
+        },
+      }
+    `
+    expect(transformMain(src)).toBeNull()
+  })
+
+  it('keeps the quote style of the first 500 tokens, directives included', () => {
+    const src = dedent`
+      'use strict'
+      module.exports = { stories: ["../src"], addons: ['x'] }
+    `
+    expect(transformMain(src)).toMatchInlineSnapshot(`
+      "'use strict'
+      module.exports = { stories: ["../src"], addons: ['x', 'msw-storybook-addon'] }"
+    `)
+  })
+
+  it('carries the addons of a spread config forward', () => {
+    const src = dedent`
+      import { shared } from './shared'
+      export default { ...shared, framework: '@storybook/react-vite' }
+    `
+    expect(transformMain(src)).toMatchInlineSnapshot(`
+      "import { shared } from './shared'
+      export default { ...shared, framework: '@storybook/react-vite', addons: [...(shared.addons ?? []), 'msw-storybook-addon'] }"
+    `)
+  })
+
+  it('reports an addons field csf-tools cannot edit', () => {
+    // The config binding is used elsewhere, so csf-tools will not edit it.
+    const src = dedent`
+      const config = { framework: '@storybook/react-vite' }
+      export default config
+      console.log(config)
+    `
+    expect(() => transformMain(src)).toThrow(/add it yourself/)
+  })
+
+  it('is idempotent when csf-tools could not add the addon', () => {
+    // A spread after the field, or a config binding used elsewhere, makes
+    // csf-tools refuse to edit `addons`, but not to read it.
+    expect(
+      transformMain(
+        `export default { addons: ['msw-storybook-addon'], ...base }`
+      )
+    ).toBeNull()
+    expect(
+      transformMain(dedent`
+        const config = { addons: ['msw-storybook-addon'] }
+        export default config
+        console.log(config)
+      `)
+    ).toBeNull()
+  })
+
+  it('reports an addons constant used elsewhere', () => {
+    const src = dedent`
+      const addons = ['@storybook/addon-docs']
+      export default { addons }
+      console.log(addons)
+    `
+    expect(() => transformMain(src)).toThrow(/add it yourself/)
+  })
+
+  it('reports a config wrapped in a call it cannot edit', () => {
+    expect(() =>
+      transformMain(`export default withX({ addons: ['a'] })`)
+    ).toThrow(/add it yourself/)
+    expect(() => transformMain(`export default makeConfig()`)).toThrow(
+      /add it yourself/
+    )
+  })
+
+  it('returns null for a config of named exports', () => {
+    expect(transformMain(`export const addons = ['a']`)).toBeNull()
+  })
+
+  it('adds the addon to a local addons constant', () => {
+    const src = dedent`
+      const addons = ['@storybook/addon-docs']
+      export default { addons }
+    `
+    expect(transformMain(src)).toMatchInlineSnapshot(`
+      "const addons = ['@storybook/addon-docs', 'msw-storybook-addon']
+      export default { addons }"
     `)
   })
 
