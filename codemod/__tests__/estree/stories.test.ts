@@ -355,6 +355,24 @@ describe('transformStory', () => {
     })
   })
 
+  it('skips a story whose parameters.msw is a method', () => {
+    const src = dedent`
+      import { http, HttpResponse } from 'msw'
+      export default { title: 'X' }
+      export const Foo = {
+        parameters: {
+          msw() {
+            return [http.get('/u', () => HttpResponse.json({}))]
+          },
+        },
+      }
+    `
+    expect(transformStory(src)).toEqual({
+      code: null,
+      skippedStories: [{ story: 'Foo', reason: 'unrecognized-shape' }]
+    })
+  })
+
   it('skips a story whose parameters.msw a later spread could shadow', () => {
     const src = dedent`
       import { http, HttpResponse } from 'msw'

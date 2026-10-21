@@ -221,6 +221,32 @@ describe('transformPreview — CSF 3.0', () => {
     `)
   })
 
+  it('removes every mswDecorator from decorators', () => {
+    const src = dedent`
+      import { mswDecorator } from 'msw-storybook-addon'
+
+      export default {
+        decorators: [
+          mswDecorator,
+          withTheme,
+          // msw again
+          mswDecorator,
+          withRouter,
+        ],
+      }
+    `
+    expect(transformPreview(src).code).toMatchInlineSnapshot(`
+      "import { mswLoader } from 'msw-storybook-addon/csf3'
+      export default {
+        decorators: [
+          withTheme,
+          withRouter,
+        ],
+        loaders: [mswLoader()],
+      }"
+    `)
+  })
+
   it('drops the decorators key when mswDecorator was the only one', () => {
     const src = dedent`
       import { initialize, mswDecorator } from 'msw-storybook-addon'
@@ -290,6 +316,80 @@ describe('transformPreview — CSF 3.0', () => {
     expect(result.code).toBeNull()
     expect(result.warnings).toHaveLength(1)
     expect(result.warnings[0]).toContain('cannot rewrite')
+  })
+
+  it('skips and warns when the config binding is used elsewhere', () => {
+    const src = dedent`
+      import { mswLoader } from 'msw-storybook-addon'
+      const preview = { loaders: [mswLoader] }
+      export default preview
+      console.log(preview)
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toEqual([
+      'Could not edit the preview config (Cannot mutate a shared or reassigned config binding); you will need to migrate this file yourself.'
+    ])
+  })
+
+  it('leaves a migrated preview alone when its config binding is used elsewhere', () => {
+    const src = dedent`
+      import { mswLoader } from 'msw-storybook-addon/csf3'
+      const preview = { loaders: [mswLoader()] }
+      export default preview
+      console.log(preview)
+    `
+    expect(transformPreview(src)).toEqual({
+      code: null,
+      warnings: [],
+      csfNext: false
+    })
+  })
+
+  it('skips and warns when the config is wrapped in a call', () => {
+    const src = dedent`
+      import { mswLoader } from 'msw-storybook-addon'
+      export default withX({ loaders: [mswLoader] })
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toMatchInlineSnapshot(`
+      [
+        "Could not edit the preview config (Cannot mutate an arbitrary config factory call); you will need to migrate this file yourself.",
+      ]
+    `)
+  })
+
+  it('names the list entry csf-tools refused to edit', () => {
+    const src = dedent`
+      import { mswDecorator } from 'msw-storybook-addon'
+      export default { decorators: [mswDecorator, withTheme], ...base }
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toMatchInlineSnapshot(`
+      [
+        "Could not edit \`decorators[0]\` (Cannot mutate decorators[0] because the target contains spread field); you will need to migrate this file yourself.",
+      ]
+    `)
+  })
+
+  it('skips and warns when loaders is a method', () => {
+    const src = dedent`
+      import { mswLoader } from 'msw-storybook-addon'
+      export default {
+        loaders() {
+          return [mswLoader]
+        },
+      }
+    `
+    const result = transformPreview(src)
+    expect(result.code).toBeNull()
+    expect(result.warnings).toMatchInlineSnapshot(`
+      [
+        "\`loaders\` is not an array literal; you will need to add \`mswLoader()\` to it yourself.",
+      ]
+    `)
   })
 
   it('skips and warns when initialize is called conditionally', () => {

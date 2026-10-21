@@ -18,17 +18,16 @@ import {
   type CsfFile,
   type CsfObject,
   type CsfObjectTarget,
+  detachedTextOf,
   type ESTree as E,
   type ESTreeNode,
   itemText,
-  lineIndent,
   loadCsf,
+  objectProperty,
   parseExpression,
-  placeableTextOf,
   printCsf,
   reindent,
   SourceEditor,
-  staticKey,
   textOf
 } from 'storybook/internal/csf-tools'
 
@@ -92,7 +91,7 @@ function migrateObject(
   const written =
     parameters.kind === 'value'
       ? parameters.node.type === 'ObjectExpression' &&
-        findObjectProperty(parameters.node, 'msw') != null
+        objectProperty(parameters.node, 'msw') != null
       : mswValueOf(object.node) != null
   if (!written) return undefined
 
@@ -118,7 +117,7 @@ function migrateObject(
     if (handlers.length > 0) {
       object.set(
         ['beforeEach'],
-        parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
+        parseExpression(beforeEachArrow(handlers, parsed.editor.indent))
       )
     }
   })
@@ -129,9 +128,9 @@ function migrateObject(
 export function mswValueOf(
   obj: E.ObjectExpression | undefined
 ): ESTreeNode | undefined {
-  const parameters = findObjectProperty(obj, 'parameters')?.value
+  const parameters = obj && objectProperty(obj, 'parameters')?.value
   if (parameters?.type !== 'ObjectExpression') return undefined
-  return findObjectProperty(parameters, 'msw')?.value
+  return objectProperty(parameters, 'msw')?.value
 }
 
 /**
@@ -157,7 +156,7 @@ function extractHandlers(
   if (value.type !== 'ObjectExpression') return null
 
   // Object form: `parameters: { msw: { handlers: ... } }`
-  const handlers = findObjectProperty(value, 'handlers')?.value
+  const handlers = objectProperty(value, 'handlers')?.value
   if (handlers?.type === 'ArrayExpression') {
     return arrayHandlers(editor, handlers)
   }
@@ -172,7 +171,7 @@ function extractHandlers(
       if (!elements) return null
       out.push(...elements)
     } else if (isHandlerLike(prop.value)) {
-      out.push(nodeText(editor, prop.value))
+      out.push(detachedTextOf(prop.value))
     } else {
       return null
     }
@@ -233,26 +232,7 @@ export function callText(callee: string, args: string[], step: string): string {
   return `${callee}(\n${lines.join(',\n')}\n)`
 }
 
-/** Source of a node with its continuation lines dedented. */
-function nodeText(editor: SourceEditor, node: ESTreeNode): string {
-  return reindent(
-    placeableTextOf(node),
-    lineIndent(editor.code, node.start),
-    ''
-  )
-}
-
 /** A `key: value` property: not a spread, method, getter or setter. */
 function isPlainProperty(prop: E.ObjectPropertyKind): prop is E.ObjectProperty {
   return prop.type === 'Property' && prop.kind === 'init' && !prop.method
-}
-
-export function findObjectProperty(
-  obj: E.ObjectExpression | undefined,
-  name: string
-): E.ObjectProperty | undefined {
-  return obj?.properties.find(
-    (prop): prop is E.ObjectProperty =>
-      isPlainProperty(prop) && staticKey(prop) === name
-  )
 }

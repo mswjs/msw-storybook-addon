@@ -43,23 +43,17 @@ import {
   type ESTree as E,
   type ESTreeNode,
   isCsfFactoryPreview,
+  isIdentifier,
   itemText,
-  lineIndent,
   loadConfig,
+  objectProperty,
   parseExpression,
-  prependToList,
   printConfig,
+  printCsfPath,
   reindent,
-  removeFromList,
   removeStatement
 } from 'storybook/internal/csf-tools'
-import {
-  beforeEachArrow,
-  callText,
-  findObjectProperty,
-  handlersOf,
-  mswValueOf
-} from './stories'
+import { beforeEachArrow, callText, handlersOf, mswValueOf } from './stories'
 
 const ADDON_PACKAGE = 'msw-storybook-addon'
 const CSF3_SUBPATH = 'msw-storybook-addon/csf3'
@@ -88,6 +82,8 @@ interface AddonImports {
   initialize?: string
   /** Local name of `mswLoader`, if imported (from the root or /csf3). */
   mswLoader?: string
+  /** Whether `mswLoader` is imported from the root, as in v2. */
+  mswLoaderFromRoot?: boolean
   /** Local name of `mswDecorator`, if imported. */
   mswDecorator?: string
   /** Local name of the default export (`addonMsw`), if imported. */
@@ -135,16 +131,16 @@ export function transformPreview(
 
 function refusedEditWarning(parsed: ConfigFile): string {
   const { path, message } = parsed.mutationDiagnostics.at(-1)!
-  const field = path.length ? `\`${path.join('.')}\`` : 'the preview config'
+  const field = path.length ? `\`${printCsfPath(path)}\`` : 'the preview config'
   return `Could not edit ${field} (${message}); you will need to migrate this file yourself.`
 }
 
 /**
- * Fields of the preview config are edited through `ConfigFile`; array
- * elements, call arguments and the `initialize(...)` statement, which it
- * has no paths for, through its editor. Every edit is committed, which
- * parses the file again, so each step looks its nodes up afresh and
- * carries what it needs from an earlier parse over as source text.
+ * Fields of the preview config, their array elements and the arguments of
+ * calls in them are edited through `ConfigFile` paths; the
+ * `initialize(...)` statement, which has no path, through its editor.
+ * Every edit parses the file again, so each step looks its nodes up afresh
+ * and carries what it needs from an earlier parse over as source text.
  *
  * Returns false when the file is to be left as it is.
  */
@@ -154,7 +150,7 @@ function migratePreview(
   options: PreviewTransformOptions,
   warnings: string[]
 ): boolean {
-  const imports = collectAddonImports(parsed._program.body)
+  const imports = collectAddonImports(parsed.program.body)
 
   // `initialize` is analyzed before anything is edited.
   let initializeCall: InitializeCall | null = null
@@ -167,8 +163,24 @@ function migratePreview(
   // The parser unwraps call-wrapped and variable-declared default exports,
   // so this covers `export default {}`, `export default definePreview({})`
   // and `const preview = definePreview({}); export default preview`.
-  if (!parsed._exportsObject) {
-    if (
+  if (!parsed.node) {
+    const root = parsed.inspect([])
+    if (parsed.hasDefaultExport && root.kind === 'unreadable') {
+      // A default export csf-tools will not read or edit, such as a binding
+      // used elsewhere too, or a config wrapped in a call other than
+      // `definePreview`. Only v2 wiring is worth a warning: a migrated
+      // preview needs nothing.
+      if (
+        imports.initialize ||
+        imports.mswDecorator ||
+        imports.mswLoaderFromRoot ||
+        imports.previewNamespace
+      ) {
+        warnings.push(
+          `Could not edit the preview config (${root.diagnostic.message}); you will need to migrate this file yourself.`
+        )
+      }
+    } else if (
       imports.initialize ||
       imports.mswLoader ||
       imports.mswDecorator ||
@@ -214,7 +226,7 @@ function migrateCsfNext(
     return false
   }
 
-  const hasNamespaceEntry = findAddonsEntry(parsed, previewNamespace) != null
+  const hasNamespaceEntry = findAddonsEntry(parsed, previewNamespace) !== -1
   const hasWiring =
     hasMswRef(parsed, 'loaders', mswLoader) ||
     hasMswRef(parsed, 'decorators', mswDecorator) ||
@@ -269,26 +281,23 @@ function fieldValue(
   parsed: ConfigFile,
   name: string
 ): E.Expression | undefined {
-  return findObjectProperty(parsed._exportsObject, name)?.value
+  const config = parsed.node
+  return config && objectProperty(config, name)?.value
 }
 
-/**
- * Whether `node` is the identifier `name`. An undefined `name`, an import
- * the file does not have, matches nothing.
- */
-function isIdentifier(
-  node: ESTreeNode | null | undefined,
-  name: string | undefined
-): node is E.IdentifierReference {
-  return node?.type === 'Identifier' && node.name === name
-}
+// An undefined `name` below is an import the file does not have: it
+// matches nothing.
 
 /** Whether `node` is a call of the function `name`. */
 function isCallOf(
   node: ESTreeNode | null | undefined,
   name: string | undefined
 ): node is E.CallExpression {
-  return node?.type === 'CallExpression' && isIdentifier(node.callee, name)
+  return (
+    name !== undefined &&
+    node?.type === 'CallExpression' &&
+    isIdentifier(node.callee, name)
+  )
 }
 
 /** `name` or `name(...)`. */
@@ -296,32 +305,9 @@ function isRef(
   node: ESTreeNode | null | undefined,
   name: string | undefined
 ): node is E.IdentifierReference | E.CallExpression {
-  return isIdentifier(node, name) || isCallOf(node, name)
-}
-
-/** Overwrite a node with code built from column zero, and commit. */
-function replaceNode(parsed: ConfigFile, node: ESTreeNode, text: string): void {
-  const editor = parsed._editor
-  editor.edits.overwrite(
-    node.start,
-    node.end,
-    reindent(text, '', lineIndent(editor.code, node.start))
+  return (
+    name !== undefined && (isIdentifier(node, name) || isCallOf(node, name))
   )
-  editor.commit()
-}
-
-/** Pass an argument, built from column zero, to a call without arguments. */
-function addFirstArgument(
-  parsed: ConfigFile,
-  call: E.CallExpression,
-  text: string
-): void {
-  const editor = parsed._editor
-  editor.edits.appendLeft(
-    call.end - 1,
-    reindent(text, '', lineIndent(editor.code, call.start))
-  )
-  editor.commit()
 }
 
 // -------- imports
@@ -349,7 +335,10 @@ function collectAddonImports(body: Body): AddonImports {
       } else if (spec.type === 'ImportSpecifier' && isValueSpecifier(spec)) {
         const name = importedName(spec)
         if (name === 'initialize') out.initialize = spec.local.name
-        if (name === 'mswLoader') out.mswLoader = spec.local.name
+        if (name === 'mswLoader') {
+          out.mswLoader = spec.local.name
+          if (src === ADDON_PACKAGE) out.mswLoaderFromRoot = true
+        }
         if (name === 'mswDecorator') out.mswDecorator = spec.local.name
       }
     }
@@ -400,8 +389,8 @@ function analyzeInitialize(
   localName: string,
   warnings: string[]
 ): InitializeCall | null | 'skip' {
-  const editor = parsed._editor
-  const calls = findInitializeCalls(parsed._program.body, localName)
+  const { editor } = parsed
+  const calls = findInitializeCalls(parsed.program.body, localName)
 
   // Any other reference to `initialize` (captured return value, conditional
   // call, passing the function around) → we can't rewrite faithfully.
@@ -468,7 +457,7 @@ function holeFreeElements(
   parsed: ConfigFile,
   arr: E.ArrayExpression
 ): string[] {
-  const editor = parsed._editor
+  const { editor } = parsed
   const list = arrayList(editor, arr)
   return list.items
     .filter((_, i) => arr.elements[i] != null)
@@ -480,10 +469,10 @@ function removeInitializeCall(
   parsed: ConfigFile,
   localName: string | undefined
 ): void {
-  const [stmt] = findInitializeCalls(parsed._program.body, localName)
+  const [stmt] = findInitializeCalls(parsed.program.body, localName)
   if (!stmt) return
-  removeStatement(parsed._editor, stmt)
-  parsed._editor.commit()
+  removeStatement(parsed.editor, stmt)
+  parsed.editor.commit()
 }
 
 /**
@@ -500,7 +489,7 @@ function setupFunction(
   options: string,
   handlers: string[]
 ): string {
-  const { indent: step, semicolons } = parsed._editor
+  const { indent: step, semicolons } = parsed.editor
   const semi = semicolons ? ';' : ''
   const statements = [
     `const worker = ${callText('setupWorker', handlers, step)}${semi}`,
@@ -522,7 +511,7 @@ function ensureLoaderCall(
   setup: string | null,
   warnings: string[]
 ): boolean {
-  const call = callText(loaderName, setup ? [setup] : [], parsed._editor.indent)
+  const call = callText(loaderName, setup ? [setup] : [], parsed.editor.indent)
   // The field as written: an identifier is not followed into a shared list.
   const loaders = fieldValue(parsed, 'loaders')
 
@@ -540,10 +529,13 @@ function ensureLoaderCall(
 
   const entry = loaders.elements.find((el) => isRef(el, loaderName))
   if (!entry) {
-    parsed.appendNodeToArray(['loaders'], parseExpression(call))
-  } else if (entry.type === 'Identifier') {
+    parsed.append(['loaders'], parseExpression(call))
+    return true
+  }
+  const index = loaders.elements.indexOf(entry)
+  if (entry.type === 'Identifier') {
     // `loaders: [mswLoader]`
-    replaceNode(parsed, entry, call)
+    parsed.set(['loaders', index], parseExpression(call))
   } else if (setup) {
     // `loaders: [mswLoader()]`
     if (entry.arguments.length > 0) {
@@ -552,7 +544,7 @@ function ensureLoaderCall(
       )
       return false
     }
-    addFirstArgument(parsed, entry, setup)
+    parsed.append(['loaders', index], parseExpression(setup))
   }
   return true
 }
@@ -565,6 +557,7 @@ function hasMswRef(
   name: string,
   ref: string | undefined
 ): boolean {
+  if (ref === undefined) return false
   const value = fieldValue(parsed, name)
   return value?.type === 'ArrayExpression'
     ? value.elements.some((el) => isRef(el, ref))
@@ -577,20 +570,21 @@ function stripMswRef(
   name: string,
   ref: string | undefined
 ): void {
+  if (ref === undefined) return
   const value = fieldValue(parsed, name)
   if (isIdentifier(value, ref)) {
     parsed.remove([name])
     return
   }
   if (value?.type !== 'ArrayExpression') return
-  const removed = value.elements.filter((el) => isRef(el, ref))
+  const removed = value.elements.flatMap((el, i) => (isRef(el, ref) ? [i] : []))
   if (removed.length === 0) return
   if (removed.length === value.elements.length) {
     parsed.remove([name])
     return
   }
-  removeFromList(parsed._editor, arrayList(parsed._editor, value), removed)
-  parsed._editor.commit()
+  // From the last, so the indexes before it still address their element.
+  for (const index of removed.reverse()) parsed.remove([name, index])
 }
 
 // -------- CSF Next: ensure `addonMsw(...)` in `addons: [...]`
@@ -600,12 +594,11 @@ function addonsArrayOf(parsed: ConfigFile): E.ArrayExpression | undefined {
   return value?.type === 'ArrayExpression' ? value : undefined
 }
 
-/** A bare-identifier entry in `addons: [...]`, if there is one. */
-function findAddonsEntry(
-  parsed: ConfigFile,
-  name: string | undefined
-): E.IdentifierReference | undefined {
-  return addonsArrayOf(parsed)?.elements.find((el) => isIdentifier(el, name))
+/** The index of a bare-identifier entry in `addons: [...]`, or -1. */
+function findAddonsEntry(parsed: ConfigFile, name: string | undefined): number {
+  if (name === undefined) return -1
+  const elements = addonsArrayOf(parsed)?.elements ?? []
+  return elements.findIndex((el) => isIdentifier(el, name))
 }
 
 /**
@@ -619,19 +612,18 @@ function ensureFactoriesAddon(
   setup: string | null,
   warnings: string[]
 ): boolean {
-  const editor = parsed._editor
+  const { indent } = parsed.editor
   const { addonDefault, previewNamespace } = imports
 
-  const registered = addonsArrayOf(parsed)?.elements.find((el) =>
-    isRef(el, addonDefault)
-  )
+  const elements = addonsArrayOf(parsed)?.elements ?? []
+  const registered = elements.find((el) => isRef(el, addonDefault))
   if (registered) {
+    const index = elements.indexOf(registered)
     if (setup && registered.type === 'Identifier') {
       // `addons: [addonMsw]`
-      replaceNode(
-        parsed,
-        registered,
-        callText(registered.name, [setup], editor.indent)
+      parsed.set(
+        ['addons', index],
+        parseExpression(callText(registered.name, [setup], indent))
       )
     } else if (setup && registered.type === 'CallExpression') {
       if (registered.arguments.length > 0) {
@@ -640,7 +632,7 @@ function ensureFactoriesAddon(
         )
         return false
       }
-      addFirstArgument(parsed, registered, setup)
+      parsed.append(['addons', index], parseExpression(setup))
     }
     // A leftover injected namespace entry still goes.
     stripMswRef(parsed, 'addons', previewNamespace)
@@ -649,11 +641,11 @@ function ensureFactoriesAddon(
 
   const localName = addonDefault ?? 'addonMsw'
   if (!addonDefault) parsed.setImport(localName, ADDON_PACKAGE)
-  const call = callText(localName, setup ? [setup] : [], editor.indent)
+  const call = callText(localName, setup ? [setup] : [], indent)
 
   const entry = findAddonsEntry(parsed, previewNamespace)
-  if (entry) {
-    replaceNode(parsed, entry, call)
+  if (entry !== -1) {
+    parsed.set(['addons', entry], parseExpression(call))
     return true
   }
   const addons = fieldValue(parsed, 'addons')
@@ -667,8 +659,7 @@ function ensureFactoriesAddon(
     )
     return false
   }
-  prependToList(editor, arrayList(editor, addons), [call])
-  editor.commit()
+  parsed.prepend(['addons'], parseExpression(call))
   return true
 }
 
@@ -692,8 +683,8 @@ function collectLoaderSetup(
     call.arguments[0].type === 'SpreadElement'
   )
     return 'conflict'
-  const list = argumentList(parsed._editor, call)
-  return itemText(parsed._editor, list, list.items[0])
+  const list = argumentList(parsed.editor, call)
+  return itemText(parsed.editor, list, list.items[0])
 }
 
 // -------- opt-in: preview-level `parameters.msw` → `beforeEach`
@@ -702,7 +693,7 @@ function migratePreviewParameters(
   parsed: ConfigFile,
   warnings: string[]
 ): void {
-  if (!mswValueOf(parsed._exportsObject)) return
+  if (!mswValueOf(parsed.node)) return
   const msw = parsed.inspect(['parameters', 'msw'])
   const handlers = msw.kind === 'value' ? handlersOf(msw.node) : null
   if (!handlers) {
@@ -732,7 +723,7 @@ function migratePreviewParameters(
   if (handlers.length > 0) {
     parsed.set(
       ['beforeEach'],
-      parseExpression(beforeEachArrow(handlers, parsed._editor.indent))
+      parseExpression(beforeEachArrow(handlers, parsed.editor.indent))
     )
   }
 }
